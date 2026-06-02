@@ -2,6 +2,11 @@
 ==========================================================
   SKVK TRADING JOURNAL — VERSION HISTORY
 ==========================================================
+  v13.9 | 2026-06-02 | Radio button disappears immediately after click,
+         |            | Price colour shows state (dark blue=checked, black=unchecked),
+         |            | Radio absolutely positioned — zero column space consumed,
+         |            | No functional changes
+  ──────────────────────────────────────────────────────
   v13.8 | 2026-06-02 | Radio button hidden by default, appears only on price hover,
          |            | When checked: price turns dark blue, radio stays visible,
          |            | When unchecked: price returns to black, radio hides again,
@@ -137,7 +142,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SKVK Trading Journal v13.8</title>
+<title>SKVK Trading Journal v13.9</title>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -617,46 +622,49 @@ tbody tr:hover td { background: #fafbff; }
 }
 .editable:hover::after { opacity: 1; }
 
-/* ── CONFIRM TOGGLE (radio style, hover to reveal) ── */
+/* ── CONFIRM TOGGLE (hover-only, zero layout space) ── */
 .confirm-wrap {
-  display: inline-flex; align-items: center; gap: 4px;
+  display: inline-block;
+  position: relative;
 }
 .confirm-toggle {
-  display: inline-block;
-  width: 11px; height: 11px;
+  position: absolute;
+  top: 50%; right: -4px;
+  transform: translateY(-50%);
+  width: 10px; height: 10px;
   border-radius: 50%;
   border: 2px solid #9ca3af;
   background: #fff;
-  position: relative;
   cursor: pointer;
-  flex-shrink: 0;
-  transition: border-color 0.15s, background 0.15s, opacity 0.15s;
-  vertical-align: middle;
-  padding: 0;
-  outline: none;
+  padding: 0; outline: none;
   box-sizing: border-box;
-  opacity: 0;  /* hidden by default */
-}
-.confirm-wrap:hover .confirm-toggle {
-  opacity: 1;  /* show on hover */
-}
-.confirm-toggle.confirmed {
-  opacity: 1;  /* always visible when checked */
-  border-color: #1a56db;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.1s;
+  z-index: 1;
 }
 .confirm-toggle::after {
   content: '';
   position: absolute;
   top: 50%; left: 50%;
   transform: translate(-50%, -50%) scale(0);
-  width: 5px; height: 5px;
+  width: 4px; height: 4px;
   border-radius: 50%;
   background: #1a56db;
-  transition: transform 0.15s;
+  transition: transform 0.1s;
 }
 .confirm-toggle.confirmed::after {
   transform: translate(-50%, -50%) scale(1);
 }
+.confirm-toggle.confirmed {
+  border-color: #1a56db;
+}
+/* Show radio on hover of the wrap */
+.confirm-wrap:hover .confirm-toggle {
+  opacity: 1;
+  pointer-events: auto;
+}
+/* Hide immediately after interaction - handled via JS */
 .price-confirmed {
   color: #1a56db !important;
   font-weight: 600;
@@ -862,7 +870,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
 <div id="topbar">
   <div class="brand">
     <span class="brand-dot"></span>
-    SKVK Trading Journal <span style="font-size:0.6rem;background:#1a73e8;color:#fff;padding:2px 7px;border-radius:10px;font-weight:700;margin-left:4px;vertical-align:middle;">v13.8</span>
+    SKVK Trading Journal <span style="font-size:0.6rem;background:#1a73e8;color:#fff;padding:2px 7px;border-radius:10px;font-weight:700;margin-left:4px;vertical-align:middle;">v13.9</span>
   </div>
   <nav class="nav-tabs">
     <button class="nav-tab active" onclick="showPage('journal')"    data-page="journal">📋 <span class="tl">Options Journal</span></button>
@@ -2355,6 +2363,9 @@ function toggleConfirm(el, hash, field) {
   const isOn = el.classList.toggle('confirmed');
   const priceEl = el.previousElementSibling;
   if (priceEl) priceEl.classList.toggle('price-confirmed', isOn);
+  // Hide radio immediately after click
+  el.style.opacity = '0';
+  el.style.pointerEvents = 'none';
   // Persist to Firebase
   const key = field + '_confirmed';
   if (db) {
@@ -2369,6 +2380,9 @@ function toggleMCXConfirm(el, id, field) {
   const isOn = el.classList.toggle('confirmed');
   const priceEl = el.previousElementSibling;
   if (priceEl) priceEl.classList.toggle('price-confirmed', isOn);
+  // Hide radio immediately after click
+  el.style.opacity = '0';
+  el.style.pointerEvents = 'none';
   const key = field + '_confirmed';
   if (db) {
     db.ref('journal/mcx_trades/' + id + '/' + key).set(isOn);
