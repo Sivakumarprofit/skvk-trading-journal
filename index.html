@@ -2,6 +2,11 @@
 ==========================================================
   SKVK TRADING JOURNAL — VERSION HISTORY
 ==========================================================
+  v13.18| 2026-06-03 | Fix: Client ID tabs now correctly auto-select first client,
+         |            | Fix: buildClientIdTabs runs before renderJournal in refreshAll,
+         |            | Fix: Quote uses CORS proxy + day-based fallback (no stuck loading),
+         |            | 10 curated trading quotes cycling daily by day-of-year
+  ──────────────────────────────────────────────────────
   v13.17| 2026-06-03 | Removed filter bar (Broker/Algo/Month/Exit/Search),
          |            | Daily trading quote below Journal title (ZenQuotes API),
          |            | Falls back to curated quotes if API unavailable,
@@ -188,7 +193,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>SKVK Trading Journal v13.17</title>
+<title>SKVK Trading Journal v13.18</title>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -927,7 +932,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
 <div id="topbar">
   <div class="brand">
     <span class="brand-dot"></span>
-    SKVK Trading Journal <span style="font-size:0.85rem;background:#1a73e8;color:#fff;padding:3px 10px;border-radius:10px;font-weight:700;margin-left:6px;vertical-align:middle;">v13.17</span>
+    SKVK Trading Journal <span style="font-size:0.85rem;background:#1a73e8;color:#fff;padding:3px 10px;border-radius:10px;font-weight:700;margin-left:6px;vertical-align:middle;">v13.18</span>
   </div>
   <nav class="nav-tabs">
     <button class="nav-tab active" onclick="showPage('journal')"    data-page="journal">📋 <span class="tl">Journal</span></button>
@@ -1636,12 +1641,12 @@ function startListeners() {
 }
 
 function refreshAll() {
+  buildClientIdTabs();    // set selectedClientId first
   renderDashboard();
-  renderJournal();
+  renderJournal();        // now filtered correctly
   populateAlgoDropdowns();
   populateFilters();
   populateCompareSelects();
-  buildClientIdTabs();
   loadDailyQuote();
 }
 
@@ -2176,19 +2181,19 @@ function buildClientIdTabs() {
   const clientIds = [...new Set(allTrades.map(t => t.client_id).filter(Boolean))].sort();
   const container = document.getElementById('client-id-tabs');
   if (!container) return;
+  // Auto-select first client if none selected or current selection not in list
+  if ((!selectedClientId || !clientIds.includes(selectedClientId)) && clientIds.length > 0) {
+    selectedClientId = clientIds[0];
+  }
   container.innerHTML = '';
-  clientIds.forEach((cid, i) => {
+  clientIds.forEach(cid => {
     const div = document.createElement('div');
-    div.className = 'underlying-tab' + (i === 0 && !selectedClientId ? ' active' : (selectedClientId === cid ? ' active' : ''));
+    div.className = 'underlying-tab' + (selectedClientId === cid ? ' active' : '');
     div.setAttribute('data-clientid', cid);
     div.onclick = function() { setClientId(this, cid); };
     div.textContent = cid;
     container.appendChild(div);
   });
-  // Auto-select first client if none selected
-  if (!selectedClientId && clientIds.length > 0) {
-    selectedClientId = clientIds[0];
-  }
 }
 
 // ── DTE filter ──
@@ -2328,33 +2333,45 @@ function renderJournal() {
 async function loadDailyQuote() {
   const el2 = document.getElementById('daily-quote');
   if (!el2) return;
-  // Cache quote per day in localStorage
   const today = new Date().toISOString().slice(0,10);
   const cached = localStorage.getItem('daily-quote-' + today);
-  if (cached) {
-    el2.innerHTML = cached;
-    return;
-  }
+  if (cached) { el2.innerHTML = cached; return; }
+
+  const fallbacks = [
+    { q: "The stock market is a device for transferring money from the impatient to the patient.", a: "Warren Buffett" },
+    { q: "In investing, what is comfortable is rarely profitable.", a: "Robert Arnott" },
+    { q: "Risk comes from not knowing what you are doing.", a: "Warren Buffett" },
+    { q: "The individual investor should act consistently as an investor and not as a speculator.", a: "Ben Graham" },
+    { q: "The market is a pendulum that forever swings between unsustainable optimism and unjustified pessimism.", a: "Benjamin Graham" },
+    { q: "Wide diversification is only required when investors do not understand what they are doing.", a: "Warren Buffett" },
+    { q: "The four most dangerous words in investing are: This time it's different.", a: "Sir John Templeton" },
+    { q: "Know what you own, and know why you own it.", a: "Peter Lynch" },
+    { q: "An investment in knowledge pays the best interest.", a: "Benjamin Franklin" },
+    { q: "The best time to plant a tree was 20 years ago. The second best time is now.", a: "Chinese Proverb" }
+  ];
+
+  // Pick based on day of year for consistent daily change
+  const dayOfYear = Math.floor((new Date() - new Date(new Date().getFullYear(),0,0)) / 86400000);
+  const pick = fallbacks[dayOfYear % fallbacks.length];
+
   try {
-    const res = await fetch('https://zenquotes.io/api/today');
-    const data = await res.json();
-    if (data && data[0]) {
+    const res = await Promise.race([
+      fetch('https://api.allorigins.win/get?url=' + encodeURIComponent('https://zenquotes.io/api/today')),
+      new Promise((_, rej) => setTimeout(() => rej('timeout'), 4000))
+    ]);
+    const json = await res.json();
+    const data = JSON.parse(json.contents);
+    if (data && data[0] && data[0].q) {
       const html = `"${data[0].q}" <span style="color:var(--text3);font-style:normal;font-weight:600;">— ${data[0].a}</span>`;
       el2.innerHTML = html;
       localStorage.setItem('daily-quote-' + today, html);
+      return;
     }
-  } catch(e) {
-    // Fallback quotes if API fails
-    const fallbacks = [
-      { q: "The stock market is a device for transferring money from the impatient to the patient.", a: "Warren Buffett" },
-      { q: "In investing, what is comfortable is rarely profitable.", a: "Robert Arnott" },
-      { q: "The individual investor should act consistently as an investor and not as a speculator.", a: "Ben Graham" },
-      { q: "Risk comes from not knowing what you are doing.", a: "Warren Buffett" },
-      { q: "The market is a pendulum that forever swings between unsustainable optimism and unjustified pessimism.", a: "Benjamin Graham" }
-    ];
-    const pick = fallbacks[new Date().getDate() % fallbacks.length];
-    el2.innerHTML = `"${pick.q}" <span style="color:var(--text3);font-style:normal;font-weight:600;">— ${pick.a}</span>`;
-  }
+  } catch(e) { /* fall through to fallback */ }
+
+  const html = `"${pick.q}" <span style="color:var(--text3);font-style:normal;font-weight:600;">— ${pick.a}</span>`;
+  el2.innerHTML = html;
+  localStorage.setItem('daily-quote-' + today, html);
 }
 
 async function deleteTrade(hash) {
