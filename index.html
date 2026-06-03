@@ -2,6 +2,11 @@
 ==========================================================
   SKVK TRADING JOURNAL — VERSION HISTORY
 ==========================================================
+  v13.10| 2026-06-03 | Force fresh load — no browser cache (meta no-cache headers),
+         |            | Upload tab: Uploaded by radio (SKVK User1/User2/Sivakumar),
+         |            | Last updated by tag next to Live status (name + date/time),
+         |            | Last updated saved to Firebase — visible to all users in realtime
+  ──────────────────────────────────────────────────────
   v13.9 | 2026-06-02 | Radio button disappears immediately after click,
          |            | Price colour shows state (dark blue=checked, black=unchecked),
          |            | Radio absolutely positioned — zero column space consumed,
@@ -142,7 +147,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SKVK Trading Journal v13.9</title>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<title>SKVK Trading Journal v13.10</title>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -870,7 +878,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
 <div id="topbar">
   <div class="brand">
     <span class="brand-dot"></span>
-    SKVK Trading Journal <span style="font-size:0.6rem;background:#1a73e8;color:#fff;padding:2px 7px;border-radius:10px;font-weight:700;margin-left:4px;vertical-align:middle;">v13.9</span>
+    SKVK Trading Journal <span style="font-size:0.6rem;background:#1a73e8;color:#fff;padding:2px 7px;border-radius:10px;font-weight:700;margin-left:4px;vertical-align:middle;">v13.10</span>
   </div>
   <nav class="nav-tabs">
     <button class="nav-tab active" onclick="showPage('journal')"    data-page="journal">📋 <span class="tl">Options Journal</span></button>
@@ -883,6 +891,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <button class="nav-tab" onclick="showPage('upload')"     data-page="upload">⬆ <span class="tl">Upload Results</span></button>
   </nav>
   <div class="topbar-right">
+    <div id="last-updated-tag" style="font-size:0.72rem;color:var(--text2);margin-right:10px;white-space:nowrap;"></div>
     <div id="db-status">● connecting…</div>
   </div>
 </div>
@@ -1048,6 +1057,20 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
       <div class="page-title">Upload Reports</div>
       <div class="page-subtitle">Quantiply CSV · Zebu Positions CSV · Auto-detected format</div>
     </div>
+  </div>
+
+  <!-- Uploaded By -->
+  <div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:14px 20px;margin-bottom:18px;display:flex;align-items:center;gap:24px;flex-wrap:wrap;">
+    <span style="font-size:0.82rem;font-weight:600;color:var(--text1);">Uploaded by:</span>
+    <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:0.85rem;color:var(--text0);">
+      <input type="radio" name="uploader" value="SKVK User1" checked style="accent-color:var(--blue);width:14px;height:14px;cursor:pointer;"> SKVK User1
+    </label>
+    <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:0.85rem;color:var(--text0);">
+      <input type="radio" name="uploader" value="SKVK User2" style="accent-color:var(--blue);width:14px;height:14px;cursor:pointer;"> SKVK User2
+    </label>
+    <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:0.85rem;color:var(--text0);">
+      <input type="radio" name="uploader" value="Sivakumar" style="accent-color:var(--blue);width:14px;height:14px;cursor:pointer;"> Sivakumar
+    </label>
   </div>
 
   <div class="upload-zone" id="upload-zone">
@@ -1503,6 +1526,14 @@ function startListeners() {
     uploads = Object.values(snap.val() || {});
     renderUploadHistory();
   });
+  // Listen for last updated tag
+  db.ref('journal/last_updated').on('value', snap => {
+    const d = snap.val();
+    const el = document.getElementById('last-updated-tag');
+    if (el && d && d.by) {
+      el.innerHTML = `<span style="color:var(--text3);">Last updated by:</span> <strong style="color:var(--text1);">${d.by}</strong> <span style="color:var(--text3);">&middot; ${d.at}</span>`;
+    }
+  });
 }
 
 function refreshAll() {
@@ -1673,6 +1704,10 @@ async function processFile(file) {
     if (skipped) parts.push(`${skipped} skipped`);
     if (added > 0 || updated > 0) {
       toast(`✓ "${file.name}": ${parts.join(', ')}`, 'success');
+      // Save last updated info to Firebase
+      const uploader = document.querySelector('input[name="uploader"]:checked')?.value || 'SKVK User1';
+      const now = new Date().toLocaleString('en-IN', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit', hour12:true });
+      if (db) await db.ref('journal/last_updated').set({ by: uploader, at: now });
     } else {
       toast(`"${file.name}": All ${skipped} trades already exist — nothing new added`, 'info');
     }
