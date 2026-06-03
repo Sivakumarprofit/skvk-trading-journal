@@ -2,6 +2,11 @@
 ==========================================================
   SKVK TRADING JOURNAL — VERSION HISTORY
 ==========================================================
+  v13.13| 2026-06-03 | CRITICAL FIX: algo_name added to trade key hash,
+         |            | Same symbol+time+broker but different algo = separate trade,
+         |            | Prevents different algos trading same symbol from deduping,
+         |            | IMPORTANT: Do Master Reset + fresh upload after deploying
+  ──────────────────────────────────────────────────────
   v13.12| 2026-06-03 | Grouping changed to Algo+Broker+ClientID (no more mixing),
          |            | Removed MULTI-BROKER badge and delta comparison row,
          |            | Broker and ClientID shown as badges in group header,
@@ -162,7 +167,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>SKVK Trading Journal v13.12</title>
+<title>SKVK Trading Journal v13.13</title>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -890,7 +895,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
 <div id="topbar">
   <div class="brand">
     <span class="brand-dot"></span>
-    SKVK Trading Journal <span style="font-size:0.85rem;background:#1a73e8;color:#fff;padding:3px 10px;border-radius:10px;font-weight:700;margin-left:6px;vertical-align:middle;">v13.12</span>
+    SKVK Trading Journal <span style="font-size:0.85rem;background:#1a73e8;color:#fff;padding:3px 10px;border-radius:10px;font-weight:700;margin-left:6px;vertical-align:middle;">v13.13</span>
   </div>
   <nav class="nav-tabs">
     <button class="nav-tab active" onclick="showPage('journal')"    data-page="journal">📋 <span class="tl">Options Journal</span></button>
@@ -1656,7 +1661,7 @@ async function sha256(str) {
   return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('').slice(0,16);
 }
 async function tradeKey(t) {
-  return sha256([t.broker, t.client_id, t.symbol, t.entry_date, t.entry_time, t.action].join('|'));
+  return sha256([t.broker, t.client_id, t.algo_name, t.symbol, t.entry_date, t.entry_time, t.action].join('|'));
 }
 async function fileKey(text) { return sha256(text.slice(0, 60000)); }
 
