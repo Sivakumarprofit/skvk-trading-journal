@@ -2,6 +2,11 @@
 ==========================================================
   SKVK TRADING JOURNAL — VERSION HISTORY
 ==========================================================
+  v13.17| 2026-06-03 | Removed filter bar (Broker/Algo/Month/Exit/Search),
+         |            | Daily trading quote below Journal title (ZenQuotes API),
+         |            | Falls back to curated quotes if API unavailable,
+         |            | Quote cached per day in localStorage
+  ──────────────────────────────────────────────────────
   v13.16| 2026-06-03 | Removed DTE filter tabs,
          |            | Removed All from Client ID tabs — auto-selects first client,
          |            | Algo group header: light green/red shade based on P&L,
@@ -183,7 +188,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>SKVK Trading Journal v13.16</title>
+<title>SKVK Trading Journal v13.17</title>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -922,7 +927,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
 <div id="topbar">
   <div class="brand">
     <span class="brand-dot"></span>
-    SKVK Trading Journal <span style="font-size:0.85rem;background:#1a73e8;color:#fff;padding:3px 10px;border-radius:10px;font-weight:700;margin-left:6px;vertical-align:middle;">v13.16</span>
+    SKVK Trading Journal <span style="font-size:0.85rem;background:#1a73e8;color:#fff;padding:3px 10px;border-radius:10px;font-weight:700;margin-left:6px;vertical-align:middle;">v13.17</span>
   </div>
   <nav class="nav-tabs">
     <button class="nav-tab active" onclick="showPage('journal')"    data-page="journal">📋 <span class="tl">Journal</span></button>
@@ -1027,6 +1032,9 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div>
       <div class="page-title">Journal</div>
       <div class="page-subtitle">Grouped by Date → Algo → Broker · Latest on top</div>
+      <div id="daily-quote" style="margin-top:8px;font-size:0.78rem;color:var(--text2);font-style:italic;max-width:700px;line-height:1.5;">
+        <span style="color:var(--text3);">Loading quote…</span>
+      </div>
     </div>
     <div style="display:flex;gap:8px;">
       <button class="btn btn-ghost btn-sm" onclick="expandAll()">Expand All</button>
@@ -1039,40 +1047,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div class="underlying-tabs" id="client-id-tabs"></div>
   </div>
 
-  <div class="filter-bar">
-    <span style="font-size:0.7rem;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;">Filter:</span>
-    <select class="filter-select" id="f-broker" onchange="renderJournal()"><option value="">All Brokers</option></select>
-
-    <!-- Multi-select algo dropdown -->
-    <div class="multi-select-wrap" id="algo-ms-wrap">
-      <button class="multi-select-btn" id="algo-ms-btn" onclick="toggleAlgoDropdown()">
-        <span id="algo-ms-label">All Algos</span>
-        <span>▾</span>
-      </button>
-      <div class="multi-select-dropdown" id="algo-ms-dd">
-        <div class="multi-select-actions">
-          <button class="ms-action-btn" onclick="selectAllAlgos()">Select All</button>
-          <button class="ms-action-btn" onclick="clearAlgos()">Clear</button>
-        </div>
-        <hr class="multi-select-divider">
-        <div id="algo-ms-list"></div>
-      </div>
-    </div>
-
-    <select class="filter-select" id="f-month"  onchange="renderJournal()"><option value="">All Months</option></select>
-    <select class="filter-select" id="f-exit"   onchange="renderJournal()">
-      <option value="">All Exit Types</option>
-      <option value="SL">Stop Loss</option>
-      <option value="UNIVERSAL">Universal Exit</option>
-      <option value="EOD">EOD/Squared off</option>
-    </select>
-    <input class="filter-input" id="f-search" placeholder="🔍 Search symbol…" oninput="renderJournal()" />
-    <button class="btn btn-ghost btn-sm" onclick="clearFilters()">✕ Clear</button>
-  </div>
   <div id="journal-content">
-    <div class="empty-state">
-      <span class="eicon">📋</span>
-      <h3>No trades yet</h3>
       <p>Upload a CSV report or add trades manually to get started</p>
     </div>
   </div>
@@ -1667,6 +1642,7 @@ function refreshAll() {
   populateFilters();
   populateCompareSelects();
   buildClientIdTabs();
+  loadDailyQuote();
 }
 
 // ════════════════════════════════════════════════════
@@ -2224,37 +2200,8 @@ function setDTE(el_tab, val) {
 }
 
 function renderJournal() {
-  const fBroker = el('f-broker').value;
-  const fMonth  = el('f-month').value;
-  const fExit   = el('f-exit').value;
-  const fSearch = el('f-search').value.toLowerCase();
-
   let tr = allTrades.filter(t => {
-    if (fBroker && t.broker !== fBroker) return false;
     if (selectedClientId && t.client_id !== selectedClientId) return false;
-    if (selectedAlgos.size > 0 && !selectedAlgos.has(t.algo_name)) return false;
-    if (fMonth  && !(t.entry_date||'').startsWith(fMonth)) return false;
-    if (fExit   && !(t.exit_reason||'').includes(fExit)) return false;
-    if (fSearch && !(t.symbol||'').toLowerCase().includes(fSearch)) return false;
-    if (selectedUnderlying) {
-      const algo = (t.algo_name||'').toUpperCase();
-      const und  = (t.underlying||'').toUpperCase();
-      const combined = algo + ' ' + und;
-      if (selectedUnderlying === 'NIFTY'     && !(algo.startsWith('NF_') || und==='NIFTY 50' || und==='NIFTY')) return false;
-      if (selectedUnderlying === 'BANKNIFTY' && !(algo.startsWith('BNF_') || und.includes('BANK'))) return false;
-      if (selectedUnderlying === 'SENSEX'    && !(algo.startsWith('SX_') || und.includes('SENSEX'))) return false;
-      if (selectedUnderlying === 'GOLD'      && !combined.includes('GOLD')) return false;
-      if (selectedUnderlying === 'SILVER'    && !combined.includes('SILVER')) return false;
-    }
-    if (selectedDTE && selectedDTE !== 'SHOWALL') {
-      const algo = (t.algo_name||'').toUpperCase();
-      const hasDTE = /\dDTE/.test(algo); // has any DTE pattern
-      if (selectedDTE === '0DTE'   && !algo.includes('0DTE')) return false;
-      if (selectedDTE === '1DTE'   && !algo.includes('1DTE')) return false;
-      if (selectedDTE === '2DTE'   && !algo.includes('2DTE')) return false;
-      // All Days = positional = no DTE suffix in name
-      if (selectedDTE === 'ALLDAYS' && hasDTE) return false;
-    }
     return true;
   });
 
@@ -2373,6 +2320,41 @@ function renderJournal() {
   });
 
   el('journal-content').innerHTML=html;
+}
+
+// ════════════════════════════════════════════════════
+//  DAILY QUOTE
+// ════════════════════════════════════════════════════
+async function loadDailyQuote() {
+  const el2 = document.getElementById('daily-quote');
+  if (!el2) return;
+  // Cache quote per day in localStorage
+  const today = new Date().toISOString().slice(0,10);
+  const cached = localStorage.getItem('daily-quote-' + today);
+  if (cached) {
+    el2.innerHTML = cached;
+    return;
+  }
+  try {
+    const res = await fetch('https://zenquotes.io/api/today');
+    const data = await res.json();
+    if (data && data[0]) {
+      const html = `"${data[0].q}" <span style="color:var(--text3);font-style:normal;font-weight:600;">— ${data[0].a}</span>`;
+      el2.innerHTML = html;
+      localStorage.setItem('daily-quote-' + today, html);
+    }
+  } catch(e) {
+    // Fallback quotes if API fails
+    const fallbacks = [
+      { q: "The stock market is a device for transferring money from the impatient to the patient.", a: "Warren Buffett" },
+      { q: "In investing, what is comfortable is rarely profitable.", a: "Robert Arnott" },
+      { q: "The individual investor should act consistently as an investor and not as a speculator.", a: "Ben Graham" },
+      { q: "Risk comes from not knowing what you are doing.", a: "Warren Buffett" },
+      { q: "The market is a pendulum that forever swings between unsustainable optimism and unjustified pessimism.", a: "Benjamin Graham" }
+    ];
+    const pick = fallbacks[new Date().getDate() % fallbacks.length];
+    el2.innerHTML = `"${pick.q}" <span style="color:var(--text3);font-style:normal;font-weight:600;">— ${pick.a}</span>`;
+  }
 }
 
 async function deleteTrade(hash) {
