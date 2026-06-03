@@ -2,6 +2,12 @@
 ==========================================================
   SKVK TRADING JOURNAL — VERSION HISTORY
 ==========================================================
+  v13.15| 2026-06-03 | Renamed Options Journal → Journal, Options Reports → P&L Report,
+         |            | Removed MCX Journal and MCX Reports tabs,
+         |            | Removed NIFTY/BANKNIFTY/SENSEX/GOLD/SILVER underlying tabs,
+         |            | Fixed topbar — wraps on overflow, Live + Last Updated always visible,
+         |            | Upload tab: AUTO/MANUAL algo name radio with text input for manual
+  ──────────────────────────────────────────────────────
   v13.14| 2026-06-03 | Dynamic Client ID filter tabs in Options Journal,
          |            | Auto-built from Firebase data — new client IDs appear automatically,
          |            | Click any Client ID tab to show only that account's trades,
@@ -172,7 +178,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>SKVK Trading Journal v13.14</title>
+<title>SKVK Trading Journal v13.15</title>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -238,19 +244,20 @@ body {
   background: #fff;
   border-bottom: 1px solid var(--border);
   box-shadow: var(--shadow-sm);
-  display: flex; align-items: center;
-  height: 68px;
-  padding: 0 24px;
+  display: flex; align-items: center; flex-wrap: wrap;
+  min-height: 68px;
+  padding: 6px 24px;
   gap: 0;
 }
 .brand {
   font-family: var(--display);
   font-weight: 800;
-  font-size: 1.55rem;
+  font-size: 1.35rem;
   letter-spacing: -0.03em;
   color: var(--text0);
-  margin-right: 40px;
-  display: flex; align-items: center; gap: 8px;
+  margin-right: 16px;
+  display: flex; align-items: center; gap: 6px;
+  flex-shrink: 0;
 }
 .brand-dot {
   width: 10px; height: 10px;
@@ -260,16 +267,17 @@ body {
 }
 @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(0.85)} }
 
-.nav-tabs { display: flex; align-items: stretch; height: 100%; gap: 2px; }
+.nav-tabs { display: flex; align-items: stretch; height: 56px; gap: 0; flex-wrap: nowrap; overflow-x: auto; flex: 1; }
 .nav-tab {
-  display: flex; align-items: center; gap: 8px;
-  padding: 0 18px;
-  font-size: 0.92rem; font-weight: 500;
+  display: flex; align-items: center; gap: 6px;
+  padding: 0 12px;
+  font-size: 0.82rem; font-weight: 500;
   color: var(--text2);
   background: none; border: none; cursor: pointer;
   position: relative;
   transition: color 0.15s;
   white-space: nowrap;
+  flex-shrink: 0;
 }
 .nav-tab:hover { color: var(--text0); background: var(--bg2); border-radius: 6px; }
 .nav-tab.active { color: var(--blue); font-weight: 700; }
@@ -280,8 +288,13 @@ body {
   border-radius: 2px 2px 0 0;
 }
 
-.topbar-right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
-#db-status { font-size: 0.72rem; color: var(--text3); display: flex; align-items: center; gap: 5px; }
+.topbar-right {
+  display: flex; align-items: center; gap: 10px;
+  flex-shrink: 0; margin-left: 12px;
+  padding: 4px 0;
+}
+#last-updated-tag { font-size:0.68rem; color:var(--text2); white-space:nowrap; max-width:220px; overflow:hidden; text-overflow:ellipsis; }
+#db-status { font-size: 0.72rem; color: var(--text3); display: flex; align-items: center; gap: 5px; white-space:nowrap; flex-shrink:0; }
 #db-status.connected { color: var(--green); }
 
 /* ── BUTTONS ── */
@@ -305,7 +318,7 @@ body {
 .btn-sm { padding: 5px 10px; font-size: 0.72rem; }
 
 /* ── MAIN ── */
-#main { margin-top: 68px; padding: 24px; max-width: 1600px; margin-left: auto; margin-right: auto; }
+#main { margin-top: 76px; padding: 24px; max-width: 1600px; margin-left: auto; margin-right: auto; }
 .page { display: none; }
 .page.active { display: block; }
 
@@ -900,13 +913,11 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
 <div id="topbar">
   <div class="brand">
     <span class="brand-dot"></span>
-    SKVK Trading Journal <span style="font-size:0.85rem;background:#1a73e8;color:#fff;padding:3px 10px;border-radius:10px;font-weight:700;margin-left:6px;vertical-align:middle;">v13.14</span>
+    SKVK Trading Journal <span style="font-size:0.85rem;background:#1a73e8;color:#fff;padding:3px 10px;border-radius:10px;font-weight:700;margin-left:6px;vertical-align:middle;">v13.15</span>
   </div>
   <nav class="nav-tabs">
-    <button class="nav-tab active" onclick="showPage('journal')"    data-page="journal">📋 <span class="tl">Options Journal</span></button>
-    <button class="nav-tab" onclick="showPage('dashboard')"  data-page="dashboard">📊 <span class="tl">Options Reports</span></button>
-    <button class="nav-tab" onclick="showPage('mcxjournal')" data-page="mcxjournal">🥇 <span class="tl">MCX Journal</span></button>
-    <button class="nav-tab" onclick="showPage('mcxreports')" data-page="mcxreports">📈 <span class="tl">MCX Reports</span></button>
+    <button class="nav-tab active" onclick="showPage('journal')"    data-page="journal">📋 <span class="tl">Journal</span></button>
+    <button class="nav-tab" onclick="showPage('dashboard')"  data-page="dashboard">📊 <span class="tl">P&L Report</span></button>
     <button class="nav-tab" onclick="showPage('compare')"    data-page="compare">⚖️ <span class="tl">Compare</span></button>
     <button class="nav-tab" onclick="showPage('manual')"     data-page="manual">✏️ <span class="tl">Manual</span></button>
     <button class="nav-tab" onclick="showPage('algos')"      data-page="algos">⚙️ <span class="tl">Algo Settings</span></button>
@@ -927,7 +938,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
 <div id="page-dashboard" class="page">
   <div class="page-header">
     <div>
-      <div class="page-title">Options Reports</div>
+      <div class="page-title">P&L Report</div>
       <div class="page-subtitle">Consolidated P&L · Strategy Performance · Monthly Breakdown</div>
       <div id="dash-last-updated" style="margin-top:6px;font-size:0.75rem;color:var(--text3);"></div>
     </div>
@@ -1005,7 +1016,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
 <div id="page-journal" class="page active">
   <div class="page-header">
     <div>
-      <div class="page-title">Options Journal</div>
+      <div class="page-title">Journal</div>
       <div class="page-subtitle">Grouped by Date → Algo → Broker · Latest on top</div>
     </div>
     <div style="display:flex;gap:8px;">
@@ -1013,16 +1024,8 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
       <button class="btn btn-ghost btn-sm" onclick="collapseAll()">Collapse All</button>
     </div>
   </div>
-  <!-- Underlying + DTE filter row -->
+  <!-- DTE + Client ID filter row -->
   <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:10px;">
-    <div class="underlying-tabs" id="underlying-tabs">
-      <div class="underlying-tab active" data-underlying="" onclick="setUnderlying(this,'')">All</div>
-      <div class="underlying-tab" data-underlying="NIFTY" onclick="setUnderlying(this,'NIFTY')">🔵 NIFTY</div>
-      <div class="underlying-tab" data-underlying="BANKNIFTY" onclick="setUnderlying(this,'BANKNIFTY')">🟣 BANKNIFTY</div>
-      <div class="underlying-tab" data-underlying="SENSEX" onclick="setUnderlying(this,'SENSEX')">🟠 SENSEX</div>
-      <div class="underlying-tab" data-underlying="GOLD" onclick="setUnderlying(this,'GOLD')">🟡 GOLD</div>
-      <div class="underlying-tab" data-underlying="SILVER" onclick="setUnderlying(this,'SILVER')">⚪ SILVER</div>
-    </div>
     <div style="display:flex;align-items:center;gap:8px;">
       <span style="font-size:0.7rem;font-weight:600;color:var(--text2);letter-spacing:0.05em;text-transform:uppercase;">DTE:</span>
       <div class="dte-tabs">
@@ -1091,18 +1094,35 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     </div>
   </div>
 
-  <!-- Uploaded By -->
-  <div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:14px 20px;margin-bottom:18px;display:flex;align-items:center;gap:24px;flex-wrap:wrap;">
-    <span style="font-size:0.82rem;font-weight:600;color:var(--text1);">Uploaded by:</span>
-    <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:0.85rem;color:var(--text0);">
-      <input type="radio" name="uploader" value="SKVK User1" checked style="accent-color:var(--blue);width:14px;height:14px;cursor:pointer;"> SKVK User1
-    </label>
-    <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:0.85rem;color:var(--text0);">
-      <input type="radio" name="uploader" value="SKVK User2" style="accent-color:var(--blue);width:14px;height:14px;cursor:pointer;"> SKVK User2
-    </label>
-    <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:0.85rem;color:var(--text0);">
-      <input type="radio" name="uploader" value="Sivakumar" style="accent-color:var(--blue);width:14px;height:14px;cursor:pointer;"> Sivakumar
-    </label>
+  <!-- Uploaded By + Algo Name -->
+  <div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:14px 20px;margin-bottom:18px;display:flex;align-items:flex-start;gap:32px;flex-wrap:wrap;">
+    <div>
+      <div style="font-size:0.78rem;font-weight:600;color:var(--text1);margin-bottom:8px;">Uploaded by:</div>
+      <div style="display:flex;gap:16px;flex-wrap:wrap;">
+        <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:0.85rem;color:var(--text0);">
+          <input type="radio" name="uploader" value="SKVK User1" checked style="accent-color:var(--blue);width:14px;height:14px;cursor:pointer;"> SKVK User1
+        </label>
+        <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:0.85rem;color:var(--text0);">
+          <input type="radio" name="uploader" value="SKVK User2" style="accent-color:var(--blue);width:14px;height:14px;cursor:pointer;"> SKVK User2
+        </label>
+        <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:0.85rem;color:var(--text0);">
+          <input type="radio" name="uploader" value="Sivakumar" style="accent-color:var(--blue);width:14px;height:14px;cursor:pointer;"> Sivakumar
+        </label>
+      </div>
+    </div>
+    <div>
+      <div style="font-size:0.78rem;font-weight:600;color:var(--text1);margin-bottom:8px;">Algo Name:</div>
+      <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+        <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:0.85rem;color:var(--text0);">
+          <input type="radio" name="algo-mode" value="auto" checked onchange="toggleAlgoMode()" style="accent-color:var(--blue);width:14px;height:14px;cursor:pointer;"> AUTO (from report)
+        </label>
+        <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:0.85rem;color:var(--text0);">
+          <input type="radio" name="algo-mode" value="manual" onchange="toggleAlgoMode()" style="accent-color:var(--blue);width:14px;height:14px;cursor:pointer;"> MANUAL
+        </label>
+        <input type="text" id="manual-algo-name" placeholder="Enter algo name…"
+          style="display:none;padding:6px 10px;border:1.5px solid var(--blue);border-radius:6px;font-size:0.82rem;outline:none;min-width:200px;">
+      </div>
+    </div>
   </div>
 
   <div class="upload-zone" id="upload-zone">
@@ -1738,6 +1758,14 @@ async function processFile(file) {
     } else {
       toast('Unknown format in "' + file.name + '" — expected Quantiply, Zebu or Zebu Tradebook', 'error');
       setProgress(false); return;
+    }
+
+    // Apply manual algo name if selected
+    const algoMode = document.querySelector('input[name="algo-mode"]:checked')?.value || 'auto';
+    if (algoMode === 'manual') {
+      const manualAlgo = document.getElementById('manual-algo-name')?.value?.trim();
+      if (!manualAlgo) { toast('Please enter an algo name for Manual mode', 'error'); setProgress(false); return; }
+      trades.forEach(t => t.algo_name = manualAlgo);
     }
 
     let added = 0, skipped = 0, updated = 0;
@@ -2600,6 +2628,12 @@ function setProgress(show, text='', pct=0) {
 // ════════════════════════════════════════════════════
 //  INLINE EDIT
 // ════════════════════════════════════════════════════
+function toggleAlgoMode() {
+  const isManual = document.querySelector('input[name="algo-mode"]:checked')?.value === 'manual';
+  const inp = document.getElementById('manual-algo-name');
+  if (inp) { inp.style.display = isManual ? 'inline-block' : 'none'; if (isManual) inp.focus(); }
+}
+
 function toggleConfirm(el, hash, field) {
   const isOn = el.classList.toggle('confirmed');
   const priceEl = el.previousElementSibling;
