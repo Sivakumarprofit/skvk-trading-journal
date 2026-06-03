@@ -2,6 +2,11 @@
 ==========================================================
   SKVK TRADING JOURNAL — VERSION HISTORY
 ==========================================================
+  v13.16| 2026-06-03 | Removed DTE filter tabs,
+         |            | Removed All from Client ID tabs — auto-selects first client,
+         |            | Algo group header: light green/red shade based on P&L,
+         |            | Delete button on each trade row — removes from Firebase
+  ──────────────────────────────────────────────────────
   v13.15| 2026-06-03 | Renamed Options Journal → Journal, Options Reports → P&L Report,
          |            | Removed MCX Journal and MCX Reports tabs,
          |            | Removed NIFTY/BANKNIFTY/SENSEX/GOLD/SILVER underlying tabs,
@@ -178,7 +183,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>SKVK Trading Journal v13.15</title>
+<title>SKVK Trading Journal v13.16</title>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -413,6 +418,10 @@ tbody tr:hover td { background: #fafbff; }
   border-bottom: 1px solid var(--border) !important;
 }
 .algo-group-header:hover td { background: var(--blue-lt) !important; }
+.algo-group-header.pnl-pos-row td { background: #f0fdf4 !important; }
+.algo-group-header.pnl-pos-row:hover td { background: #dcfce7 !important; }
+.algo-group-header.pnl-neg-row td { background: #fff5f5 !important; }
+.algo-group-header.pnl-neg-row:hover td { background: #ffe4e4 !important; }
 
 .trade-row.buy-row td:first-child { border-left: 3px solid var(--green); }
 .trade-row.sell-row td:first-child { border-left: 3px solid var(--red); }
@@ -913,7 +922,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
 <div id="topbar">
   <div class="brand">
     <span class="brand-dot"></span>
-    SKVK Trading Journal <span style="font-size:0.85rem;background:#1a73e8;color:#fff;padding:3px 10px;border-radius:10px;font-weight:700;margin-left:6px;vertical-align:middle;">v13.15</span>
+    SKVK Trading Journal <span style="font-size:0.85rem;background:#1a73e8;color:#fff;padding:3px 10px;border-radius:10px;font-weight:700;margin-left:6px;vertical-align:middle;">v13.16</span>
   </div>
   <nav class="nav-tabs">
     <button class="nav-tab active" onclick="showPage('journal')"    data-page="journal">📋 <span class="tl">Journal</span></button>
@@ -1024,26 +1033,10 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
       <button class="btn btn-ghost btn-sm" onclick="collapseAll()">Collapse All</button>
     </div>
   </div>
-  <!-- DTE + Client ID filter row -->
-  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:10px;">
-    <div style="display:flex;align-items:center;gap:8px;">
-      <span style="font-size:0.7rem;font-weight:600;color:var(--text2);letter-spacing:0.05em;text-transform:uppercase;">DTE:</span>
-      <div class="dte-tabs">
-        <div class="dte-tab active" data-dte="SHOWALL" onclick="setDTE(this,'SHOWALL')">Show All</div>
-        <div class="dte-tab" data-dte="0DTE" onclick="setDTE(this,'0DTE')">0DTE</div>
-        <div class="dte-tab" data-dte="1DTE" onclick="setDTE(this,'1DTE')">1DTE</div>
-        <div class="dte-tab" data-dte="2DTE" onclick="setDTE(this,'2DTE')">2DTE</div>
-        <div class="dte-tab" data-dte="ALLDAYS" onclick="setDTE(this,'ALLDAYS')">All Days</div>
-      </div>
-    </div>
-  </div>
-
   <!-- Client ID tabs — dynamically built from Firebase data -->
   <div style="display:flex;align-items:center;gap:8px;padding:6px 0 2px 0;flex-wrap:wrap;">
     <span style="font-size:0.7rem;font-weight:600;color:var(--text2);letter-spacing:0.05em;text-transform:uppercase;">Client:</span>
-    <div class="underlying-tabs" id="client-id-tabs">
-      <div class="underlying-tab active" data-clientid="" onclick="setClientId(this,'')">All</div>
-    </div>
+    <div class="underlying-tabs" id="client-id-tabs"></div>
   </div>
 
   <div class="filter-bar">
@@ -2207,20 +2200,18 @@ function buildClientIdTabs() {
   const clientIds = [...new Set(allTrades.map(t => t.client_id).filter(Boolean))].sort();
   const container = document.getElementById('client-id-tabs');
   if (!container) return;
-  container.innerHTML = `<div class="underlying-tab active" data-clientid="" onclick="setClientId(this,'')">All</div>`;
-  clientIds.forEach(cid => {
+  container.innerHTML = '';
+  clientIds.forEach((cid, i) => {
     const div = document.createElement('div');
-    div.className = 'underlying-tab';
+    div.className = 'underlying-tab' + (i === 0 && !selectedClientId ? ' active' : (selectedClientId === cid ? ' active' : ''));
     div.setAttribute('data-clientid', cid);
     div.onclick = function() { setClientId(this, cid); };
     div.textContent = cid;
     container.appendChild(div);
   });
-  // Restore active state
-  const active = container.querySelector(`[data-clientid="${selectedClientId}"]`);
-  if (active) {
-    container.querySelectorAll('.underlying-tab').forEach(t => t.classList.remove('active'));
-    active.classList.add('active');
+  // Auto-select first client if none selected
+  if (!selectedClientId && clientIds.length > 0) {
+    selectedClientId = clientIds[0];
   }
 }
 
@@ -2314,7 +2305,7 @@ function renderJournal() {
       <tr id="${dId}-hdr">
         <th style="width:80px">Day</th><th>Algo</th><th>Broker</th>
         <th>Symbol</th><th>Type</th><th>Action</th><th>Qty</th>
-        <th>Entry ₹</th><th>Exit ₹</th><th>Exit Reason</th><th>P&L ₹</th><th>Time</th>
+        <th>Entry ₹</th><th>Exit ₹</th><th>Exit Reason</th><th>P&L ₹</th><th>Time</th><th style="width:36px;"></th>
       </tr>
     </thead><tbody id="${dId}">`;
 
@@ -2326,7 +2317,7 @@ function renderJournal() {
       const aId=dId+'_'+safeKey(key);
       const clientLabel = clientId ? `<span class="badge b-gray" style="font-size:0.65rem;">${clientId}</span>` : '';
 
-      html+=`<tr class="algo-group-header" data-group="${dId}" onclick="tgl('${aId}')">
+      html+=`<tr class="algo-group-header ${aPnl>=0?'pnl-pos-row':'pnl-neg-row'}" data-group="${dId}" onclick="tgl('${aId}')">
         <td><span class="day-badge">Day ${dayN}</span></td>
         <td colspan="9">
           <div style="display:flex;align-items:center;gap:8px;">
@@ -2369,6 +2360,11 @@ function renderJournal() {
               <span class="editable" onclick="editCell(this,'${h}','exit_date','date')">${t.exit_date||'—'}</span>
               &nbsp;${t.entry_time||''}
             </td>
+            <td style="text-align:center;">
+              <button onclick="deleteTrade('${h}')" title="Delete trade"
+                style="background:none;border:none;cursor:pointer;color:#d1d5db;font-size:0.85rem;padding:2px 4px;border-radius:4px;transition:color 0.15s;"
+                onmouseover="this.style.color='var(--red)'" onmouseout="this.style.color='#d1d5db'">🗑</button>
+            </td>
           </tr>`;
       });
     });
@@ -2377,6 +2373,17 @@ function renderJournal() {
   });
 
   el('journal-content').innerHTML=html;
+}
+
+async function deleteTrade(hash) {
+  if (!confirm('Delete this trade? This cannot be undone.')) return;
+  if (db) {
+    await db.ref('journal/trades/' + hash).remove();
+  } else {
+    allTrades = allTrades.filter(t => t.hash !== hash);
+    refreshAll();
+  }
+  toast('Trade deleted', 'success');
 }
 
 function exitBadge(r) {
@@ -2525,16 +2532,9 @@ function clearFilters() {
   ['f-broker','f-month','f-exit','f-search'].forEach(id=>{ el(id).value=''; });
   selectedAlgos.clear();
   selectedUnderlying = '';
-  selectedDTE = '';
-  selectedClientId = '';
-  document.querySelectorAll('.underlying-tab[data-underlying]').forEach(t=>t.classList.remove('active'));
-  document.querySelector('.underlying-tab[data-underlying=""]').classList.add('active');
-  document.querySelectorAll('.underlying-tab[data-clientid]').forEach(t=>t.classList.remove('active'));
-  const allClientTab = document.querySelector('.underlying-tab[data-clientid=""]');
-  if (allClientTab) allClientTab.classList.add('active');
   selectedDTE = 'SHOWALL';
-  document.querySelectorAll('.dte-tab').forEach(t=>t.classList.remove('active'));
-  document.querySelector('.dte-tab[data-dte="SHOWALL"]').classList.add('active');
+  selectedClientId = '';
+  buildClientIdTabs();
   buildAlgoDropdown(getAllAlgos());
   renderJournal();
 }
