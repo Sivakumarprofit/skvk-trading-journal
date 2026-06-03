@@ -2,6 +2,11 @@
 ==========================================================
   SKVK TRADING JOURNAL — VERSION HISTORY
 ==========================================================
+  v13.14| 2026-06-03 | Dynamic Client ID filter tabs in Options Journal,
+         |            | Auto-built from Firebase data — new client IDs appear automatically,
+         |            | Click any Client ID tab to show only that account's trades,
+         |            | Clear filters resets Client ID tab back to All
+  ──────────────────────────────────────────────────────
   v13.13| 2026-06-03 | CRITICAL FIX: algo_name added to trade key hash,
          |            | Same symbol+time+broker but different algo = separate trade,
          |            | Prevents different algos trading same symbol from deduping,
@@ -167,7 +172,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>SKVK Trading Journal v13.13</title>
+<title>SKVK Trading Journal v13.14</title>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -895,7 +900,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
 <div id="topbar">
   <div class="brand">
     <span class="brand-dot"></span>
-    SKVK Trading Journal <span style="font-size:0.85rem;background:#1a73e8;color:#fff;padding:3px 10px;border-radius:10px;font-weight:700;margin-left:6px;vertical-align:middle;">v13.13</span>
+    SKVK Trading Journal <span style="font-size:0.85rem;background:#1a73e8;color:#fff;padding:3px 10px;border-radius:10px;font-weight:700;margin-left:6px;vertical-align:middle;">v13.14</span>
   </div>
   <nav class="nav-tabs">
     <button class="nav-tab active" onclick="showPage('journal')"    data-page="journal">📋 <span class="tl">Options Journal</span></button>
@@ -1027,6 +1032,14 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
         <div class="dte-tab" data-dte="2DTE" onclick="setDTE(this,'2DTE')">2DTE</div>
         <div class="dte-tab" data-dte="ALLDAYS" onclick="setDTE(this,'ALLDAYS')">All Days</div>
       </div>
+    </div>
+  </div>
+
+  <!-- Client ID tabs — dynamically built from Firebase data -->
+  <div style="display:flex;align-items:center;gap:8px;padding:6px 0 2px 0;flex-wrap:wrap;">
+    <span style="font-size:0.7rem;font-weight:600;color:var(--text2);letter-spacing:0.05em;text-transform:uppercase;">Client:</span>
+    <div class="underlying-tabs" id="client-id-tabs">
+      <div class="underlying-tab active" data-clientid="" onclick="setClientId(this,'')">All</div>
     </div>
   </div>
 
@@ -1575,6 +1588,7 @@ let currentYear = String(new Date().getFullYear());
 let selectedAlgos = new Set(); // empty = all selected
 let selectedUnderlying = '';   // empty = all
 let selectedDTE = 'SHOWALL';   // SHOWALL=no filter, ALLDAYS=positional, 0DTE/1DTE/2DTE=exact
+let selectedClientId = '';     // empty = all client IDs
 let algoGroups = {};           // groupName → { name, color, algos:[] }
 
 
@@ -1639,6 +1653,7 @@ function refreshAll() {
   populateAlgoDropdowns();
   populateFilters();
   populateCompareSelects();
+  buildClientIdTabs();
 }
 
 // ════════════════════════════════════════════════════
@@ -2147,9 +2162,38 @@ function updateAlgoLabel() {
 // ── Underlying filter ──
 function setUnderlying(el_tab, val) {
   selectedUnderlying = val;
-  document.querySelectorAll('.underlying-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.underlying-tab[data-underlying]').forEach(t => t.classList.remove('active'));
   el_tab.classList.add('active');
   renderJournal();
+}
+
+// ── Client ID filter ──
+function setClientId(el_tab, val) {
+  selectedClientId = val;
+  document.querySelectorAll('.underlying-tab[data-clientid]').forEach(t => t.classList.remove('active'));
+  el_tab.classList.add('active');
+  renderJournal();
+}
+
+function buildClientIdTabs() {
+  const clientIds = [...new Set(allTrades.map(t => t.client_id).filter(Boolean))].sort();
+  const container = document.getElementById('client-id-tabs');
+  if (!container) return;
+  container.innerHTML = `<div class="underlying-tab active" data-clientid="" onclick="setClientId(this,'')">All</div>`;
+  clientIds.forEach(cid => {
+    const div = document.createElement('div');
+    div.className = 'underlying-tab';
+    div.setAttribute('data-clientid', cid);
+    div.onclick = function() { setClientId(this, cid); };
+    div.textContent = cid;
+    container.appendChild(div);
+  });
+  // Restore active state
+  const active = container.querySelector(`[data-clientid="${selectedClientId}"]`);
+  if (active) {
+    container.querySelectorAll('.underlying-tab').forEach(t => t.classList.remove('active'));
+    active.classList.add('active');
+  }
 }
 
 // ── DTE filter ──
@@ -2168,6 +2212,7 @@ function renderJournal() {
 
   let tr = allTrades.filter(t => {
     if (fBroker && t.broker !== fBroker) return false;
+    if (selectedClientId && t.client_id !== selectedClientId) return false;
     if (selectedAlgos.size > 0 && !selectedAlgos.has(t.algo_name)) return false;
     if (fMonth  && !(t.entry_date||'').startsWith(fMonth)) return false;
     if (fExit   && !(t.exit_reason||'').includes(fExit)) return false;
@@ -2453,8 +2498,12 @@ function clearFilters() {
   selectedAlgos.clear();
   selectedUnderlying = '';
   selectedDTE = '';
-  document.querySelectorAll('.underlying-tab').forEach(t=>t.classList.remove('active'));
+  selectedClientId = '';
+  document.querySelectorAll('.underlying-tab[data-underlying]').forEach(t=>t.classList.remove('active'));
   document.querySelector('.underlying-tab[data-underlying=""]').classList.add('active');
+  document.querySelectorAll('.underlying-tab[data-clientid]').forEach(t=>t.classList.remove('active'));
+  const allClientTab = document.querySelector('.underlying-tab[data-clientid=""]');
+  if (allClientTab) allClientTab.classList.add('active');
   selectedDTE = 'SHOWALL';
   document.querySelectorAll('.dte-tab').forEach(t=>t.classList.remove('active'));
   document.querySelector('.dte-tab[data-dte="SHOWALL"]').classList.add('active');
