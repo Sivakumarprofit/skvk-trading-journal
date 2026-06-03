@@ -2,6 +2,13 @@
 ==========================================================
   SKVK TRADING JOURNAL — VERSION HISTORY
 ==========================================================
+  v13.12| 2026-06-03 | Grouping changed to Algo+Broker+ClientID (no more mixing),
+         |            | Removed MULTI-BROKER badge and delta comparison row,
+         |            | Broker and ClientID shown as badges in group header,
+         |            | Admin tab added with Master Reset feature,
+         |            | Reset checkboxes for each Firebase path separately,
+         |            | Type RESET to confirm — permanent delete of selected data
+  ──────────────────────────────────────────────────────
   v13.11| 2026-06-03 | Upload history shows uploader name (defaults to SKVK User1),
          |            | uploaded_by saved in Firebase per upload record,
          |            | Last Updated info shown on Homepage beneath page title,
@@ -155,7 +162,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>SKVK Trading Journal v13.11</title>
+<title>SKVK Trading Journal v13.12</title>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -883,7 +890,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
 <div id="topbar">
   <div class="brand">
     <span class="brand-dot"></span>
-    SKVK Trading Journal <span style="font-size:0.85rem;background:#1a73e8;color:#fff;padding:3px 10px;border-radius:10px;font-weight:700;margin-left:6px;vertical-align:middle;">v13.11</span>
+    SKVK Trading Journal <span style="font-size:0.85rem;background:#1a73e8;color:#fff;padding:3px 10px;border-radius:10px;font-weight:700;margin-left:6px;vertical-align:middle;">v13.12</span>
   </div>
   <nav class="nav-tabs">
     <button class="nav-tab active" onclick="showPage('journal')"    data-page="journal">📋 <span class="tl">Options Journal</span></button>
@@ -894,6 +901,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <button class="nav-tab" onclick="showPage('manual')"     data-page="manual">✏️ <span class="tl">Manual</span></button>
     <button class="nav-tab" onclick="showPage('algos')"      data-page="algos">⚙️ <span class="tl">Algo Settings</span></button>
     <button class="nav-tab" onclick="showPage('upload')"     data-page="upload">⬆ <span class="tl">Upload Results</span></button>
+    <button class="nav-tab" onclick="showPage('admin')"      data-page="admin">🔧 <span class="tl">Admin</span></button>
   </nav>
   <div class="topbar-right">
     <div id="last-updated-tag" style="font-size:0.72rem;color:var(--text2);margin-right:10px;white-space:nowrap;"></div>
@@ -1100,6 +1108,81 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div class="section-hd">Upload History</div>
     <div id="upload-history-list">
       <div style="color:var(--text3);font-size:0.78rem;padding:10px 0;">No uploads yet — upload your first CSV above</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ ADMIN ══════════ -->
+<div id="page-admin" class="page">
+  <div class="page-header">
+    <div>
+      <div class="page-title">Admin</div>
+      <div class="page-subtitle">Master Reset · Data Management</div>
+    </div>
+  </div>
+
+  <div style="max-width:560px;">
+    <div style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:24px;box-shadow:var(--shadow-sm);">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+        <span style="font-size:1.4rem;">🗑️</span>
+        <span style="font-size:1rem;font-weight:700;color:var(--text0);">Master Reset</span>
+      </div>
+      <p style="font-size:0.8rem;color:var(--text2);margin-bottom:18px;">Select what to clear from Firebase. This action is <strong style="color:var(--red);">permanent and cannot be undone.</strong></p>
+
+      <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:20px;">
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:10px 14px;border:1px solid var(--border);border-radius:8px;transition:background 0.15s;" onmouseover="this.style.background='var(--bg2)'" onmouseout="this.style.background=''">
+          <input type="checkbox" id="rst-trades" style="width:16px;height:16px;accent-color:var(--red);cursor:pointer;">
+          <div>
+            <div style="font-size:0.85rem;font-weight:600;color:var(--text0);">Options Trades</div>
+            <div style="font-size:0.72rem;color:var(--text3);">journal/trades — all uploaded options trade records</div>
+          </div>
+        </label>
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:10px 14px;border:1px solid var(--border);border-radius:8px;transition:background 0.15s;" onmouseover="this.style.background='var(--bg2)'" onmouseout="this.style.background=''">
+          <input type="checkbox" id="rst-mcx" style="width:16px;height:16px;accent-color:var(--red);cursor:pointer;">
+          <div>
+            <div style="font-size:0.85rem;font-weight:600;color:var(--text0);">MCX Trades</div>
+            <div style="font-size:0.72rem;color:var(--text3);">journal/mcx_trades — all MCX futures trade records</div>
+          </div>
+        </label>
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:10px 14px;border:1px solid var(--border);border-radius:8px;transition:background 0.15s;" onmouseover="this.style.background='var(--bg2)'" onmouseout="this.style.background=''">
+          <input type="checkbox" id="rst-algos" style="width:16px;height:16px;accent-color:var(--red);cursor:pointer;">
+          <div>
+            <div style="font-size:0.85rem;font-weight:600;color:var(--text0);">Algo Settings</div>
+            <div style="font-size:0.72rem;color:var(--text3);">journal/algos — algo metadata, groups and colors</div>
+          </div>
+        </label>
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:10px 14px;border:1px solid var(--border);border-radius:8px;transition:background 0.15s;" onmouseover="this.style.background='var(--bg2)'" onmouseout="this.style.background=''">
+          <input type="checkbox" id="rst-uploads" style="width:16px;height:16px;accent-color:var(--red);cursor:pointer;">
+          <div>
+            <div style="font-size:0.85rem;font-weight:600;color:var(--text0);">Upload History</div>
+            <div style="font-size:0.72rem;color:var(--text3);">journal/uploads — record of all past file uploads</div>
+          </div>
+        </label>
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:10px 14px;border:1px solid var(--border);border-radius:8px;transition:background 0.15s;" onmouseover="this.style.background='var(--bg2)'" onmouseout="this.style.background=''">
+          <input type="checkbox" id="rst-lastupdated" style="width:16px;height:16px;accent-color:var(--red);cursor:pointer;">
+          <div>
+            <div style="font-size:0.85rem;font-weight:600;color:var(--text0);">Last Updated Info</div>
+            <div style="font-size:0.72rem;color:var(--text3);">journal/last_updated — last upload timestamp and user</div>
+          </div>
+        </label>
+      </div>
+
+      <!-- Confirm input -->
+      <div id="reset-confirm-wrap" style="display:none;margin-bottom:14px;">
+        <p style="font-size:0.8rem;color:var(--red);margin-bottom:8px;">⚠️ Type <strong>RESET</strong> to confirm:</p>
+        <input type="text" id="reset-confirm-input" placeholder="Type RESET here…"
+          style="width:100%;padding:8px 12px;border:2px solid var(--red);border-radius:8px;font-size:0.85rem;outline:none;box-sizing:border-box;"
+          oninput="checkResetConfirm()">
+      </div>
+
+      <button id="reset-btn" onclick="initiateReset()"
+        style="background:var(--red);color:#fff;border:none;border-radius:8px;padding:10px 22px;font-size:0.85rem;font-weight:600;cursor:pointer;opacity:0.5;pointer-events:none;transition:opacity 0.15s;">
+        🗑️ Reset Selected
+      </button>
+      <button id="reset-execute-btn" onclick="executeReset()" style="display:none;background:#b91c1c;color:#fff;border:none;border-radius:8px;padding:10px 22px;font-size:0.85rem;font-weight:600;cursor:pointer;margin-left:10px;">
+        ✓ Confirm Reset
+      </button>
+      <span id="reset-status" style="font-size:0.8rem;margin-left:12px;"></span>
     </div>
   </div>
 </div>
@@ -2111,29 +2194,32 @@ function renderJournal() {
     return;
   }
 
-  // Group: date → algo → broker
+  // Group: date → algo+broker+clientid
   const byDate = {};
   tr.forEach(t => {
-    const d = t.entry_date||'Unknown';
+    const d   = t.entry_date||'Unknown';
+    const key = `${t.algo_name}|||${t.broker}|||${t.client_id||''}`;
     if(!byDate[d]) byDate[d]={};
-    if(!byDate[d][t.algo_name]) byDate[d][t.algo_name]={};
-    if(!byDate[d][t.algo_name][t.broker]) byDate[d][t.algo_name][t.broker]=[];
-    byDate[d][t.algo_name][t.broker].push(t);
+    if(!byDate[d][key]) byDate[d][key]=[];
+    byDate[d][key].push(t);
   });
 
-  // Day numbers per algo
+  // Day numbers per algo+broker+clientid key
   const dayMap={};
-  [...new Set(tr.map(t=>t.algo_name))].forEach(algo=>{
-    const dates=[...new Set(tr.filter(t=>t.algo_name===algo).map(t=>t.entry_date))].sort();
-    dayMap[algo]={};
-    dates.forEach((d,i)=>dayMap[algo][d]=i+1);
+  const allKeys=[...new Set(tr.map(t=>`${t.algo_name}|||${t.broker}|||${t.client_id||''}`))];
+  allKeys.forEach(key=>{
+    const dates=[...new Set(tr.filter(t=>`${t.algo_name}|||${t.broker}|||${t.client_id||''}`===key).map(t=>t.entry_date))].sort();
+    dayMap[key]={};
+    dates.forEach((d,i)=>dayMap[key][d]=i+1);
   });
 
   let html='';
   Object.keys(byDate).sort().reverse().forEach(date=>{
-    const dAlgos=byDate[date];
-    const dPnl=Object.values(dAlgos).flatMap(a=>Object.values(a).flat()).reduce((s,t)=>s+(t.pnl||0),0);
+    const dKeys=byDate[date];
+    const dPnl=Object.values(dKeys).flat().reduce((s,t)=>s+(t.pnl||0),0);
     const dId='d'+date.replace(/-/g,'');
+    const totalLegs=Object.values(dKeys).flat().length;
+    const totalGroups=Object.keys(dKeys).length;
 
     html+=`<div class="table-wrap" style="margin-bottom:18px;">
     <table><thead>
@@ -2142,7 +2228,7 @@ function renderJournal() {
           <div style="display:flex;align-items:center;gap:14px;">
             <span id="arr-${dId}">▼</span>
             <span style="font-family:var(--display);font-size:0.92rem;">${fmtDate(date)}</span>
-            <span style="font-size:0.72rem;color:var(--text2);">${Object.keys(dAlgos).length} algo(s) · ${Object.values(dAlgos).flatMap(a=>Object.values(a).flat()).length} legs</span>
+            <span style="font-size:0.72rem;color:var(--text2);">${totalGroups} algo(s) · ${totalLegs} legs</span>
             <span class="${dPnl>=0?'pnl-pos':'pnl-neg'}" style="margin-left:auto;font-size:0.92rem;">${fmt(dPnl)}</span>
           </div>
         </td>
@@ -2154,13 +2240,13 @@ function renderJournal() {
       </tr>
     </thead><tbody id="${dId}">`;
 
-    Object.keys(dAlgos).forEach(algoName=>{
-      const bMap=dAlgos[algoName];
-      const brokers=Object.keys(bMap);
-      const allLegs=brokers.flatMap(b=>bMap[b]);
-      const aPnl=allLegs.reduce((s,t)=>s+(t.pnl||0),0);
-      const dayN=dayMap[algoName]?.[date]||1;
-      const aId=dId+'_'+safeKey(algoName);
+    Object.keys(dKeys).forEach(key=>{
+      const legs=dKeys[key];
+      const [algoName, broker, clientId] = key.split('|||');
+      const aPnl=legs.reduce((s,t)=>s+(t.pnl||0),0);
+      const dayN=dayMap[key]?.[date]||1;
+      const aId=dId+'_'+safeKey(key);
+      const clientLabel = clientId ? `<span class="badge b-gray" style="font-size:0.65rem;">${clientId}</span>` : '';
 
       html+=`<tr class="algo-group-header" data-group="${dId}" onclick="tgl('${aId}')">
         <td><span class="day-badge">Day ${dayN}</span></td>
@@ -2168,18 +2254,18 @@ function renderJournal() {
           <div style="display:flex;align-items:center;gap:8px;">
             <span id="arr-${aId}">▼</span>
             <span style="font-weight:600;">${algoName}</span>
-            ${brokers.length>1?`<span class="badge b-purple">Multi-broker Δ</span>`:''}
-            <span class="badge b-gray">${allLegs.length} legs</span>
+            <span class="badge b-gray" style="font-size:0.65rem;">${broker}</span>
+            ${clientLabel}
+            <span class="badge b-gray">${legs.length} legs</span>
           </div>
         </td>
         <td class="${aPnl>=0?'pnl-pos':'pnl-neg'}" style="font-weight:700;">${fmt(aPnl)}</td>
         <td></td>
       </tr>`;
 
-      brokers.forEach(broker=>{
-        bMap[broker].forEach(t=>{
-          const h = t.hash||'';
-          html+=`<tr class="trade-row ${t.action==='BUY'?'buy-row':'sell-row'}" data-group="${aId}" ${t.is_re_entry?'style="opacity:0.7"':''}>
+      legs.forEach(t=>{
+        const h = t.hash||'';
+        html+=`<tr class="trade-row ${t.action==='BUY'?'buy-row':'sell-row'}" data-group="${aId}" ${t.is_re_entry?'style="opacity:0.7"':''}>
             <td>${t.is_re_entry?`<span class="badge b-amber">RE-ENTRY</span>`:''}</td>
             <td style="color:var(--text2);font-size:0.72rem;max-width:180px;overflow:hidden;text-overflow:ellipsis;" title="${algoName}">${algoName.length>22?algoName.slice(0,20)+'…':algoName}</td>
             <td><span class="badge b-gray">${t.broker}</span></td>
@@ -2206,25 +2292,7 @@ function renderJournal() {
               &nbsp;${t.entry_time||''}
             </td>
           </tr>`;
-        });
       });
-
-      // Delta row — shown when multi-broker
-      if (brokers.length>1) {
-        const bPnls=brokers.map(b=>({ b, v:bMap[b].reduce((s,t)=>s+(t.pnl||0),0) }));
-        const delta=Math.max(...bPnls.map(x=>x.v))-Math.min(...bPnls.map(x=>x.v));
-        html+=`<tr class="delta-row" data-group="${aId}" id="delta-${aId}">
-          <td></td>
-          <td colspan="9">
-            <div style="display:flex;align-items:center;gap:18px;padding:4px 0;">
-              <strong style="color:var(--purple);">Δ DELTA COMPARISON</strong>
-              ${bPnls.map(x=>`<span>${x.b}: <strong class="${x.v>=0?'pnl-pos':'pnl-neg'}">${fmt(x.v)}</strong></span>`).join('<span style="color:var(--text3)">vs</span>')}
-              <span style="margin-left:8px;">Difference: <strong style="color:var(--amber);">${fmt(delta)}</strong></span>
-            </div>
-          </td>
-          <td></td><td></td>
-        </tr>`;
-      }
     });
 
     html+=`</tbody></table></div>`;
@@ -2236,6 +2304,79 @@ function renderJournal() {
 function exitBadge(r) {
   const map={SL:'b-red',UNIVERSAL:'b-green',EOD:'b-gray',TGT:'b-teal',EXPIRY:'b-amber'};
   return `<span class="badge ${map[r]||'b-gray'}">${r||'—'}</span>`;
+}
+
+// ════════════════════════════════════════════════════
+//  MASTER RESET
+// ════════════════════════════════════════════════════
+function updateResetBtn() {
+  const anyChecked = ['rst-trades','rst-mcx','rst-algos','rst-uploads','rst-lastupdated'].some(id => {
+    const el2 = document.getElementById(id);
+    return el2 && el2.checked;
+  });
+  const btn = document.getElementById('reset-btn');
+  if (btn) {
+    btn.style.opacity = anyChecked ? '1' : '0.5';
+    btn.style.pointerEvents = anyChecked ? 'auto' : 'none';
+  }
+}
+
+// Add listeners to checkboxes
+document.addEventListener('DOMContentLoaded', () => {
+  ['rst-trades','rst-mcx','rst-algos','rst-uploads','rst-lastupdated'].forEach(id => {
+    const cb = document.getElementById(id);
+    if (cb) cb.addEventListener('change', updateResetBtn);
+  });
+});
+
+function initiateReset() {
+  const wrap = document.getElementById('reset-confirm-wrap');
+  const input = document.getElementById('reset-confirm-input');
+  if (wrap) { wrap.style.display = 'block'; }
+  if (input) { input.value = ''; input.focus(); }
+  document.getElementById('reset-execute-btn').style.display = 'none';
+}
+
+function checkResetConfirm() {
+  const val = document.getElementById('reset-confirm-input')?.value?.trim();
+  const btn = document.getElementById('reset-execute-btn');
+  if (btn) btn.style.display = val === 'RESET' ? 'inline-block' : 'none';
+}
+
+async function executeReset() {
+  if (!db) { toast('No Firebase connection', 'error'); return; }
+  const paths = {
+    'rst-trades':      'journal/trades',
+    'rst-mcx':         'journal/mcx_trades',
+    'rst-algos':       'journal/algos',
+    'rst-uploads':     'journal/uploads',
+    'rst-lastupdated': 'journal/last_updated'
+  };
+  const toDelete = Object.entries(paths).filter(([id]) => document.getElementById(id)?.checked).map(([,path]) => path);
+  if (!toDelete.length) return;
+
+  const status = document.getElementById('reset-status');
+  status.textContent = 'Resetting…'; status.style.color = 'var(--orange)';
+
+  try {
+    for (const path of toDelete) {
+      await db.ref(path).remove();
+    }
+    // Reset UI
+    ['rst-trades','rst-mcx','rst-algos','rst-uploads','rst-lastupdated'].forEach(id => {
+      const cb = document.getElementById(id); if (cb) cb.checked = false;
+    });
+    document.getElementById('reset-confirm-wrap').style.display = 'none';
+    document.getElementById('reset-execute-btn').style.display = 'none';
+    document.getElementById('reset-confirm-input').value = '';
+    updateResetBtn();
+    status.textContent = '✓ Reset complete'; status.style.color = 'var(--green)';
+    setTimeout(() => { status.textContent = ''; }, 3000);
+    toast(`✓ Cleared: ${toDelete.join(', ')}`, 'success');
+  } catch(e) {
+    status.textContent = 'Error: ' + e.message; status.style.color = 'var(--red)';
+    toast('Reset failed: ' + e.message, 'error');
+  }
 }
 
 // Toggle group rows
