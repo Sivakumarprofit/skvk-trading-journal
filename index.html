@@ -2,6 +2,11 @@
 ==========================================================
   SKVK TRADING JOURNAL — VERSION HISTORY
 ==========================================================
+  v13.23| 2026-06-04 | Monthly Breakdown: blue (profit) / dark (loss) instead of green/red,
+         |            | Monthly Breakdown: % P&L shown next to amount when capital set,
+         |            | Settings: Total Capital table (Jan 2026 to Jan 2036, editable per month),
+         |            | Capital saved to Firebase — used for % P&L calculation in reports
+  ──────────────────────────────────────────────────────
   v13.22| 2026-06-04 | Zebra striping on trade rows (alternating white/light grey),
          |            | Full row hover highlight in blue tint for readability,
          |            | Algo sort order: NF 1DTE→0DTE, BNF 1DTE→0DTE, SX 1DTE→0DTE, others
@@ -214,7 +219,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>SKVK Trading Journal v13.22</title>
+<title>SKVK Trading Journal v13.23</title>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -529,6 +534,11 @@ tbody tr:hover td { background: #fafbff; }
 
 .pnl-pos { color: var(--green); font-weight: 600; }
 .pnl-neg { color: var(--red);   font-weight: 600; }
+
+/* Monthly breakdown report — neutral blue/dark colors (less emotional) */
+.rpt-pos { color: #1a56db; font-weight: 600; }
+.rpt-neg { color: #1e293b; font-weight: 600; }
+.rpt-pct { font-size: 0.72rem; color: var(--text2); margin-left: 4px; font-weight: 400; }
 
 /* ── PERIOD TABS ── */
 .period-tabs { display: flex; gap: 4px; flex-wrap: wrap; }
@@ -997,7 +1007,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
 <div id="topbar">
   <div class="brand">
     <span class="brand-dot"></span>
-    SKVK Trading Journal <span style="font-size:0.85rem;background:#1a73e8;color:#fff;padding:3px 10px;border-radius:10px;font-weight:700;margin-left:6px;vertical-align:middle;">v13.22</span>
+    SKVK Trading Journal <span style="font-size:0.85rem;background:#1a73e8;color:#fff;padding:3px 10px;border-radius:10px;font-weight:700;margin-left:6px;vertical-align:middle;">v13.23</span>
   </div>
   <nav class="nav-tabs">
     <button class="nav-tab active" onclick="showPage('journal')"    data-page="journal">📋 <span class="tl">Journal</span></button>
@@ -1197,6 +1207,31 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
   </div>
 
   <div style="display:grid;gap:24px;max-width:900px;">
+
+    <!-- ── Total Capital ── -->
+    <div style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:22px;box-shadow:var(--shadow-sm);">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span style="font-size:1.3rem;">💰</span>
+          <div>
+            <div style="font-size:0.95rem;font-weight:700;color:var(--text0);">Total Capital</div>
+            <div style="font-size:0.72rem;color:var(--text2);margin-top:2px;">Monthly capital used to calculate % P&L in reports</div>
+          </div>
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="saveCapitalTable()">💾 Save</button>
+      </div>
+      <div style="overflow-x:auto;">
+        <table style="width:100%;border-collapse:collapse;font-size:0.82rem;" id="capital-table">
+          <thead>
+            <tr style="background:var(--bg2);">
+              <th style="padding:8px 12px;text-align:left;font-weight:600;color:var(--text1);border-bottom:1px solid var(--border);">Month</th>
+              <th style="padding:8px 12px;text-align:right;font-weight:600;color:var(--text1);border-bottom:1px solid var(--border);">Capital (₹)</th>
+            </tr>
+          </thead>
+          <tbody id="capital-table-body"></tbody>
+        </table>
+      </div>
+    </div>
 
     <!-- ── Display Preferences ── -->
     <div style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:22px;box-shadow:var(--shadow-sm);">
@@ -1725,6 +1760,10 @@ function startListeners() {
     uploads = Object.values(snap.val() || {});
     renderUploadHistory();
   });
+  db.ref('journal/capital').on('value', snap => {
+    capitalData = snap.val() || {};
+    buildCapitalTable();
+  });
   // Listen for last updated tag
   db.ref('journal/last_updated').on('value', snap => {
     const d = snap.val();
@@ -1759,7 +1798,7 @@ function showPage(name) {
   if (pg) pg.classList.add('active');
   const tab = document.querySelector(`[data-page="${name}"]`);
   if (tab) tab.classList.add('active');
-  if (name === 'settings') { renderGroupList(); renderAlgoPage(); loadDisplayPrefs(); }
+  if (name === 'settings') { renderGroupList(); renderAlgoPage(); loadDisplayPrefs(); loadCapitalTable(); }
   if (name === 'algos') { renderGroupList(); renderAlgoPage(); }
   if (name === 'compare') { populateCompareSelects(); }
 }
@@ -2182,8 +2221,8 @@ function renderDashTable(tr, mMap) {
             <span class="badge b-gray" style="font-size:0.6rem;">${gAlgos.length} algos</span>
           </div>
         </td>`;
-      h+=months.map(m=>{ const v=gMonthTot[m]; return `<td class="${v>=0?'pnl-pos':'pnl-neg'}" style="font-weight:700;">${fmt(v)}</td>`; }).join('');
-      h+=`<td class="${gTotal>=0?'pnl-pos':'pnl-neg'}" style="font-weight:800;font-size:0.88rem;">${fmt(gTotal)}</td></tr>`;
+      h+=months.map(m=>{ const v=gMonthTot[m]; return `<td style="font-weight:700;">${fmtRpt(v,m)}</td>`; }).join('');
+      h+=`<td style="font-weight:800;font-size:0.88rem;">${fmtRpt(gTotal)}</td></tr>`;
 
       // ── Individual algo rows ──
       for (const a of gAlgos) {
@@ -2192,8 +2231,8 @@ function renderDashTable(tr, mMap) {
           <td style="padding-left:52px;max-width:260px;overflow:hidden;text-overflow:ellipsis;color:var(--text1);font-size:0.75rem;" title="${a}">
             <span style="color:${g.color};margin-right:5px;">└</span>${a}
           </td>`;
-        h+=months.map(m=>{ const v=algoM[a]?.[m]??null; return v===null?`<td style="color:var(--text3);">—</td>`:`<td class="${v>=0?'pnl-pos':'pnl-neg'}">${fmt(v)}</td>`; }).join('');
-        h+=`<td class="${tot>=0?'pnl-pos':'pnl-neg'}" style="font-weight:500;">${fmt(tot)}</td></tr>`;
+        h+=months.map(m=>{ const v=algoM[a]?.[m]??null; return v===null?`<td style="color:var(--text3);">—</td>`:`<td>${fmtRpt(v,m)}</td>`; }).join('');
+        h+=`<td style="font-weight:500;">${fmtRpt(tot)}</td></tr>`;
       }
     }
     h+=`<tr><td colspan="${months.length+2}" style="padding:2px;background:var(--border);"></td></tr>`;
@@ -2206,15 +2245,15 @@ function renderDashTable(tr, mMap) {
     for(const a of ungrouped){
       const tot=Object.values(algoM[a]||{}).reduce((s,v)=>s+v,0);
       h+=`<tr><td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;font-weight:500;color:var(--text0)" title="${a}">${a}</td>`;
-      h+=months.map(m=>{ const v=algoM[a]?.[m]??null; return v===null?`<td style="color:var(--text3)">—</td>`:`<td class="${v>=0?'pnl-pos':'pnl-neg'}">${fmt(v)}</td>`; }).join('');
-      h+=`<td class="${tot>=0?'pnl-pos':'pnl-neg'}" style="font-weight:700">${fmt(tot)}</td></tr>`;
+      h+=months.map(m=>{ const v=algoM[a]?.[m]??null; return v===null?`<td style="color:var(--text3)">—</td>`:`<td>${fmtRpt(v,m)}</td>`; }).join('');
+      h+=`<td style="font-weight:700">${fmtRpt(tot)}</td></tr>`;
     }
   }
 
   const grandTotal=Object.values(mMap).reduce((s,v)=>s+v,0);
   h+=`<tr style="background:var(--bg3);"><td style="font-weight:700;font-family:var(--display)">GRAND TOTAL</td>`;
-  h+=months.map(m=>{ const v=mMap[m]||0; return `<td class="${v>=0?'pnl-pos':'pnl-neg'}" style="font-weight:700">${fmt(v)}</td>`; }).join('');
-  h+=`<td class="${grandTotal>=0?'pnl-pos':'pnl-neg'}" style="font-weight:700">${fmt(grandTotal)}</td></tr>`;
+  h+=months.map(m=>{ const v=mMap[m]||0; return `<td style="font-weight:700">${fmtRpt(v,m)}</td>`; }).join('');
+  h+=`<td style="font-weight:700">${fmtRpt(grandTotal)}</td></tr>`;
   h+='</tbody></table>';
   el('dash-table').innerHTML=h;
 }
@@ -2489,6 +2528,63 @@ async function loadDailyQuote() {
 // ════════════════════════════════════════════════════
 //  DISPLAY PREFERENCES
 // ════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════
+//  TOTAL CAPITAL TABLE
+// ════════════════════════════════════════════════════
+let capitalData = {}; // { 'YYYY-MM': amount }
+
+function generateCapitalMonths() {
+  const months = [];
+  let d = new Date(2026, 0, 1); // Jan 2026
+  const end = new Date(2036, 0, 1); // Jan 2036
+  while (d <= end) {
+    months.push(d.toISOString().slice(0,7)); // YYYY-MM
+    d.setMonth(d.getMonth() + 1);
+  }
+  return months;
+}
+
+function buildCapitalTable() {
+  const tbody = document.getElementById('capital-table-body');
+  if (!tbody) return;
+  const months = generateCapitalMonths();
+  tbody.innerHTML = months.map(m => {
+    const label = new Date(m + '-01').toLocaleDateString('en-IN', { month:'short', year:'numeric' });
+    const val = capitalData[m] || '';
+    return `<tr style="border-bottom:1px solid var(--border);">
+      <td style="padding:7px 12px;color:var(--text1);font-weight:500;">${label}</td>
+      <td style="padding:7px 12px;text-align:right;">
+        <input type="number" id="cap-${m}" value="${val}" placeholder="0"
+          style="width:140px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-size:0.82rem;text-align:right;outline:none;"
+          onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--border)'">
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+async function saveCapitalTable() {
+  const months = generateCapitalMonths();
+  const newData = {};
+  months.forEach(m => {
+    const inp = document.getElementById('cap-' + m);
+    if (inp && inp.value) newData[m] = parseFloat(inp.value) || 0;
+  });
+  capitalData = newData;
+  if (db) await db.ref('journal/capital').set(newData);
+  toast('✓ Capital saved', 'success');
+}
+
+function loadCapitalTable() {
+  if (db) {
+    db.ref('journal/capital').on('value', snap => {
+      capitalData = snap.val() || {};
+      buildCapitalTable();
+    });
+  } else {
+    buildCapitalTable();
+  }
+}
+
 function saveDisplayPrefs() {
   const showUnentered = document.getElementById('show-unentered')?.checked ?? true;
   const label = document.getElementById('unentered-label');
@@ -2922,6 +3018,20 @@ function renderEditedValue(field, val) {
 //  FORMAT HELPERS
 // ════════════════════════════════════════════════════
 function fmt(v) { if(v==null) return '—'; const n=parseFloat(v); if(isNaN(n)) return '—'; return (n<0?'-₹':'₹')+Math.abs(n).toLocaleString('en-IN',{maximumFractionDigits:0}); }
+
+// Report formatter — blue/dark colors + optional % 
+function fmtRpt(v, month) {
+  if (v == null) return '—';
+  const n = parseFloat(v); if (isNaN(n)) return '—';
+  const cls = n >= 0 ? 'rpt-pos' : 'rpt-neg';
+  const amt = (n<0?'-₹':'₹') + Math.abs(n).toLocaleString('en-IN', {maximumFractionDigits:0});
+  let pct = '';
+  if (month && capitalData[month] && capitalData[month] > 0) {
+    const p = (n / capitalData[month] * 100).toFixed(1);
+    pct = `<span class="rpt-pct">(${p}%)</span>`;
+  }
+  return `<span class="${cls}">${amt}${pct}</span>`;
+}
 function fmtMonth(ym){ if(!ym)return'—'; const[y,m]=ym.split('-'); return ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][+m-1]+' '+y; }
 function fmtDate(d){ if(!d)return'—'; return new Date(d+'T00:00:00').toLocaleDateString('en-IN',{weekday:'short',day:'numeric',month:'short',year:'numeric'}); }
 function fmtDT(iso){ if(!iso)return''; return new Date(iso).toLocaleString('en-IN',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}); }
