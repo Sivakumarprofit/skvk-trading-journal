@@ -2,6 +2,10 @@
 ==========================================================
   SKVK TRADING JOURNAL — VERSION HISTORY
 ==========================================================
+  v13.21| 2026-06-04 | Fix: Algo Management now shows groups and algos in Settings page,
+         |            | renderAlgoPage and renderGroupList render into both locations,
+         |            | Settings page fully functional — no need to visit old Algo tab
+  ──────────────────────────────────────────────────────
   v13.20| 2026-06-04 | Cancelled trades saved to Firebase with status:CANCELLED,
          |            | Cancelled trades shown in grey/muted style in journal,
          |            | Settings tab replaces Admin + Algo Settings (merged),
@@ -206,7 +210,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>SKVK Trading Journal v13.20</title>
+<title>SKVK Trading Journal v13.21</title>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -975,7 +979,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
 <div id="topbar">
   <div class="brand">
     <span class="brand-dot"></span>
-    SKVK Trading Journal <span style="font-size:0.85rem;background:#1a73e8;color:#fff;padding:3px 10px;border-radius:10px;font-weight:700;margin-left:6px;vertical-align:middle;">v13.20</span>
+    SKVK Trading Journal <span style="font-size:0.85rem;background:#1a73e8;color:#fff;padding:3px 10px;border-radius:10px;font-weight:700;margin-left:6px;vertical-align:middle;">v13.21</span>
   </div>
   <nav class="nav-tabs">
     <button class="nav-tab active" onclick="showPage('journal')"    data-page="journal">📋 <span class="tl">Journal</span></button>
@@ -1202,7 +1206,27 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
         <span style="font-size:0.95rem;font-weight:700;color:var(--text0);">Algo Management</span>
       </div>
       <div id="settings-algo-content">
-        <!-- Algo content injected here -->
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+          <div>
+            <div style="font-size:0.85rem;font-weight:700;color:var(--text0);">Algo Groups</div>
+            <div style="font-size:0.72rem;color:var(--text2);margin-top:2px;">Group multiple algos · combined P&L in Reports</div>
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="openAddGroupModal()">+ New Group</button>
+        </div>
+        <div id="settings-group-list">
+          <div style="color:var(--text3);font-size:0.78rem;padding:6px 0;">No groups yet</div>
+        </div>
+        <hr style="border:none;border-top:1px solid var(--border);margin:16px 0;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+          <div>
+            <div style="font-size:0.85rem;font-weight:700;color:var(--text0);">Individual Algos</div>
+            <div style="font-size:0.72rem;color:var(--text2);margin-top:2px;">Auto-created on upload · edit metadata here</div>
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="openAddAlgoModal()">+ Add Algo</button>
+        </div>
+        <div id="settings-algo-list">
+          <div class="loading"><div class="spinner"></div> Loading…</div>
+        </div>
       </div>
     </div>
 
@@ -2646,8 +2670,9 @@ function clearFilters() {
 // ════════════════════════════════════════════════════
 function renderAlgoPage() {
   const algos=Object.values(algoMeta).sort((a,b)=>(a.name||'').localeCompare(b.name||''));
-  if(!algos.length){ el('algo-list').innerHTML=`<div class="empty-state"><span class="eicon">⚙️</span><h3>No algos yet</h3><p>They are auto-created when you upload CSV reports</p></div>`; return; }
-  el('algo-list').innerHTML=algos.map(a=>`
+  const html = !algos.length
+    ? `<div class="empty-state"><span class="eicon">⚙️</span><h3>No algos yet</h3><p>They are auto-created when you upload CSV reports</p></div>`
+    : algos.map(a=>`
     <div class="algo-item">
       <div class="algo-dot" style="background:${a.color||'#6b7280'}"></div>
       <div style="flex:1">
@@ -2657,6 +2682,10 @@ function renderAlgoPage() {
       <button class="btn btn-ghost btn-sm" onclick="editAlgo('${a.name}')">Edit</button>
       <button class="btn btn-danger btn-sm" onclick="delAlgo('${a.name}')">Delete</button>
     </div>`).join('');
+  // Render into page-algos (legacy)
+  if (document.getElementById('algo-list')) el('algo-list').innerHTML = html;
+  // Render into settings page
+  if (document.getElementById('settings-algo-list')) document.getElementById('settings-algo-list').innerHTML = html;
 }
 
 function populateAlgoDropdowns() {
@@ -2884,14 +2913,9 @@ function listenGroups() {
 }
 
 function renderGroupList() {
-  const container = el('group-list');
-  if (!container) return;
   const groups = Object.values(algoGroups);
-  if (!groups.length) {
-    container.innerHTML = `<div style="color:var(--text3);font-size:0.78rem;padding:10px 0;">No groups yet — create one to combine algo P&L in Reports</div>`;
-    return;
-  }
-  container.innerHTML = groups.map(g => `
+  const emptyHtml = `<div style="color:var(--text3);font-size:0.78rem;padding:10px 0;">No groups yet — create one to combine algo P&L in Reports</div>`;
+  const html = !groups.length ? emptyHtml : groups.map(g => `
     <div class="group-card">
       <div class="group-header">
         <div class="group-color-bar" style="background:${g.color||'#1a73e8'};min-height:36px;"></div>
@@ -2912,6 +2936,12 @@ function renderGroupList() {
         ${!(g.algos||[]).length ? `<span style="color:var(--text3);font-size:0.75rem;">No algos assigned yet — click Edit</span>` : ''}
       </div>
     </div>`).join('');
+  // Render into page-algos (legacy)
+  const legacyContainer = document.getElementById('group-list');
+  if (legacyContainer) legacyContainer.innerHTML = html;
+  // Render into settings page
+  const settingsContainer = document.getElementById('settings-group-list');
+  if (settingsContainer) settingsContainer.innerHTML = html;
 }
 
 function openAddGroupModal() {
