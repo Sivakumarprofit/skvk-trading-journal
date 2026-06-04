@@ -2,6 +2,11 @@
 ==========================================================
   SKVK TRADING JOURNAL — VERSION HISTORY
 ==========================================================
+  v13.19| 2026-06-03 | Archive feature: 📦 button on each trade row,
+         |            | Archived rows turn dark orange, excluded from all P&L,
+         |            | Trade stays in Firebase with archived:true flag,
+         |            | Click again to unarchive — fully toggleable
+  ──────────────────────────────────────────────────────
   v13.18| 2026-06-03 | Fix: Client ID tabs now correctly auto-select first client,
          |            | Fix: buildClientIdTabs runs before renderJournal in refreshAll,
          |            | Fix: Quote uses CORS proxy + day-based fallback (no stuck loading),
@@ -193,7 +198,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>SKVK Trading Journal v13.18</title>
+<title>SKVK Trading Journal v13.19</title>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -435,6 +440,22 @@ tbody tr:hover td { background: #fafbff; }
 
 .trade-row.buy-row td:first-child { border-left: 3px solid var(--green); }
 .trade-row.sell-row td:first-child { border-left: 3px solid var(--red); }
+
+/* Archived trade row */
+.trade-row.archived-row td {
+  background: #fff7ed !important;
+  color: #c2410c !important;
+  opacity: 0.75;
+}
+.trade-row.archived-row td span,
+.trade-row.archived-row td a,
+.trade-row.archived-row .pnl-pos,
+.trade-row.archived-row .pnl-neg {
+  color: #c2410c !important;
+}
+.trade-row.archived-row .badge {
+  opacity: 0.6;
+}
 
 .delta-row { display: none; }
 .delta-row.visible { display: table-row; }
@@ -932,7 +953,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
 <div id="topbar">
   <div class="brand">
     <span class="brand-dot"></span>
-    SKVK Trading Journal <span style="font-size:0.85rem;background:#1a73e8;color:#fff;padding:3px 10px;border-radius:10px;font-weight:700;margin-left:6px;vertical-align:middle;">v13.18</span>
+    SKVK Trading Journal <span style="font-size:0.85rem;background:#1a73e8;color:#fff;padding:3px 10px;border-radius:10px;font-weight:700;margin-left:6px;vertical-align:middle;">v13.19</span>
   </div>
   <nav class="nav-tabs">
     <button class="nav-tab active" onclick="showPage('journal')"    data-page="journal">📋 <span class="tl">Journal</span></button>
@@ -1919,8 +1940,8 @@ let ci=0; function nextColor(){return COLORS[ci++%COLORS.length];}
 //  DASHBOARD
 // ════════════════════════════════════════════════════
 function renderDashboard() {
-  const tr = allTrades.filter(t=>(t.entry_date||'').startsWith(currentYear));
-  const total = tr.reduce((s,t)=>s+(t.pnl||0),0);
+  const tr = allTrades.filter(t=>!t.archived && (t.entry_date||'').startsWith(currentYear));
+  const total = tr.filter(t=>!t.archived).reduce((s,t)=>s+(t.pnl||0),0);
   const wr = tr.length ? Math.round(tr.filter(t=>(t.pnl||0)>0).length/tr.length*100) : 0;
 
   // Monthly
@@ -2237,7 +2258,7 @@ function renderJournal() {
   let html='';
   Object.keys(byDate).sort().reverse().forEach(date=>{
     const dKeys=byDate[date];
-    const dPnl=Object.values(dKeys).flat().reduce((s,t)=>s+(t.pnl||0),0);
+    const dPnl=Object.values(dKeys).flat().filter(t=>!t.archived).reduce((s,t)=>s+(t.pnl||0),0);
     const dId='d'+date.replace(/-/g,'');
     const totalLegs=Object.values(dKeys).flat().length;
     const totalGroups=Object.keys(dKeys).length;
@@ -2264,7 +2285,7 @@ function renderJournal() {
     Object.keys(dKeys).forEach(key=>{
       const legs=dKeys[key];
       const [algoName, broker, clientId] = key.split('|||');
-      const aPnl=legs.reduce((s,t)=>s+(t.pnl||0),0);
+      const aPnl=legs.filter(t=>!t.archived).reduce((s,t)=>s+(t.pnl||0),0);
       const dayN=dayMap[key]?.[date]||1;
       const aId=dId+'_'+safeKey(key);
       const clientLabel = clientId ? `<span class="badge b-gray" style="font-size:0.65rem;">${clientId}</span>` : '';
@@ -2286,7 +2307,7 @@ function renderJournal() {
 
       legs.forEach(t=>{
         const h = t.hash||'';
-        html+=`<tr class="trade-row ${t.action==='BUY'?'buy-row':'sell-row'}" data-group="${aId}" ${t.is_re_entry?'style="opacity:0.7"':''}>
+        html+=`<tr class="trade-row ${t.action==='BUY'?'buy-row':'sell-row'}${t.archived?' archived-row':''}" data-group="${aId}" ${t.is_re_entry&&!t.archived?'style="opacity:0.7"':''}>
             <td>${t.is_re_entry?`<span class="badge b-amber">RE-ENTRY</span>`:''}</td>
             <td style="color:var(--text2);font-size:0.72rem;max-width:180px;overflow:hidden;text-overflow:ellipsis;" title="${algoName}">${algoName.length>22?algoName.slice(0,20)+'…':algoName}</td>
             <td><span class="badge b-gray">${t.broker}</span></td>
@@ -2312,9 +2333,12 @@ function renderJournal() {
               <span class="editable" onclick="editCell(this,'${h}','exit_date','date')">${t.exit_date||'—'}</span>
               &nbsp;${t.entry_time||''}
             </td>
-            <td style="text-align:center;">
+            <td style="text-align:center;white-space:nowrap;">
+              <button onclick="archiveTrade('${h}',${t.archived?'true':'false'})" title="${t.archived?'Unarchive trade':'Archive trade'}"
+                style="background:none;border:none;cursor:pointer;color:${t.archived?'#c2410c':'#d1d5db'};font-size:0.85rem;padding:2px 3px;border-radius:4px;transition:color 0.15s;"
+                onmouseover="this.style.color='#c2410c'" onmouseout="this.style.color='${t.archived?'#c2410c':'#d1d5db'}'">📦</button>
               <button onclick="deleteTrade('${h}')" title="Delete trade"
-                style="background:none;border:none;cursor:pointer;color:#d1d5db;font-size:0.85rem;padding:2px 4px;border-radius:4px;transition:color 0.15s;"
+                style="background:none;border:none;cursor:pointer;color:#d1d5db;font-size:0.85rem;padding:2px 3px;border-radius:4px;transition:color 0.15s;"
                 onmouseover="this.style.color='var(--red)'" onmouseout="this.style.color='#d1d5db'">🗑</button>
             </td>
           </tr>`;
@@ -2372,6 +2396,17 @@ async function loadDailyQuote() {
   const html = `"${pick.q}" <span style="color:var(--text3);font-style:normal;font-weight:600;">— ${pick.a}</span>`;
   el2.innerHTML = html;
   localStorage.setItem('daily-quote-' + today, html);
+}
+
+async function archiveTrade(hash, isArchived) {
+  const newState = !isArchived;
+  if (db) {
+    await db.ref('journal/trades/' + hash + '/archived').set(newState);
+  } else {
+    const t = allTrades.find(x => x.hash === hash);
+    if (t) { t.archived = newState; refreshAll(); }
+  }
+  toast(newState ? '📦 Trade archived' : '✅ Trade unarchived', 'success');
 }
 
 async function deleteTrade(hash) {
