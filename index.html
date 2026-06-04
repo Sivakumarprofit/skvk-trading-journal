@@ -2,6 +2,11 @@
 ==========================================================
   SKVK TRADING JOURNAL — VERSION HISTORY
 ==========================================================
+  v13.25| 2026-06-04 | Total Capital: compact Year x Month grid (11 rows instead of 121),
+         |            | Settings: Account Nicknames section (after Display Preferences),
+         |            | Nicknames saved to Firebase — client tabs show Nickname (ID),
+         |            | Auto-detects client IDs from trades, no manual entry needed
+  ──────────────────────────────────────────────────────
   v13.24| 2026-06-04 | Fix: Category Total now uses blue/dark colors (was still red/green),
          |            | Fix: % P&L now shows after capital loads from Firebase,
          |            | Total Capital section moved to last-but-one in Settings
@@ -223,7 +228,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>SKVK Trading Journal v13.24</title>
+<title>SKVK Trading Journal v13.25</title>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -1011,7 +1016,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
 <div id="topbar">
   <div class="brand">
     <span class="brand-dot"></span>
-    SKVK Trading Journal <span style="font-size:0.85rem;background:#1a73e8;color:#fff;padding:3px 10px;border-radius:10px;font-weight:700;margin-left:6px;vertical-align:middle;">v13.24</span>
+    SKVK Trading Journal <span style="font-size:0.85rem;background:#1a73e8;color:#fff;padding:3px 10px;border-radius:10px;font-weight:700;margin-left:6px;vertical-align:middle;">v13.25</span>
   </div>
   <nav class="nav-tabs">
     <button class="nav-tab active" onclick="showPage('journal')"    data-page="journal">📋 <span class="tl">Journal</span></button>
@@ -1231,6 +1236,23 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
       </div>
     </div>
 
+    <!-- ── Account Nicknames ── -->
+    <div style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:22px;box-shadow:var(--shadow-sm);">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span style="font-size:1.3rem;">🏷️</span>
+          <div>
+            <div style="font-size:0.95rem;font-weight:700;color:var(--text0);">Account Nicknames</div>
+            <div style="font-size:0.72rem;color:var(--text2);margin-top:2px;">Friendly names for client IDs — shown in Journal tabs</div>
+          </div>
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="saveNicknames()">💾 Save</button>
+      </div>
+      <div id="nickname-list">
+        <div style="color:var(--text3);font-size:0.8rem;">Upload trades first — client IDs will appear here automatically</div>
+      </div>
+    </div>
+
     <!-- ── Algo Management ── -->
     <div style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:22px;box-shadow:var(--shadow-sm);">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
@@ -1274,17 +1296,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
         </div>
         <button class="btn btn-primary btn-sm" onclick="saveCapitalTable()">💾 Save</button>
       </div>
-      <div style="overflow-x:auto;">
-        <table style="width:100%;border-collapse:collapse;font-size:0.82rem;" id="capital-table">
-          <thead>
-            <tr style="background:var(--bg2);">
-              <th style="padding:8px 12px;text-align:left;font-weight:600;color:var(--text1);border-bottom:1px solid var(--border);">Month</th>
-              <th style="padding:8px 12px;text-align:right;font-weight:600;color:var(--text1);border-bottom:1px solid var(--border);">Capital (₹)</th>
-            </tr>
-          </thead>
-          <tbody id="capital-table-body"></tbody>
-        </table>
-      </div>
+      <div id="capital-grid" style="overflow-x:auto;"></div>
     </div>
 
 
@@ -1768,7 +1780,12 @@ function startListeners() {
   db.ref('journal/capital').on('value', snap => {
     capitalData = snap.val() || {};
     buildCapitalTable();
-    renderDashboard(); // re-render to show % P&L
+    renderDashboard();
+  });
+  db.ref('journal/nicknames').on('value', snap => {
+    accountNicknames = snap.val() || {};
+    buildClientIdTabs();
+    buildNicknameList();
   });
   // Listen for last updated tag
   db.ref('journal/last_updated').on('value', snap => {
@@ -1804,7 +1821,7 @@ function showPage(name) {
   if (pg) pg.classList.add('active');
   const tab = document.querySelector(`[data-page="${name}"]`);
   if (tab) tab.classList.add('active');
-  if (name === 'settings') { renderGroupList(); renderAlgoPage(); loadDisplayPrefs(); loadCapitalTable(); }
+  if (name === 'settings') { renderGroupList(); renderAlgoPage(); loadDisplayPrefs(); loadCapitalTable(); buildNicknameList(); }
   if (name === 'algos') { renderGroupList(); renderAlgoPage(); }
   if (name === 'compare') { populateCompareSelects(); }
 }
@@ -2329,7 +2346,6 @@ function buildClientIdTabs() {
   const clientIds = [...new Set(allTrades.map(t => t.client_id).filter(Boolean))].sort();
   const container = document.getElementById('client-id-tabs');
   if (!container) return;
-  // Auto-select first client if none selected or current selection not in list
   if ((!selectedClientId || !clientIds.includes(selectedClientId)) && clientIds.length > 0) {
     selectedClientId = clientIds[0];
   }
@@ -2339,7 +2355,7 @@ function buildClientIdTabs() {
     div.className = 'underlying-tab' + (selectedClientId === cid ? ' active' : '');
     div.setAttribute('data-clientid', cid);
     div.onclick = function() { setClientId(this, cid); };
-    div.textContent = cid;
+    div.textContent = getClientLabel(cid);
     container.appendChild(div);
   });
 }
@@ -2550,31 +2566,92 @@ function generateCapitalMonths() {
   return months;
 }
 
+// ════════════════════════════════════════════════════
+//  ACCOUNT NICKNAMES
+// ════════════════════════════════════════════════════
+let accountNicknames = {}; // { 'Z71621': 'Sivakumar' }
+
+function buildNicknameList() {
+  const container = document.getElementById('nickname-list');
+  if (!container) return;
+  const clientIds = [...new Set(allTrades.map(t => t.client_id).filter(Boolean))].sort();
+  if (!clientIds.length) {
+    container.innerHTML = `<div style="color:var(--text3);font-size:0.8rem;">Upload trades first — client IDs will appear here automatically</div>`;
+    return;
+  }
+  container.innerHTML = clientIds.map(cid => `
+    <div style="display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid var(--border);">
+      <span style="font-size:0.82rem;font-weight:600;color:var(--text2);min-width:80px;">${cid}</span>
+      <span style="color:var(--text3);font-size:0.8rem;">→</span>
+      <input type="text" id="nick-${cid}" value="${accountNicknames[cid]||''}" placeholder="Enter nickname…"
+        style="flex:1;padding:5px 10px;border:1px solid var(--border);border-radius:6px;font-size:0.82rem;outline:none;"
+        onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--border)'">
+      <span style="font-size:0.72rem;color:var(--text3);">Tab shows: <strong>${accountNicknames[cid]||cid} (${cid})</strong></span>
+    </div>`).join('');
+}
+
+async function saveNicknames() {
+  const clientIds = [...new Set(allTrades.map(t => t.client_id).filter(Boolean))].sort();
+  const newData = {};
+  clientIds.forEach(cid => {
+    const inp = document.getElementById('nick-' + cid);
+    if (inp && inp.value.trim()) newData[cid] = inp.value.trim();
+  });
+  accountNicknames = newData;
+  if (db) await db.ref('journal/nicknames').set(newData);
+  buildClientIdTabs(); // refresh tabs with new nicknames
+  buildNicknameList(); // refresh preview
+  toast('✓ Nicknames saved', 'success');
+}
+
+function getClientLabel(cid) {
+  const nick = accountNicknames[cid];
+  return nick ? `${nick} (${cid})` : cid;
+}
+
 function buildCapitalTable() {
-  const tbody = document.getElementById('capital-table-body');
-  if (!tbody) return;
-  const months = generateCapitalMonths();
-  tbody.innerHTML = months.map(m => {
-    const label = new Date(m + '-01').toLocaleDateString('en-IN', { month:'short', year:'numeric' });
-    const val = capitalData[m] || '';
-    return `<tr style="border-bottom:1px solid var(--border);">
-      <td style="padding:7px 12px;color:var(--text1);font-weight:500;">${label}</td>
-      <td style="padding:7px 12px;text-align:right;">
-        <input type="number" id="cap-${m}" value="${val}" placeholder="0"
-          style="width:140px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-size:0.82rem;text-align:right;outline:none;"
-          onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--border)'">
-      </td>
-    </tr>`;
-  }).join('');
+  const grid = document.getElementById('capital-grid');
+  if (!grid) return;
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const years = [];
+  for (let y = 2026; y <= 2036; y++) years.push(y);
+
+  let html = `<table style="border-collapse:collapse;font-size:0.78rem;width:100%;">
+    <thead>
+      <tr style="background:var(--bg2);">
+        <th style="padding:6px 10px;text-align:left;font-weight:700;color:var(--text1);border:1px solid var(--border);min-width:52px;">Year</th>
+        ${months.map(m=>`<th style="padding:6px 8px;text-align:center;font-weight:600;color:var(--text1);border:1px solid var(--border);min-width:80px;">${m}</th>`).join('')}
+      </tr>
+    </thead>
+    <tbody>
+    ${years.map(y=>`
+      <tr>
+        <td style="padding:5px 10px;font-weight:700;color:var(--text0);background:var(--bg2);border:1px solid var(--border);">${y}</td>
+        ${months.map((m,i)=>{
+          const key = `${y}-${String(i+1).padStart(2,'0')}`;
+          const val = capitalData[key] || '';
+          return `<td style="padding:3px 4px;border:1px solid var(--border);">
+            <input type="number" id="cap-${key}" value="${val}" placeholder="—"
+              style="width:100%;padding:3px 5px;border:1px solid transparent;border-radius:4px;font-size:0.75rem;text-align:right;outline:none;background:transparent;"
+              onfocus="this.style.borderColor='var(--blue)';this.style.background='#fff'"
+              onblur="this.style.borderColor='transparent';this.style.background='transparent'">
+          </td>`;
+        }).join('')}
+      </tr>`).join('')}
+    </tbody>
+  </table>`;
+  grid.innerHTML = html;
 }
 
 async function saveCapitalTable() {
-  const months = generateCapitalMonths();
   const newData = {};
-  months.forEach(m => {
-    const inp = document.getElementById('cap-' + m);
-    if (inp && inp.value) newData[m] = parseFloat(inp.value) || 0;
-  });
+  for (let y = 2026; y <= 2036; y++) {
+    for (let m = 1; m <= 12; m++) {
+      const key = `${y}-${String(m).padStart(2,'0')}`;
+      const inp = document.getElementById('cap-' + key);
+      if (inp && inp.value) newData[key] = parseFloat(inp.value) || 0;
+    }
+  }
   capitalData = newData;
   if (db) await db.ref('journal/capital').set(newData);
   toast('✓ Capital saved', 'success');
