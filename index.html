@@ -2,6 +2,10 @@
 ==========================================================
   SKVK TRADING JOURNAL — VERSION HISTORY
 ==========================================================
+  v13.22| 2026-06-04 | Zebra striping on trade rows (alternating white/light grey),
+         |            | Full row hover highlight in blue tint for readability,
+         |            | Algo sort order: NF 1DTE→0DTE, BNF 1DTE→0DTE, SX 1DTE→0DTE, others
+  ──────────────────────────────────────────────────────
   v13.21| 2026-06-04 | Fix: Algo Management now shows groups and algos in Settings page,
          |            | renderAlgoPage and renderGroupList render into both locations,
          |            | Settings page fully functional — no need to visit old Algo tab
@@ -210,7 +214,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>SKVK Trading Journal v13.21</title>
+<title>SKVK Trading Journal v13.22</title>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -452,6 +456,20 @@ tbody tr:hover td { background: #fafbff; }
 
 .trade-row.buy-row td:first-child { border-left: 3px solid var(--green); }
 .trade-row.sell-row td:first-child { border-left: 3px solid var(--red); }
+
+/* Zebra striping */
+.trade-row:nth-child(even) td { background: #f8fafc; }
+.trade-row:nth-child(odd) td  { background: #ffffff; }
+
+/* Hover highlight — entire row */
+.trade-row:hover td {
+  background: #eef4ff !important;
+  transition: background 0.1s;
+}
+
+/* Keep archived/cancelled styles on top */
+.trade-row.archived-row:hover td  { background: #ffe8d6 !important; }
+.trade-row.cancelled-row:hover td { background: #f1f3f5 !important; }
 
 /* Archived trade row */
 .trade-row.archived-row td {
@@ -979,7 +997,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
 <div id="topbar">
   <div class="brand">
     <span class="brand-dot"></span>
-    SKVK Trading Journal <span style="font-size:0.85rem;background:#1a73e8;color:#fff;padding:3px 10px;border-radius:10px;font-weight:700;margin-left:6px;vertical-align:middle;">v13.21</span>
+    SKVK Trading Journal <span style="font-size:0.85rem;background:#1a73e8;color:#fff;padding:3px 10px;border-radius:10px;font-weight:700;margin-left:6px;vertical-align:middle;">v13.22</span>
   </div>
   <nav class="nav-tabs">
     <button class="nav-tab active" onclick="showPage('journal')"    data-page="journal">📋 <span class="tl">Journal</span></button>
@@ -2348,7 +2366,11 @@ function renderJournal() {
       </tr>
     </thead><tbody id="${dId}">`;
 
-    Object.keys(dKeys).forEach(key=>{
+    Object.keys(dKeys).sort((a,b) => {
+      const [algoA] = a.split('|||');
+      const [algoB] = b.split('|||');
+      return algoSortKey(algoA).localeCompare(algoSortKey(algoB));
+    }).forEach(key=>{
       const legs=dKeys[key];
       const [algoName, broker, clientId] = key.split('|||');
       const aPnl=legs.filter(t=>!t.archived).reduce((s,t)=>s+(t.pnl||0),0);
@@ -2510,6 +2532,24 @@ async function deleteTrade(hash) {
     refreshAll();
   }
   toast('Trade deleted', 'success');
+}
+
+// ════════════════════════════════════════════════════
+//  ALGO SORT ORDER
+// ════════════════════════════════════════════════════
+function algoSortKey(algoName) {
+  const a = (algoName || '').toUpperCase();
+  // Prefix group: NF=0, BNF=1, SX=2, others=3
+  let prefix = 3;
+  if (a.startsWith('NF_') && !a.startsWith('BNF_')) prefix = 0;
+  else if (a.startsWith('BNF_')) prefix = 1;
+  else if (a.startsWith('SX_')) prefix = 2;
+  // DTE order within prefix: 1DTE=0, 0DTE=1, 2DTE=2, no DTE=3
+  let dte = 3;
+  if (a.includes('1DTE')) dte = 0;
+  else if (a.includes('0DTE')) dte = 1;
+  else if (a.includes('2DTE')) dte = 2;
+  return `${prefix}_${dte}_${algoName}`;
 }
 
 function exitBadge(r) {
