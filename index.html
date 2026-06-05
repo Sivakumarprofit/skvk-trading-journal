@@ -2,6 +2,11 @@
 ==========================================================
   SKVK TRADING JOURNAL — VERSION HISTORY
 ==========================================================
+  v13.28| 2026-06-05 | Fixed column alignment using table-layout:fixed,
+         |            | Category header no longer uses colspan — proper column alignment,
+         |            | Removed duplicate Category Total from header row,
+         |            | Grand Total shows avg capital % based on year average
+  ──────────────────────────────────────────────────────
   v13.27| 2026-06-05 | Broker P&L: individual Broker+ClientID rows with nicknames,
          |            | Grand Total row hover stays navy (no longer turns white)
   ──────────────────────────────────────────────────────
@@ -236,7 +241,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>SKVK Trading Journal v13.27</title>
+<title>SKVK Trading Journal v13.28</title>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -1026,7 +1031,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
 <div id="topbar">
   <div class="brand">
     <span class="brand-dot"></span>
-    SKVK Trading Journal <span style="font-size:0.85rem;background:#1a73e8;color:#fff;padding:3px 10px;border-radius:10px;font-weight:700;margin-left:6px;vertical-align:middle;">v13.27</span>
+    SKVK Trading Journal <span style="font-size:0.85rem;background:#1a73e8;color:#fff;padding:3px 10px;border-radius:10px;font-weight:700;margin-left:6px;vertical-align:middle;">v13.28</span>
   </div>
   <nav class="nav-tabs">
     <button class="nav-tab active" onclick="showPage('journal')"    data-page="journal">📋 <span class="tl">Journal</span></button>
@@ -2185,7 +2190,19 @@ function renderDashTable(tr, mMap) {
   const algoM={};
   tr.forEach(t=>{ const ym=(t.entry_date||'').slice(0,7); if(!ym) return; if(!algoM[t.algo_name])algoM[t.algo_name]={}; algoM[t.algo_name][ym]=(algoM[t.algo_name][ym]||0)+(t.pnl||0); });
 
-  let h=`<table><thead><tr><th>Algo / Strategy</th>${months.map(m=>`<th>${fmtMonth(m)}</th>`).join('')}<th>Total</th></tr></thead><tbody>`;
+  // Column widths: first col wide, rest equal
+  const colStyle = `padding:8px 14px;text-align:right;`;
+  let h=`<table style="table-layout:fixed;width:100%;">
+    <colgroup>
+      <col style="width:35%;">
+      ${months.map(()=>`<col style="width:${Math.floor(50/months.length)}%;">`).join('')}
+      <col style="width:12%;">
+    </colgroup>
+    <thead><tr>
+      <th style="padding:10px 14px;text-align:left;">Algo / Strategy</th>
+      ${months.map(m=>`<th style="padding:10px 14px;text-align:right;">${fmtMonth(m)}</th>`).join('')}
+      <th style="padding:10px 14px;text-align:right;">Total</th>
+    </tr></thead><tbody>`;
 
   // ── Group rows organized by Category — collapsible ──
   const groups = Object.values(algoGroups);
@@ -2210,36 +2227,17 @@ function renderDashTable(tr, mMap) {
     const catLabel = cat === '__uncategorized__' ? 'Other Groups' : cat;
     const catId = 'cat_' + catIdx++;
 
-    // Category totals
-    const catMonthTot = {};
-    months.forEach(m => {
-      catMonthTot[m] = catGroups.reduce((s, g) => {
-        const gAlgos = (g.algos||[]).filter(a => algos.includes(a));
-        return s + gAlgos.reduce((ss,a) => ss+(algoM[a]?.[m]||0), 0);
-      }, 0);
-    });
-    const catTotal = Object.values(catMonthTot).reduce((s,v)=>s+v,0);
-
-    // ── Category header row (clickable) ──
+    // ── Category header row — spans all columns properly ──
     h += `<tr class="cat-header-row" onclick="toggleReportCat('${catId}')" id="catr_${catId}">
-      <td colspan="${months.length+2}" style="
-        padding: 10px 14px;
-        background: var(--bg3);
-        border-top: 2px solid var(--border2);
-        border-bottom: 1px solid var(--border2);
-      ">
-        <div style="display:flex;align-items:center;justify-content:space-between;">
-          <div style="display:flex;align-items:center;gap:8px;">
-            <span class="collapse-arrow open" id="catarr_${catId}"></span>
-            <span style="font-size:0.75rem;font-weight:800;color:var(--text0);letter-spacing:0.04em;text-transform:uppercase;">📂 ${catLabel}</span>
-            <span style="font-size:0.68rem;color:var(--text2);">${catGroups.length} group(s)</span>
-          </div>
-          <div style="display:flex;gap:20px;align-items:center;">
-            <span style="font-size:0.72rem;color:var(--text2);font-style:italic;">Category Total</span>
-            ${fmtRpt(catTotal)}
-          </div>
+      <td style="padding:8px 14px;background:var(--bg3);border-top:2px solid var(--border2);border-bottom:1px solid var(--border2);">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span class="collapse-arrow open" id="catarr_${catId}"></span>
+          <span style="font-size:0.75rem;font-weight:800;color:var(--text0);letter-spacing:0.04em;text-transform:uppercase;">📂 ${catLabel}</span>
+          <span style="font-size:0.68rem;color:var(--text2);">${catGroups.length} group(s)</span>
         </div>
       </td>
+      ${months.map(()=>`<td style="background:var(--bg3);border-top:2px solid var(--border2);border-bottom:1px solid var(--border2);"></td>`).join('')}
+      <td style="background:var(--bg3);border-top:2px solid var(--border2);border-bottom:1px solid var(--border2);"></td>
     </tr>`;
 
     let grpIdx = 0;
@@ -2253,13 +2251,12 @@ function renderDashTable(tr, mMap) {
       const gTotal = Object.values(gMonthTot).reduce((s,v)=>s+v,0);
       const grpId = catId + '_grp_' + grpIdx++;
 
-      // ── Group header row (clickable, collapsible) ──
       h+=`<tr class="grp-header-row group-pnl-row" 
             data-cat="${catId}"
             onclick="toggleReportGrp('${grpId}')"
             id="grpr_${grpId}"
             style="background:${g.color}12;border-left:4px solid ${g.color};">
-        <td style="padding-left:28px;">
+        <td style="padding:8px 8px 8px 28px;">
           <div style="display:flex;align-items:center;gap:8px;">
             <span class="collapse-arrow closed" id="grparr_${grpId}"></span>
             <span class="group-dot" style="background:${g.color};width:10px;height:10px;border-radius:50%;display:inline-block;flex-shrink:0;"></span>
@@ -2267,18 +2264,17 @@ function renderDashTable(tr, mMap) {
             <span class="badge b-gray" style="font-size:0.6rem;">${gAlgos.length} algos</span>
           </div>
         </td>`;
-      h+=months.map(m=>{ const v=gMonthTot[m]; return `<td style="font-weight:700;">${fmtRpt(v,m)}</td>`; }).join('');
-      h+=`<td style="font-weight:800;font-size:0.88rem;">${fmtRpt(gTotal)}</td></tr>`;
+      h+=months.map(m=>{ const v=gMonthTot[m]; return `<td style="${colStyle}font-weight:700;">${fmtRpt(v,m)}</td>`; }).join('');
+      h+=`<td style="${colStyle}font-weight:800;font-size:0.88rem;">${fmtRpt(gTotal)}</td></tr>`;
 
-      // ── Individual algo rows ──
       for (const a of gAlgos) {
         const tot=Object.values(algoM[a]||{}).reduce((s,v)=>s+v,0);
         h+=`<tr class="report-algo-row" data-grp="${grpId}" data-cat="${catId}" style="display:none;background:${g.color}05;">
-          <td style="padding-left:52px;max-width:260px;overflow:hidden;text-overflow:ellipsis;color:var(--text1);font-size:0.75rem;" title="${a}">
+          <td style="padding:6px 8px 6px 52px;overflow:hidden;text-overflow:ellipsis;color:var(--text1);font-size:0.75rem;" title="${a}">
             <span style="color:${g.color};margin-right:5px;">└</span>${a}
           </td>`;
-        h+=months.map(m=>{ const v=algoM[a]?.[m]??null; return v===null?`<td style="color:var(--text3);">—</td>`:`<td>${fmtRpt(v,m)}</td>`; }).join('');
-        h+=`<td style="font-weight:500;">${fmtRpt(tot)}</td></tr>`;
+        h+=months.map(m=>{ const v=algoM[a]?.[m]??null; return v===null?`<td style="${colStyle}color:var(--text3);">—</td>`:`<td style="${colStyle}">${fmtRpt(v,m)}</td>`; }).join('');
+        h+=`<td style="${colStyle}font-weight:500;">${fmtRpt(tot)}</td></tr>`;
       }
     }
     h+=`<tr><td colspan="${months.length+2}" style="padding:2px;background:var(--border);"></td></tr>`;
@@ -2290,16 +2286,23 @@ function renderDashTable(tr, mMap) {
     h+=`<tr><td colspan="${months.length+2}" style="padding:6px 14px;font-size:0.67rem;font-weight:700;color:var(--text3);letter-spacing:0.07em;text-transform:uppercase;background:var(--bg2);">Ungrouped Algos</td></tr>`;
     for(const a of ungrouped){
       const tot=Object.values(algoM[a]||{}).reduce((s,v)=>s+v,0);
-      h+=`<tr><td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;font-weight:500;color:var(--text0)" title="${a}">${a}</td>`;
-      h+=months.map(m=>{ const v=algoM[a]?.[m]??null; return v===null?`<td style="color:var(--text3)">—</td>`:`<td>${fmtRpt(v,m)}</td>`; }).join('');
-      h+=`<td style="font-weight:700">${fmtRpt(tot)}</td></tr>`;
+      h+=`<tr><td style="padding:8px 14px;overflow:hidden;text-overflow:ellipsis;font-weight:500;color:var(--text0)" title="${a}">${a}</td>`;
+      h+=months.map(m=>{ const v=algoM[a]?.[m]??null; return v===null?`<td style="${colStyle}color:var(--text3)">—</td>`:`<td style="${colStyle}">${fmtRpt(v,m)}</td>`; }).join('');
+      h+=`<td style="${colStyle}font-weight:700">${fmtRpt(tot)}</td></tr>`;
     }
   }
 
-  const grandTotal=Object.values(mMap).reduce((s,v)=>s+v,0);
-  h+=`<tr class="grand-total-row"><td style="font-weight:700;font-family:var(--display);padding:10px 14px;">GRAND TOTAL</td>`;
-  h+=months.map(m=>{ const v=mMap[m]||0; return `<td style="font-weight:700;padding:10px 14px;text-align:right;">${fmtRpt(v,m)}</td>`; }).join('');
-  h+=`<td style="font-weight:700;padding:10px 14px;text-align:right;">${fmtRpt(grandTotal)}</td></tr>`;
+  // ── Grand Total with avg capital % ──
+  const grandTotal = Object.values(mMap).reduce((s,v)=>s+v,0);
+  // Average capital for the year
+  const yearCaps = months.map(m=>capitalData[m]).filter(v=>v>0);
+  const avgCap = yearCaps.length ? yearCaps.reduce((s,v)=>s+v,0)/yearCaps.length : 0;
+  const grandPct = avgCap > 0 ? ` <span style="font-size:0.72rem;color:var(--text2);font-weight:400;">(${(grandTotal/avgCap*100).toFixed(1)}%)</span>` : '';
+
+  h+=`<tr class="grand-total-row">
+    <td style="padding:10px 14px;font-weight:700;font-family:var(--display);">GRAND TOTAL</td>`;
+  h+=months.map(m=>{ const v=mMap[m]||0; return `<td style="${colStyle}font-weight:700;">${fmtRpt(v,m)}</td>`; }).join('');
+  h+=`<td style="${colStyle}font-weight:700;">${fmtRpt(grandTotal)}${grandPct}</td></tr>`;
   h+='</tbody></table>';
   el('dash-table').innerHTML=h;
   renderBrokerTable(allTrades.filter(t=>!t.archived && (t.entry_date||'').startsWith(currentYear)), months);
