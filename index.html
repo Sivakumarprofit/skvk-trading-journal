@@ -2,6 +2,11 @@
 ==========================================================
   SKVK TRADING JOURNAL — VERSION HISTORY
 ==========================================================
+  v13.26| 2026-06-05 | Renamed Monthly Breakdown to Strategy P&L,
+         |            | Grand Total row: dark navy box highlight with white text,
+         |            | New Broker P&L table beneath Strategy P&L (same month columns),
+         |            | Compact summary cards (smaller padding, font, grid gap)
+  ──────────────────────────────────────────────────────
   v13.25| 2026-06-04 | Total Capital: compact Year x Month grid (11 rows instead of 121),
          |            | Settings: Account Nicknames section (after Display Preferences),
          |            | Nicknames saved to Firebase — client tabs show Nickname (ID),
@@ -11,8 +16,8 @@
          |            | Fix: % P&L now shows after capital loads from Firebase,
          |            | Total Capital section moved to last-but-one in Settings
   ──────────────────────────────────────────────────────
-  v13.23| 2026-06-04 | Monthly Breakdown: blue (profit) / dark (loss) instead of green/red,
-         |            | Monthly Breakdown: % P&L shown next to amount when capital set,
+  v13.23| 2026-06-04 | Strategy P&L: blue (profit) / dark (loss) instead of green/red,
+         |            | Strategy P&L: % P&L shown next to amount when capital set,
          |            | Settings: Total Capital table (Jan 2026 to Jan 2036, editable per month),
          |            | Capital saved to Firebase — used for % P&L calculation in reports
   ──────────────────────────────────────────────────────
@@ -228,7 +233,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>SKVK Trading Journal v13.25</title>
+<title>SKVK Trading Journal v13.26</title>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -391,15 +396,15 @@ body {
 /* ── STAT CARDS ── */
 .stat-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(175px, 1fr));
-  gap: 14px;
-  margin-bottom: 24px;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 8px;
+  margin-bottom: 16px;
 }
 .stat-card {
   background: #fff;
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
-  padding: 22px;
+  padding: 12px 16px;
   box-shadow: var(--shadow-sm);
   position: relative;
   overflow: hidden;
@@ -407,16 +412,16 @@ body {
 }
 .stat-card:hover { box-shadow: var(--shadow-md); }
 .stat-card-icon {
-  position: absolute; top: 16px; right: 16px;
-  font-size: 1.8rem; opacity: 0.12;
+  position: absolute; top: 10px; right: 12px;
+  font-size: 1.4rem; opacity: 0.12;
 }
-.stat-label { font-size: 0.75rem; font-weight: 700; color: var(--text2); letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 8px; }
-.stat-value { font-family: var(--display); font-size: 1.85rem; font-weight: 800; letter-spacing: -0.03em; }
+.stat-label { font-size: 0.68rem; font-weight: 700; color: var(--text2); letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 4px; }
+.stat-value { font-family: var(--display); font-size: 1.4rem; font-weight: 800; letter-spacing: -0.03em; }
 .stat-value.positive { color: var(--green); }
 .stat-value.negative { color: var(--red); }
 .stat-value.neutral { color: var(--text0); }
-.stat-sub { font-size: 0.7rem; color: var(--text3); margin-top: 4px; }
-.stat-bar { height: 3px; border-radius: 2px; margin-top: 10px; }
+.stat-sub { font-size: 0.65rem; color: var(--text3); margin-top: 2px; }
+.stat-bar { height: 2px; border-radius: 2px; margin-top: 8px; }
 
 /* ── TABLES ── */
 .table-wrap {
@@ -1016,7 +1021,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
 <div id="topbar">
   <div class="brand">
     <span class="brand-dot"></span>
-    SKVK Trading Journal <span style="font-size:0.85rem;background:#1a73e8;color:#fff;padding:3px 10px;border-radius:10px;font-weight:700;margin-left:6px;vertical-align:middle;">v13.25</span>
+    SKVK Trading Journal <span style="font-size:0.85rem;background:#1a73e8;color:#fff;padding:3px 10px;border-radius:10px;font-weight:700;margin-left:6px;vertical-align:middle;">v13.26</span>
   </div>
   <nav class="nav-tabs">
     <button class="nav-tab active" onclick="showPage('journal')"    data-page="journal">📋 <span class="tl">Journal</span></button>
@@ -1041,7 +1046,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
   <div class="page-header">
     <div>
       <div class="page-title">P&L Report</div>
-      <div class="page-subtitle">Consolidated P&L · Strategy Performance · Monthly Breakdown</div>
+      <div class="page-subtitle">Consolidated P&L · Strategy Performance · Strategy P&L</div>
       <div id="dash-last-updated" style="margin-top:6px;font-size:0.75rem;color:var(--text3);"></div>
     </div>
     <div class="period-tabs" id="year-tabs"></div>
@@ -1100,8 +1105,8 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
 
   <div class="page-header" style="margin-top:4px;">
     <div>
-      <div class="page-title" style="font-size:1rem;">Monthly Breakdown</div>
-      <div class="page-subtitle">P&L by Algo × Month · Click rows to expand/collapse</div>
+      <div class="page-title" style="font-size:1rem;">Strategy P&L</div>
+      <div class="page-subtitle">P&L by Strategy × Month · Click rows to expand/collapse</div>
     </div>
     <div style="display:flex;align-items:center;gap:8px;">
       <button class="btn btn-ghost btn-sm" onclick="expandAllReport()">Expand All</button>
@@ -1111,6 +1116,19 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
   </div>
   <div class="table-wrap" id="dash-table">
     <div class="loading"><div class="spinner"></div> Loading data…</div>
+  </div>
+
+  <!-- Broker P&L -->
+  <div style="margin-top:28px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+      <div>
+        <div style="font-size:1.1rem;font-weight:800;font-family:var(--display);">Broker P&L</div>
+        <div style="font-size:0.75rem;color:var(--text2);margin-top:2px;">P&L by Broker × Month</div>
+      </div>
+    </div>
+    <div class="table-wrap" id="broker-table">
+      <div class="loading"><div class="spinner"></div> Loading data…</div>
+    </div>
   </div>
 </div>
 
@@ -1526,7 +1544,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
   </div>
   <div id="mcx-instrument-cards"><div class="loading"><div class="spinner"></div> Loading…</div></div>
   <div class="page-header" style="margin-top:8px;">
-    <div class="page-title" style="font-size:1rem;">Monthly Breakdown</div>
+    <div class="page-title" style="font-size:1rem;">Strategy P&L</div>
   </div>
   <div class="table-wrap" id="mcx-monthly-table"><div class="loading"><div class="spinner"></div> Loading…</div></div>
 </div>
@@ -2274,11 +2292,57 @@ function renderDashTable(tr, mMap) {
   }
 
   const grandTotal=Object.values(mMap).reduce((s,v)=>s+v,0);
-  h+=`<tr style="background:var(--bg3);"><td style="font-weight:700;font-family:var(--display)">GRAND TOTAL</td>`;
-  h+=months.map(m=>{ const v=mMap[m]||0; return `<td style="font-weight:700">${fmtRpt(v,m)}</td>`; }).join('');
-  h+=`<td style="font-weight:700">${fmtRpt(grandTotal)}</td></tr>`;
+  h+=`<tr style="background:#1e3a5f;border-top:2px solid #1e3a5f;"><td style="font-weight:700;font-family:var(--display);color:#fff;padding:10px 14px;border-radius:4px 0 0 4px;">GRAND TOTAL</td>`;
+  h+=months.map(m=>{ const v=mMap[m]||0; return `<td style="font-weight:700;color:#fff;padding:10px 14px;">${fmtRpt(v,m,'#fff')}</td>`; }).join('');
+  h+=`<td style="font-weight:700;color:#fff;padding:10px 14px;border-radius:0 4px 4px 0;">${fmtRpt(grandTotal,null,'#fff')}</td></tr>`;
   h+='</tbody></table>';
   el('dash-table').innerHTML=h;
+  renderBrokerTable(allTrades.filter(t=>!t.archived && (t.entry_date||'').startsWith(currentYear)), months);
+}
+
+function renderBrokerTable(tr, months) {
+  if (!months || !months.length) { el('broker-table').innerHTML=''; return; }
+  // Build broker → month → pnl map
+  const brokerMap = {};
+  tr.forEach(t => {
+    const b = (t.broker||'Unknown').toUpperCase();
+    const m = (t.entry_date||'').slice(0,7);
+    if (!brokerMap[b]) brokerMap[b] = {};
+    brokerMap[b][m] = (brokerMap[b][m]||0) + (t.pnl||0);
+  });
+  const brokers = Object.keys(brokerMap).sort();
+  if (!brokers.length) { el('broker-table').innerHTML='<div style="padding:20px;color:var(--text3);text-align:center;">No data</div>'; return; }
+
+  // Grand total per month
+  const grandMap = {};
+  months.forEach(m => { grandMap[m] = brokers.reduce((s,b)=>s+(brokerMap[b]?.[m]||0),0); });
+  const grandTotal = Object.values(grandMap).reduce((s,v)=>s+v,0);
+
+  let h = `<table><thead><tr style="background:#1e3a5f;">
+    <th style="color:#fff;padding:10px 14px;text-align:left;font-size:0.78rem;letter-spacing:0.04em;">BROKER</th>
+    ${months.map(m=>`<th style="color:#fff;padding:10px 14px;text-align:right;font-size:0.78rem;">${m.slice(0,3).toUpperCase()} ${m.slice(0,4)}</th>`).join('')}
+    <th style="color:#fff;padding:10px 14px;text-align:right;font-size:0.78rem;">TOTAL</th>
+  </tr></thead><tbody>`;
+
+  brokers.forEach(b => {
+    const bTotal = months.reduce((s,m)=>s+(brokerMap[b]?.[m]||0),0);
+    const rowBg = bTotal >= 0 ? '#f0fdf4' : '#fff5f5';
+    h += `<tr style="background:${rowBg};border-bottom:1px solid var(--border);">
+      <td style="padding:8px 14px;font-weight:600;font-size:0.82rem;">${b}</td>
+      ${months.map(m=>{ const v=brokerMap[b]?.[m]??null; return `<td style="padding:8px 14px;text-align:right;">${v===null?'<span style="color:var(--text3)">—</span>':fmtRpt(v,m)}</td>`; }).join('')}
+      <td style="padding:8px 14px;text-align:right;font-weight:700;">${fmtRpt(bTotal)}</td>
+    </tr>`;
+  });
+
+  // Grand total row
+  h += `<tr style="background:#1e3a5f;">
+    <td style="padding:10px 14px;font-weight:700;font-family:var(--display);color:#fff;">GRAND TOTAL</td>
+    ${months.map(m=>{ const v=grandMap[m]||0; return `<td style="padding:10px 14px;text-align:right;font-weight:700;color:#fff;">${fmtRpt(v,m,'#fff')}</td>`; }).join('')}
+    <td style="padding:10px 14px;text-align:right;font-weight:700;color:#fff;">${fmtRpt(grandTotal,null,'#fff')}</td>
+  </tr>`;
+
+  h += '</tbody></table>';
+  el('broker-table').innerHTML = h;
 }
 
 // ════════════════════════════════════════════════════
@@ -3103,17 +3167,19 @@ function renderEditedValue(field, val) {
 function fmt(v) { if(v==null) return '—'; const n=parseFloat(v); if(isNaN(n)) return '—'; return (n<0?'-₹':'₹')+Math.abs(n).toLocaleString('en-IN',{maximumFractionDigits:0}); }
 
 // Report formatter — blue/dark colors + optional % 
-function fmtRpt(v, month) {
+function fmtRpt(v, month, forceColor) {
   if (v == null) return '—';
   const n = parseFloat(v); if (isNaN(n)) return '—';
-  const cls = n >= 0 ? 'rpt-pos' : 'rpt-neg';
+  const cls = forceColor ? '' : (n >= 0 ? 'rpt-pos' : 'rpt-neg');
+  const style = forceColor ? `color:${forceColor};` : '';
   const amt = (n<0?'-₹':'₹') + Math.abs(n).toLocaleString('en-IN', {maximumFractionDigits:0});
   let pct = '';
   if (month && capitalData[month] && capitalData[month] > 0) {
     const p = (n / capitalData[month] * 100).toFixed(1);
-    pct = `<span class="rpt-pct">(${p}%)</span>`;
+    const pctColor = forceColor ? `color:${forceColor};opacity:0.75;` : '';
+    pct = `<span class="rpt-pct" style="${pctColor}">(${p}%)</span>`;
   }
-  return `<span class="${cls}">${amt}${pct}</span>`;
+  return `<span class="${cls}" style="${style}">${amt}${pct}</span>`;
 }
 function fmtMonth(ym){ if(!ym)return'—'; const[y,m]=ym.split('-'); return ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][+m-1]+' '+y; }
 function fmtDate(d){ if(!d)return'—'; return new Date(d+'T00:00:00').toLocaleDateString('en-IN',{weekday:'short',day:'numeric',month:'short',year:'numeric'}); }
