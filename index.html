@@ -2,6 +2,9 @@
 ==========================================================
   SKVK TRADING JOURNAL — VERSION HISTORY
 ==========================================================
+  v13.27| 2026-06-05 | Broker P&L: individual Broker+ClientID rows with nicknames,
+         |            | Grand Total row hover stays navy (no longer turns white)
+  ──────────────────────────────────────────────────────
   v13.26| 2026-06-05 | Renamed Monthly Breakdown to Strategy P&L,
          |            | Grand Total row: dark navy box highlight with white text,
          |            | New Broker P&L table beneath Strategy P&L (same month columns),
@@ -233,7 +236,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>SKVK Trading Journal v13.26</title>
+<title>SKVK Trading Journal v13.27</title>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -450,6 +453,8 @@ tbody td {
 }
 tbody tr:last-child td { border-bottom: none; }
 tbody tr:hover td { background: #fafbff; }
+tbody tr.grand-total-row td { background: #e8edf5 !important; color: var(--text0) !important; border-top: 2px solid #1e3a5f !important; }
+tbody tr.grand-total-row:hover td { background: #d8e2f0 !important; color: var(--text0) !important; }
 
 /* ── JOURNAL ROWS ── */
 .date-group-header td {
@@ -1021,7 +1026,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
 <div id="topbar">
   <div class="brand">
     <span class="brand-dot"></span>
-    SKVK Trading Journal <span style="font-size:0.85rem;background:#1a73e8;color:#fff;padding:3px 10px;border-radius:10px;font-weight:700;margin-left:6px;vertical-align:middle;">v13.26</span>
+    SKVK Trading Journal <span style="font-size:0.85rem;background:#1a73e8;color:#fff;padding:3px 10px;border-radius:10px;font-weight:700;margin-left:6px;vertical-align:middle;">v13.27</span>
   </div>
   <nav class="nav-tabs">
     <button class="nav-tab active" onclick="showPage('journal')"    data-page="journal">📋 <span class="tl">Journal</span></button>
@@ -2292,9 +2297,9 @@ function renderDashTable(tr, mMap) {
   }
 
   const grandTotal=Object.values(mMap).reduce((s,v)=>s+v,0);
-  h+=`<tr style="background:#1e3a5f;border-top:2px solid #1e3a5f;"><td style="font-weight:700;font-family:var(--display);color:#fff;padding:10px 14px;border-radius:4px 0 0 4px;">GRAND TOTAL</td>`;
-  h+=months.map(m=>{ const v=mMap[m]||0; return `<td style="font-weight:700;color:#fff;padding:10px 14px;">${fmtRpt(v,m,'#fff')}</td>`; }).join('');
-  h+=`<td style="font-weight:700;color:#fff;padding:10px 14px;border-radius:0 4px 4px 0;">${fmtRpt(grandTotal,null,'#fff')}</td></tr>`;
+  h+=`<tr class="grand-total-row"><td style="font-weight:700;font-family:var(--display);padding:10px 14px;">GRAND TOTAL</td>`;
+  h+=months.map(m=>{ const v=mMap[m]||0; return `<td style="font-weight:700;padding:10px 14px;text-align:right;">${fmtRpt(v,m)}</td>`; }).join('');
+  h+=`<td style="font-weight:700;padding:10px 14px;text-align:right;">${fmtRpt(grandTotal)}</td></tr>`;
   h+='</tbody></table>';
   el('dash-table').innerHTML=h;
   renderBrokerTable(allTrades.filter(t=>!t.archived && (t.entry_date||'').startsWith(currentYear)), months);
@@ -2302,25 +2307,27 @@ function renderDashTable(tr, mMap) {
 
 function renderBrokerTable(tr, months) {
   if (!months || !months.length) { el('broker-table').innerHTML=''; return; }
-  // Build broker → month → pnl map
+  // Build broker+clientid → month → pnl map
   const brokerMap = {};
   tr.forEach(t => {
     const b = (t.broker||'Unknown').toUpperCase();
+    const cid = t.client_id || '';
+    const nick = accountNicknames[cid];
+    const label = nick ? `${b} · ${nick} (${cid})` : (cid ? `${b} · ${cid}` : b);
     const m = (t.entry_date||'').slice(0,7);
-    if (!brokerMap[b]) brokerMap[b] = {};
-    brokerMap[b][m] = (brokerMap[b][m]||0) + (t.pnl||0);
+    if (!brokerMap[label]) brokerMap[label] = {};
+    brokerMap[label][m] = (brokerMap[label][m]||0) + (t.pnl||0);
   });
   const brokers = Object.keys(brokerMap).sort();
   if (!brokers.length) { el('broker-table').innerHTML='<div style="padding:20px;color:var(--text3);text-align:center;">No data</div>'; return; }
 
-  // Grand total per month
   const grandMap = {};
   months.forEach(m => { grandMap[m] = brokers.reduce((s,b)=>s+(brokerMap[b]?.[m]||0),0); });
   const grandTotal = Object.values(grandMap).reduce((s,v)=>s+v,0);
 
   let h = `<table><thead><tr style="background:#1e3a5f;">
-    <th style="color:#fff;padding:10px 14px;text-align:left;font-size:0.78rem;letter-spacing:0.04em;">BROKER</th>
-    ${months.map(m=>`<th style="color:#fff;padding:10px 14px;text-align:right;font-size:0.78rem;">${m.slice(0,3).toUpperCase()} ${m.slice(0,4)}</th>`).join('')}
+    <th style="color:#fff;padding:10px 14px;text-align:left;font-size:0.78rem;letter-spacing:0.04em;">ACCOUNT</th>
+    ${months.map(m=>`<th style="color:#fff;padding:10px 14px;text-align:right;font-size:0.78rem;">${new Date(m+'-01').toLocaleDateString('en-IN',{month:'short',year:'numeric'}).toUpperCase()}</th>`).join('')}
     <th style="color:#fff;padding:10px 14px;text-align:right;font-size:0.78rem;">TOTAL</th>
   </tr></thead><tbody>`;
 
@@ -2334,11 +2341,10 @@ function renderBrokerTable(tr, months) {
     </tr>`;
   });
 
-  // Grand total row
-  h += `<tr style="background:#1e3a5f;">
-    <td style="padding:10px 14px;font-weight:700;font-family:var(--display);color:#fff;">GRAND TOTAL</td>
-    ${months.map(m=>{ const v=grandMap[m]||0; return `<td style="padding:10px 14px;text-align:right;font-weight:700;color:#fff;">${fmtRpt(v,m,'#fff')}</td>`; }).join('')}
-    <td style="padding:10px 14px;text-align:right;font-weight:700;color:#fff;">${fmtRpt(grandTotal,null,'#fff')}</td>
+  h += `<tr class="grand-total-row">
+    <td style="padding:10px 14px;font-weight:700;font-family:var(--display);">GRAND TOTAL</td>
+    ${months.map(m=>{ const v=grandMap[m]||0; return `<td style="padding:10px 14px;text-align:right;font-weight:700;">${fmtRpt(v,m)}</td>`; }).join('')}
+    <td style="padding:10px 14px;text-align:right;font-weight:700;">${fmtRpt(grandTotal)}</td>
   </tr>`;
 
   h += '</tbody></table>';
