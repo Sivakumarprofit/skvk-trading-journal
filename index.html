@@ -2,6 +2,13 @@
 ==========================================================
   SKVK TRADING JOURNAL — VERSION HISTORY
 ==========================================================
+  v13.32| 2026-06-10 | Renamed Stockmock tab to SM Compare
+  ──────────────────────────────────────────────────────
+  v13.31| 2026-06-10 | Further fixed Stockmock parser: handles double header rows,
+         |            | Finds Strike cols by scanning backwards for entry/exit price,
+         |            | Skips repeated header rows in data section,
+         |            | Works with all 3 StockMock file formats tested
+  ──────────────────────────────────────────────────────
   v13.30| 2026-06-10 | Fixed Stockmock parser (By Date sheet, handles both file formats),
          |            | Strategy dropdown from broker trades — source of truth,
          |            | Shows No Stockmock Data if strategy missing from SM,
@@ -253,7 +260,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>SKVK Trading Journal v13.30</title>
+<title>SKVK Trading Journal v13.32</title>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -1073,7 +1080,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
 <div id="topbar">
   <div class="brand">
     <span class="brand-dot"></span>
-    SKVK Trading Journal <span style="font-size:0.85rem;background:#1a73e8;color:#fff;padding:3px 10px;border-radius:10px;font-weight:700;margin-left:6px;vertical-align:middle;">v13.30</span>
+    SKVK Trading Journal <span style="font-size:0.85rem;background:#1a73e8;color:#fff;padding:3px 10px;border-radius:10px;font-weight:700;margin-left:6px;vertical-align:middle;">v13.32</span>
   </div>
   <nav class="nav-tabs">
     <button class="nav-tab active" onclick="showPage('journal')"    data-page="journal">📋 <span class="tl">Journal</span></button>
@@ -1081,7 +1088,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <button class="nav-tab" onclick="showPage('compare')"    data-page="compare">⚖️ <span class="tl">Compare</span></button>
     <button class="nav-tab" onclick="showPage('manual')"     data-page="manual">✏️ <span class="tl">Manual</span></button>
     <button class="nav-tab" onclick="showPage('upload')"     data-page="upload">⬆ <span class="tl">Upload Results</span></button>
-    <button class="nav-tab" onclick="showPage('stockmock')"  data-page="stockmock">🔬 <span class="tl">Stockmock</span></button>
+    <button class="nav-tab" onclick="showPage('stockmock')"  data-page="stockmock">🔬 <span class="tl">SM Compare</span></button>
     <button class="nav-tab" onclick="showPage('settings')"   data-page="settings">⚙️ <span class="tl">Settings</span></button>
   </nav>
   <div class="topbar-right">
@@ -2927,11 +2934,12 @@ function parseSMExcel(arrayBuffer) {
     const sheet = wb.Sheets[sheetName];
     const raw = XLSX.utils.sheet_to_json(sheet, {header:1, defval:''});
 
-    // Find the actual header row — it has 'Profit', 'Entry Price', 'Exit Price', 'Strike'
+    // Find the ACTUAL data header row — it contains 'Entry Price' and 'Strike'
+    // There may be 2 header rows — we want the one with 'Entry Price'
     let hdrRow = -1;
-    for (let i = 0; i < Math.min(raw.length, 10); i++) {
+    for (let i = 0; i < Math.min(raw.length, 5); i++) {
       const joined = raw[i].map(c=>String(c).toLowerCase()).join('|');
-      if (joined.includes('entry price') && joined.includes('exit price') && joined.includes('strike')) {
+      if (joined.includes('entry price') && joined.includes('strike')) {
         hdrRow = i; break;
       }
     }
@@ -2939,44 +2947,51 @@ function parseSMExcel(arrayBuffer) {
 
     const hdrs = raw[hdrRow].map(c => String(c).trim().toLowerCase());
 
-    // Find leg blocks — each leg has: Profit, Entry Price, Exit Price, Difference, Strike
-    // They appear as repeated column groups
-    const legStarts = [];
-    hdrs.forEach((h, i) => {
-      if (h === 'strike') {
-        // Walk back to find the profit column for this leg
-        for (let j = i-1; j >= Math.max(0, i-5); j--) {
-          if (hdrs[j] === 'profit') { legStarts.push({profitIdx:j, strikeidx:i}); break; }
-        }
-      }
-    });
-
-    // Find date column
+    // Find date column index
     const dateIdx = hdrs.findIndex(h => h === 'date');
 
-    // Process data rows
+    // Find all Strike column indices — each one marks the end of a leg block
+    const strikeIdxs = [];
+    hdrs.forEach((h,i) => { if (h === 'strike') strikeIdxs.push(i); });
+
+    if (!strikeIdxs.length) return;
+
+    // For each Strike column, find the associated leg columns by scanning backwards
+    const legDefs = strikeIdxs.map(si => {
+      // Walk backwards from strike to find: entry price, exit price, profit
+      let entryPriceIdx=-1, exitPriceIdx=-1, profitIdx=-1, entryTimeIdx=-1, exitTimeIdx=-1;
+      for (let ci = si-1; ci >= Math.max(0, si-10); ci--) {
+        const h = hdrs[ci];
+        if (h === 'entry price' && entryPriceIdx < 0) entryPriceIdx = ci;
+        if (h === 'exit price'  && exitPriceIdx  < 0) exitPriceIdx  = ci;
+        if (h === 'profit'      && profitIdx      < 0) profitIdx     = ci;
+        if (h === 'entry time'  && entryTimeIdx   < 0) entryTimeIdx  = ci;
+        if (h === 'exit time'   && exitTimeIdx    < 0) exitTimeIdx   = ci;
+      }
+      return { strikeIdx:si, entryPriceIdx, exitPriceIdx, profitIdx, entryTimeIdx, exitTimeIdx };
+    }).filter(l => l.entryPriceIdx >= 0 && l.strikeIdx >= 0);
+
+    // Process data rows — skip extra header rows (first data row starts after hdrRow+1)
+    // Skip any row where the date column is also 'date' (repeated header)
     for (let ri = hdrRow+1; ri < raw.length; ri++) {
       const r = raw[ri];
-      if (!r[dateIdx]) continue;
-      const tradeDate = normSMDate(r[dateIdx]);
+      const dateVal = r[dateIdx];
+      if (!dateVal || String(dateVal).toLowerCase().trim() === 'date') continue;
+      const tradeDate = normSMDate(dateVal);
       if (!tradeDate) continue;
 
-      legStarts.forEach(leg => {
-        const strikeRaw = String(r[leg.strikeidx]||'').trim();
+      legDefs.forEach(leg => {
+        const strikeRaw = String(r[leg.strikeIdx]||'').trim();
         const sk = extractStrike(strikeRaw);
         if (!sk) return;
 
-        // Find entry/exit price near the profit col
-        let entryPrice = 0, exitPrice = 0, entryTime = '', exitTime = '';
-        for (let ci = leg.profitIdx+1; ci <= leg.strikeidx; ci++) {
-          const h = hdrs[ci]||'';
-          if (h === 'entry price' && !entryPrice) entryPrice = parseFloat(r[ci])||0;
-          if (h === 'exit price'  && !exitPrice)  exitPrice  = parseFloat(r[ci])||0;
-          if (h === 'entry time'  && !entryTime)  entryTime  = String(r[ci]||'').trim();
-          if (h === 'exit time'   && !exitTime)   exitTime   = String(r[ci]||'').trim();
-        }
+        const entryPrice = parseFloat(r[leg.entryPriceIdx]) || 0;
+        const exitPrice  = parseFloat(r[leg.exitPriceIdx])  || 0;
+        const legProfit  = parseFloat(r[leg.profitIdx])     || 0;
+        const entryTime  = leg.entryTimeIdx >= 0 ? String(r[leg.entryTimeIdx]||'').trim() : '';
+        const exitTime   = leg.exitTimeIdx  >= 0 ? String(r[leg.exitTimeIdx]||'').trim()  : '';
 
-        const legProfit = parseFloat(r[leg.profitIdx])||0;
+        if (!entryPrice && !exitPrice) return; // skip empty rows
 
         trades.push({
           source:        'stockmock',
