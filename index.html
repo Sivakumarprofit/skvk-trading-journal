@@ -2,6 +2,8 @@
 ==========================================================
   SKVK TRADING JOURNAL — VERSION HISTORY
 ==========================================================
+  v13.35| 2026-06-10 | Fix: Syntax error in parseSMExcel (stratName||) caused page crash
+  ──────────────────────────────────────────────────────
   v13.34| 2026-06-10 | Renamed SM Compare nav tab to StockMock Compare (wraps 2 lines),
          |            | Settings: Firebase Usage Estimation (per path, in MB, with progress bar),
          |            | Settings: Clear Stockmock Data by date range with preview + confirm
@@ -266,7 +268,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>SKVK Trading Journal v13.34</title>
+<title>SKVK Trading Journal v13.35</title>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -1086,7 +1088,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
 <div id="topbar">
   <div class="brand">
     <span class="brand-dot"></span>
-    SKVK Trading Journal <span style="font-size:0.85rem;background:#1a73e8;color:#fff;padding:3px 10px;border-radius:10px;font-weight:700;margin-left:6px;vertical-align:middle;">v13.34</span>
+    SKVK Trading Journal <span style="font-size:0.85rem;background:#1a73e8;color:#fff;padding:3px 10px;border-radius:10px;font-weight:700;margin-left:6px;vertical-align:middle;">v13.35</span>
   </div>
   <nav class="nav-tabs">
     <button class="nav-tab active" onclick="showPage('journal')"    data-page="journal">📋 <span class="tl">Journal</span></button>
@@ -3148,7 +3150,7 @@ function parseSMExcel(arrayBuffer) {
 
         trades.push({
           source:        'stockmock',
-          strategy_name: (stratName||).trim(),
+          strategy_name: (stratName||'').trim(),
           trade_date:    tradeDate,
           option_type:   sk.type,
           strike:        sk.strike,
