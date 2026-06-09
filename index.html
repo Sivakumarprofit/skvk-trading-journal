@@ -2,6 +2,12 @@
 ==========================================================
   SKVK TRADING JOURNAL — VERSION HISTORY
 ==========================================================
+  v13.30| 2026-06-10 | Fixed Stockmock parser (By Date sheet, handles both file formats),
+         |            | Strategy dropdown from broker trades — source of truth,
+         |            | Shows No Stockmock Data if strategy missing from SM,
+         |            | SM loaded summary badge, renamed SM to Stockmock throughout,
+         |            | Column headers wrap to 2 lines to save space
+  ──────────────────────────────────────────────────────
   v13.29| 2026-06-05 | New SM Compare tab — StockMock vs Broker trade comparison,
          |            | Upload StockMock Excel, saves to Firebase (dedup),
          |            | Strategy-wise expandable comparison with color coding,
@@ -247,7 +253,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>SKVK Trading Journal v13.29</title>
+<title>SKVK Trading Journal v13.30</title>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -1067,7 +1073,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
 <div id="topbar">
   <div class="brand">
     <span class="brand-dot"></span>
-    SKVK Trading Journal <span style="font-size:0.85rem;background:#1a73e8;color:#fff;padding:3px 10px;border-radius:10px;font-weight:700;margin-left:6px;vertical-align:middle;">v13.29</span>
+    SKVK Trading Journal <span style="font-size:0.85rem;background:#1a73e8;color:#fff;padding:3px 10px;border-radius:10px;font-weight:700;margin-left:6px;vertical-align:middle;">v13.30</span>
   </div>
   <nav class="nav-tabs">
     <button class="nav-tab active" onclick="showPage('journal')"    data-page="journal">📋 <span class="tl">Journal</span></button>
@@ -1075,7 +1081,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <button class="nav-tab" onclick="showPage('compare')"    data-page="compare">⚖️ <span class="tl">Compare</span></button>
     <button class="nav-tab" onclick="showPage('manual')"     data-page="manual">✏️ <span class="tl">Manual</span></button>
     <button class="nav-tab" onclick="showPage('upload')"     data-page="upload">⬆ <span class="tl">Upload Results</span></button>
-    <button class="nav-tab" onclick="showPage('stockmock')"  data-page="stockmock">🔬 <span class="tl">SM Compare</span></button>
+    <button class="nav-tab" onclick="showPage('stockmock')"  data-page="stockmock">🔬 <span class="tl">Stockmock</span></button>
     <button class="nav-tab" onclick="showPage('settings')"   data-page="settings">⚙️ <span class="tl">Settings</span></button>
   </nav>
   <div class="topbar-right">
@@ -1417,8 +1423,8 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
 <div id="page-stockmock" class="page">
   <div class="page-header">
     <div>
-      <div class="page-title">SM Compare</div>
-      <div class="page-subtitle">StockMock backtest vs Actual broker trades · Strategy-wise</div>
+      <div class="page-title">Stockmock Compare</div>
+      <div class="page-subtitle">Stockmock backtest vs Actual broker trades · Strategy-wise</div>
     </div>
   </div>
 
@@ -1426,7 +1432,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
 
     <!-- Upload StockMock Excel -->
     <div style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:20px;box-shadow:var(--shadow-sm);">
-      <div style="font-size:0.9rem;font-weight:700;color:var(--text0);margin-bottom:4px;">📤 Upload StockMock Excel</div>
+      <div style="font-size:0.9rem;font-weight:700;color:var(--text0);margin-bottom:4px;">📤 Upload Stockmock Excel</div>
       <div style="font-size:0.72rem;color:var(--text2);margin-bottom:14px;">Basket export from stockmock.in — supports multiple strategies</div>
       <div id="sm-drop-zone" style="border:2px dashed var(--border);border-radius:8px;padding:20px;text-align:center;cursor:pointer;transition:border-color 0.2s;"
         onclick="document.getElementById('sm-file-input').click()"
@@ -1434,12 +1440,11 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
         ondragleave="this.style.borderColor='var(--border)'"
         ondrop="event.preventDefault();this.style.borderColor='var(--border)';handleSMFile(event.dataTransfer.files[0])">
         <div style="font-size:1.5rem;">📊</div>
-        <div style="font-size:0.82rem;color:var(--text2);margin-top:6px;">Drop StockMock Excel here or click to browse</div>
+        <div style="font-size:0.82rem;color:var(--text2);margin-top:6px;">Drop Stockmock Excel here or click to browse</div>
         <div style="font-size:0.7rem;color:var(--text3);margin-top:3px;">.xlsx files only</div>
       </div>
       <input type="file" id="sm-file-input" accept=".xlsx" style="display:none" onchange="handleSMFile(this.files[0])">
       <div id="sm-upload-status" style="margin-top:10px;font-size:0.78rem;"></div>
-      <!-- Upload history -->
       <div style="margin-top:14px;">
         <div style="font-size:0.72rem;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;">Upload History</div>
         <div id="sm-upload-history" style="font-size:0.75rem;color:var(--text3);">No uploads yet</div>
@@ -1453,17 +1458,29 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
         <label style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border:1px solid var(--border);border-radius:8px;">
           <div>
             <div style="font-size:0.82rem;font-weight:600;">Match Tolerance %</div>
-            <div style="font-size:0.7rem;color:var(--text3);">Max % difference for Strike, Entry, Exit, P&L</div>
+            <div style="font-size:0.7rem;color:var(--text3);">Max % diff for Strike, Entry, Exit, P&L</div>
           </div>
           <input type="number" id="sm-tolerance" value="2" min="0" max="20" step="0.5"
             style="width:70px;padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:0.85rem;text-align:center;outline:none;"
             onchange="renderSMComparison()">
         </label>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;">
-          <span style="font-size:0.72rem;padding:4px 10px;background:#f0fdf4;border-radius:6px;color:#16a34a;font-weight:600;">🟢 Full Match</span>
-          <span style="font-size:0.72rem;padding:4px 10px;background:#fffbeb;border-radius:6px;color:#d97706;font-weight:600;">🟡 Partial Match</span>
-          <span style="font-size:0.72rem;padding:4px 10px;background:#f9fafb;border-radius:6px;color:#6b7280;font-weight:600;">⚫ No SM Data</span>
-          <span style="font-size:0.72rem;padding:4px 10px;background:#fee2e2;border-radius:6px;color:#dc2626;font-weight:600;">🔴 Cell Diff</span>
+        <!-- Strategy selector -->
+        <div style="padding:10px 14px;border:1px solid var(--border);border-radius:8px;">
+          <div style="font-size:0.82rem;font-weight:600;margin-bottom:6px;">Strategy</div>
+          <select id="sm-strategy-select" onchange="renderSMComparison()"
+            style="width:100%;padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:0.82rem;outline:none;">
+            <option value="">All Strategies</option>
+          </select>
+        </div>
+        <!-- SM loaded summary -->
+        <div id="sm-loaded-summary" style="padding:10px 14px;border:1px solid var(--border);border-radius:8px;font-size:0.78rem;color:var(--text2);">
+          No Stockmock data loaded yet
+        </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+          <span style="font-size:0.7rem;padding:3px 8px;background:#f0fdf4;border-radius:6px;color:#16a34a;font-weight:600;">🟢 Full Match</span>
+          <span style="font-size:0.7rem;padding:3px 8px;background:#fffbeb;border-radius:6px;color:#d97706;font-weight:600;">🟡 Partial</span>
+          <span style="font-size:0.7rem;padding:3px 8px;background:#f9fafb;border-radius:6px;color:#6b7280;font-weight:600;">⚫ No SM Data</span>
+          <span style="font-size:0.7rem;padding:3px 8px;background:#fee2e2;border-radius:6px;color:#dc2626;font-weight:600;">🔴 Cell Diff</span>
         </div>
       </div>
     </div>
@@ -1473,7 +1490,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
   <div id="sm-comparison-content">
     <div style="text-align:center;padding:40px;color:var(--text3);">
       <div style="font-size:2rem;">🔬</div>
-      <div style="margin-top:8px;">Upload a StockMock Excel to start comparing</div>
+      <div style="margin-top:8px;">Select a strategy above to compare</div>
     </div>
   </div>
 </div>
@@ -1953,7 +1970,7 @@ function showPage(name) {
   const tab = document.querySelector(`[data-page="${name}"]`);
   if (tab) tab.classList.add('active');
   if (name === 'settings') { renderGroupList(); renderAlgoPage(); loadDisplayPrefs(); loadCapitalTable(); buildNicknameList(); }
-  if (name === 'stockmock') { renderSMComparison(); }
+  if (name === 'stockmock') { updateSMStrategyDropdown(); updateSMLoadedSummary(); renderSMComparison(); }
   if (name === 'algos') { renderGroupList(); renderAlgoPage(); }
   if (name === 'compare') { populateCompareSelects(); }
 }
@@ -2848,135 +2865,136 @@ function loadCapitalTable() {
 // ════════════════════════════════════════════════════
 //  STOCKMOCK COMPARISON
 // ════════════════════════════════════════════════════
-let smTrades = []; // loaded from Firebase
+let smTrades = [];
 
 function extractStrike(str) {
-  // Extract strike number from strings like "73800CE", "74000PE", "SENSEX2660473800CE"
-  const m = (str||'').match(/(\d{4,6})(CE|PE)/i);
+  const m = (str||'').toString().match(/(\d{4,6})(CE|PE)/i);
   return m ? { strike: parseInt(m[1]), type: m[2].toUpperCase() } : null;
 }
 
 function withinTolerance(a, b, pct) {
-  if (!a || !b || isNaN(a) || isNaN(b)) return null; // can't compare
+  if (a === null || b === null || isNaN(a) || isNaN(b)) return null;
   if (a === 0 && b === 0) return true;
-  const base = Math.abs(a) || Math.abs(b) || 1;
+  const base = Math.max(Math.abs(a), Math.abs(b), 1);
   return Math.abs(a - b) / base * 100 <= pct;
 }
 
+function normSMDate(raw) {
+  if (!raw) return '';
+  const s = String(raw).trim();
+  // 2026-06-09
+  if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0,10);
+  // 09-Jun-2026
+  const m = s.match(/(\d{1,2})[- ]([A-Za-z]{3})[- ](\d{4})/);
+  if (m) {
+    const mn = {jan:'01',feb:'02',mar:'03',apr:'04',may:'05',jun:'06',jul:'07',aug:'08',sep:'09',oct:'10',nov:'11',dec:'12'};
+    return `${m[3]}-${mn[m[2].toLowerCase()]||'01'}-${m[1].padStart(2,'0')}`;
+  }
+  // Excel serial
+  if (!isNaN(raw)) {
+    const d = new Date(Math.round((parseFloat(raw)-25569)*86400*1000));
+    return d.toISOString().slice(0,10);
+  }
+  return '';
+}
+
 function parseSMExcel(arrayBuffer) {
-  // Use SheetJS to parse Excel
   const XLSX = window.XLSX;
-  if (!XLSX) { toast('SheetJS not loaded', 'error'); return []; }
-  const wb = XLSX.read(arrayBuffer, { type: 'array' });
+  if (!XLSX) return [];
+  const wb = XLSX.read(arrayBuffer, { type:'array', cellDates:false });
   const trades = [];
 
-  // Find result sheets — pattern: "# S-N - Result"
-  const resultSheets = wb.SheetNames.filter(n => /^#\s*S-\d+\s*-\s*Result$/.test(n.trim()));
-
-  // Get strategy names from Basket Strategies sheet
+  // Get strategy name map from Basket Strategies sheet
   const stratMap = {};
-  const bsSheet = wb.Sheets['Basket Strategies'];
-  if (bsSheet) {
-    const rows = XLSX.utils.sheet_to_json(bsSheet, { header:1, defval:'' });
+  const bs = wb.Sheets['Basket Strategies'];
+  if (bs) {
+    const rows = XLSX.utils.sheet_to_json(bs, {header:1, defval:''});
     rows.forEach(r => {
-      // Row pattern: True  #S-1  StrategyName  ...
-      if (r[0]==='True' && typeof r[2]==='string' && r[2].trim()) {
-        const num = (r[1]||'').toString().replace(/[^0-9]/g,'');
-        if (num) stratMap['S-'+num] = r[2].trim();
+      if (String(r[0]).trim()==='True' && String(r[2]||'').trim()) {
+        const num = String(r[1]||'').replace(/[^0-9]/g,'');
+        if (num) stratMap['S-'+num] = String(r[2]).trim();
       }
     });
   }
 
-  for (const sheetName of resultSheets) {
-    const num = sheetName.match(/S-(\d+)/)?.[1];
-    const strategyName = stratMap['S-'+num] || sheetName;
+  // Process each "# S-N - Result (By Date)" sheet
+  wb.SheetNames.forEach(sheetName => {
+    const byDateMatch = sheetName.match(/^#\s*S-(\d+)\s*-\s*Result\s*\(By Date\)$/i);
+    if (!byDateMatch) return;
+    const num = byDateMatch[1];
+    const stratName = stratMap['S-'+num] || ('Strategy S-'+num);
+
     const sheet = wb.Sheets[sheetName];
-    const rows = XLSX.utils.sheet_to_json(sheet, { header:1, defval:'' });
+    const raw = XLSX.utils.sheet_to_json(sheet, {header:1, defval:''});
 
-    // Find header row
-    let hdrIdx = rows.findIndex(r => r.some(c => String(c).toLowerCase().includes('entry price') || String(c).toLowerCase().includes('entry date')));
-    if (hdrIdx < 0) continue;
-    const hdrs = rows[hdrIdx].map(h => String(h).trim().toLowerCase());
-
-    for (let i = hdrIdx+1; i < rows.length; i++) {
-      const r = rows[i];
-      if (!r[0] || String(r[0]).trim() === '') continue;
-      const get = (keys) => {
-        for (const k of keys) {
-          const idx = hdrs.findIndex(h => h.includes(k));
-          if (idx >= 0 && r[idx] !== '') return r[idx];
-        }
-        return null;
-      };
-
-      const dateRaw = get(['date']);
-      if (!dateRaw) continue;
-
-      // Parse date
-      let tradeDate = '';
-      if (typeof dateRaw === 'number') {
-        // Excel serial date
-        const d = new Date(Math.round((dateRaw - 25569) * 86400 * 1000));
-        tradeDate = d.toISOString().slice(0,10);
-      } else {
-        const dp = String(dateRaw).trim();
-        // Format: 09-Jun-2026 or 2026-06-09
-        const m1 = dp.match(/(\d{2})-([A-Za-z]{3})-(\d{4})/);
-        const m2 = dp.match(/(\d{4})-(\d{2})-(\d{2})/);
-        if (m1) {
-          const months = {jan:'01',feb:'02',mar:'03',apr:'04',may:'05',jun:'06',jul:'07',aug:'08',sep:'09',oct:'10',nov:'11',dec:'12'};
-          tradeDate = `${m1[3]}-${months[m1[2].toLowerCase()]}-${m1[1]}`;
-        } else if (m2) tradeDate = dp;
+    // Find the actual header row — it has 'Profit', 'Entry Price', 'Exit Price', 'Strike'
+    let hdrRow = -1;
+    for (let i = 0; i < Math.min(raw.length, 10); i++) {
+      const joined = raw[i].map(c=>String(c).toLowerCase()).join('|');
+      if (joined.includes('entry price') && joined.includes('exit price') && joined.includes('strike')) {
+        hdrRow = i; break;
       }
+    }
+    if (hdrRow < 0) return;
+
+    const hdrs = raw[hdrRow].map(c => String(c).trim().toLowerCase());
+
+    // Find leg blocks — each leg has: Profit, Entry Price, Exit Price, Difference, Strike
+    // They appear as repeated column groups
+    const legStarts = [];
+    hdrs.forEach((h, i) => {
+      if (h === 'strike') {
+        // Walk back to find the profit column for this leg
+        for (let j = i-1; j >= Math.max(0, i-5); j--) {
+          if (hdrs[j] === 'profit') { legStarts.push({profitIdx:j, strikeidx:i}); break; }
+        }
+      }
+    });
+
+    // Find date column
+    const dateIdx = hdrs.findIndex(h => h === 'date');
+
+    // Process data rows
+    for (let ri = hdrRow+1; ri < raw.length; ri++) {
+      const r = raw[ri];
+      if (!r[dateIdx]) continue;
+      const tradeDate = normSMDate(r[dateIdx]);
       if (!tradeDate) continue;
 
-      const profit = parseFloat(String(get(['profit'])||'0').replace(/[^0-9.-]/g,'')) || 0;
-
-      // Extract per-leg data — columns like "(1) SX Sell ... CE" etc.
-      // Find leg columns by looking for entry price, exit price, strike in headers
-      const legCols = [];
-      hdrs.forEach((h,idx) => {
-        if (h.includes('entry price') || h.includes('entry date')) {
-          // find the block of columns for this leg
-          legCols.push(idx);
-        }
-      });
-
-      // Simple approach: look for columns containing CE/PE strike info
-      hdrs.forEach((h, idx) => {
-        const entryPriceIdx = hdrs.findIndex((hh,ii) => ii >= idx && hh === 'entry price');
-        const exitPriceIdx  = hdrs.findIndex((hh,ii) => ii >= idx && hh === 'exit price');
-        const strikeIdx     = hdrs.findIndex((hh,ii) => ii >= idx && hh === 'strike');
-        const profitIdx     = hdrs.findIndex((hh,ii) => ii >= idx && hh === 'profit');
-        const entryTimeIdx  = hdrs.findIndex((hh,ii) => ii >= idx && hh === 'entry time');
-        const exitTimeIdx   = hdrs.findIndex((hh,ii) => ii >= idx && hh === 'exit time');
-        if (entryPriceIdx < 0) return;
-
-        // Only process each leg once
-        if (idx !== entryPriceIdx - 2 && idx !== entryPriceIdx) return;
-
-        const strikeVal = r[strikeIdx] ? String(r[strikeIdx]).trim() : '';
-        const sk = extractStrike(strikeVal);
+      legStarts.forEach(leg => {
+        const strikeRaw = String(r[leg.strikeidx]||'').trim();
+        const sk = extractStrike(strikeRaw);
         if (!sk) return;
 
-        const trade = {
+        // Find entry/exit price near the profit col
+        let entryPrice = 0, exitPrice = 0, entryTime = '', exitTime = '';
+        for (let ci = leg.profitIdx+1; ci <= leg.strikeidx; ci++) {
+          const h = hdrs[ci]||'';
+          if (h === 'entry price' && !entryPrice) entryPrice = parseFloat(r[ci])||0;
+          if (h === 'exit price'  && !exitPrice)  exitPrice  = parseFloat(r[ci])||0;
+          if (h === 'entry time'  && !entryTime)  entryTime  = String(r[ci]||'').trim();
+          if (h === 'exit time'   && !exitTime)   exitTime   = String(r[ci]||'').trim();
+        }
+
+        const legProfit = parseFloat(r[leg.profitIdx])||0;
+
+        trades.push({
           source:        'stockmock',
-          strategy_name: strategyName,
+          strategy_name: stratName,
           trade_date:    tradeDate,
           option_type:   sk.type,
           strike:        sk.strike,
-          entry_price:   parseFloat(r[entryPriceIdx]) || 0,
-          exit_price:    parseFloat(r[exitPriceIdx]) || 0,
-          entry_time:    r[entryTimeIdx] ? String(r[entryTimeIdx]).trim() : '',
-          exit_time:     r[exitTimeIdx]  ? String(r[exitTimeIdx]).trim()  : '',
-          leg_profit:    parseFloat(r[profitIdx]) || 0,
-          day_profit:    profit,
+          entry_price:   entryPrice,
+          exit_price:    exitPrice,
+          entry_time:    entryTime,
+          exit_time:     exitTime,
+          leg_profit:    legProfit,
           created_at:    new Date().toISOString()
-        };
-        trades.push(trade);
+        });
       });
     }
-  }
+  });
+
   return trades;
 }
 
@@ -2988,7 +3006,6 @@ async function handleSMFile(file) {
   const reader = new FileReader();
   reader.onload = async (e) => {
     try {
-      // Dynamically load SheetJS if not loaded
       if (!window.XLSX) {
         await new Promise((res,rej) => {
           const s = document.createElement('script');
@@ -2997,66 +3014,85 @@ async function handleSMFile(file) {
           document.head.appendChild(s);
         });
       }
-
       const trades = parseSMExcel(e.target.result);
       if (!trades.length) {
-        status.innerHTML = '<span style="color:var(--red);">⚠ No trades found in file</span>';
+        status.innerHTML = '<span style="color:var(--red);">⚠ No trades found — check file format</span>';
         return;
       }
-
-      let added = 0, skipped = 0;
+      let added=0, skipped=0;
       for (const t of trades) {
         const key = `${t.strategy_name}|${t.trade_date}|${t.option_type}|${t.strike}`;
-        const safeK = btoa(key).replace(/[/+=]/g,'_').slice(0,32);
+        const safeK = btoa(unescape(encodeURIComponent(key))).replace(/[/+=]/g,'_').slice(0,32);
+        t.hash = safeK;
         if (db) {
-          const snap = await db.ref('journal/stockmock_trades/' + safeK).get();
+          const snap = await db.ref('journal/stockmock_trades/'+safeK).get();
           if (snap.exists()) { skipped++; continue; }
-          await db.ref('journal/stockmock_trades/' + safeK).set({...t, hash: safeK});
+          await db.ref('journal/stockmock_trades/'+safeK).set(t);
         } else {
-          if (smTrades.find(x => x.hash === safeK)) { skipped++; continue; }
-          smTrades.push({...t, hash: safeK});
+          if (smTrades.find(x=>x.hash===safeK)) { skipped++; continue; }
+          smTrades.push(t);
         }
         added++;
       }
-
-      // Save upload record
-      const rec = { filename: file.name, uploaded_at: new Date().toISOString(), added, skipped };
-      if (db) await db.ref('journal/sm_uploads/' + Date.now()).set(rec);
-
-      status.innerHTML = `<span style="color:var(--green);">✓ ${added} trades added, ${skipped} skipped</span>`;
-      loadSMTrades();
-      toast(`✓ StockMock: ${added} added, ${skipped} skipped`, 'success');
+      const rec = {filename:file.name, uploaded_at:new Date().toISOString(), added, skipped};
+      if (db) await db.ref('journal/sm_uploads/'+Date.now()).set(rec);
+      status.innerHTML = `<span style="color:var(--green);">✓ ${added} legs added, ${skipped} skipped</span>`;
+      toast(`✓ Stockmock: ${added} added, ${skipped} skipped`, 'success');
     } catch(err) {
       status.innerHTML = `<span style="color:var(--red);">Error: ${err.message}</span>`;
-      console.error(err);
+      console.error('SM parse error:', err);
     }
   };
   reader.readAsArrayBuffer(file);
 }
 
 function loadSMTrades() {
-  if (db) {
-    db.ref('journal/stockmock_trades').on('value', snap => {
-      smTrades = Object.values(snap.val() || {});
-      renderSMComparison();
-      renderSMUploadHistory();
-    });
-    db.ref('journal/sm_uploads').on('value', snap => {
-      renderSMUploadHistory(Object.values(snap.val() || {}));
-    });
-  } else {
+  if (!db) return;
+  db.ref('journal/stockmock_trades').on('value', snap => {
+    smTrades = Object.values(snap.val()||{});
+    updateSMStrategyDropdown();
+    updateSMLoadedSummary();
     renderSMComparison();
-  }
+  });
+  db.ref('journal/sm_uploads').on('value', snap => {
+    renderSMUploadHistory(Object.values(snap.val()||{}));
+  });
+}
+
+function updateSMStrategyDropdown() {
+  const sel = document.getElementById('sm-strategy-select');
+  if (!sel) return;
+  // Broker strategies = source of truth
+  const brokerStrats = [...new Set(allTrades.map(t=>t.algo_name).filter(Boolean))].sort();
+  const smStrats = new Set(smTrades.map(t=>t.strategy_name));
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">All Strategies</option>';
+  brokerStrats.forEach(s => {
+    const hasSM = smStrats.has(s);
+    const opt = document.createElement('option');
+    opt.value = s;
+    opt.textContent = `${s} ${hasSM ? '✓' : '(no SM data)'}`;
+    sel.appendChild(opt);
+  });
+  if (cur) sel.value = cur;
+}
+
+function updateSMLoadedSummary() {
+  const el2 = document.getElementById('sm-loaded-summary');
+  if (!el2) return;
+  if (!smTrades.length) { el2.innerHTML = 'No Stockmock data loaded yet'; return; }
+  const strats = [...new Set(smTrades.map(t=>t.strategy_name))];
+  el2.innerHTML = `✓ <strong>${strats.length}</strong> strategies · <strong>${smTrades.length}</strong> legs loaded in Stockmock`;
 }
 
 function renderSMUploadHistory(uploads) {
   const el2 = document.getElementById('sm-upload-history');
-  if (!el2) return;
-  if (!uploads || !uploads.length) { el2.innerHTML = '<span style="color:var(--text3);">No uploads yet</span>'; return; }
-  el2.innerHTML = [...uploads].reverse().slice(0,5).map(u =>
+  if (!el2 || !uploads) return;
+  if (!uploads.length) { el2.innerHTML='<span style="color:var(--text3);">No uploads yet</span>'; return; }
+  el2.innerHTML=[...uploads].reverse().slice(0,5).map(u=>
     `<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border);">
-      <span style="color:var(--text1);font-size:0.75rem;">${u.filename}</span>
-      <span style="color:var(--text3);font-size:0.7rem;">+${u.added} · ${fmtDT(u.uploaded_at)}</span>
+      <span style="color:var(--text1);font-size:0.75rem;overflow:hidden;text-overflow:ellipsis;max-width:160px;">${u.filename}</span>
+      <span style="color:var(--text3);font-size:0.7rem;white-space:nowrap;">+${u.added} · ${fmtDT(u.uploaded_at)}</span>
     </div>`
   ).join('');
 }
@@ -3064,147 +3100,136 @@ function renderSMUploadHistory(uploads) {
 function renderSMComparison() {
   const container = document.getElementById('sm-comparison-content');
   if (!container) return;
-  const tolerance = parseFloat(document.getElementById('sm-tolerance')?.value || 2);
+  const tolerance = parseFloat(document.getElementById('sm-tolerance')?.value||2);
+  const selStrat  = document.getElementById('sm-strategy-select')?.value||'';
 
-  // Group broker trades by strategy
-  const brokerByStrategy = {};
-  allTrades.filter(t => !t.archived && t.status !== 'CANCELLED').forEach(t => {
-    if (!brokerByStrategy[t.algo_name]) brokerByStrategy[t.algo_name] = [];
-    brokerByStrategy[t.algo_name].push(t);
-  });
+  // Broker trades — source of truth
+  const brokerTrades = allTrades.filter(t=>!t.archived && t.status!=='CANCELLED');
+  const strategies = selStrat
+    ? [selStrat]
+    : [...new Set(brokerTrades.map(t=>t.algo_name).filter(Boolean))].sort();
 
-  if (!Object.keys(brokerByStrategy).length) {
-    container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text3);">No broker trades found</div>';
+  if (!strategies.length) {
+    container.innerHTML='<div style="text-align:center;padding:40px;color:var(--text3);">No broker trades found</div>';
     return;
   }
 
-  // Group SM trades by strategy+date+type
+  // SM lookup: strategy+date+optionType → trade
   const smByKey = {};
   smTrades.forEach(t => {
     const k = `${t.strategy_name}|${t.trade_date}|${t.option_type}`;
-    smByKey[k] = t;
+    if (!smByKey[k]) smByKey[k] = t;
   });
 
   let html = '';
-  const strategies = Object.keys(brokerByStrategy).sort();
 
   strategies.forEach((strat, si) => {
-    const bTrades = brokerByStrategy[strat];
-    // Group broker trades by date
-    const byDate = {};
-    bTrades.forEach(t => {
-      const d = t.entry_date || '';
-      if (!byDate[d]) byDate[d] = [];
-      byDate[d].push(t);
-    });
+    const bTrades = brokerTrades.filter(t=>t.algo_name===strat);
+    if (!bTrades.length) return;
 
-    const gId = 'smg_' + si;
-    const stratTotal = bTrades.reduce((s,t)=>s+(t.pnl||0),0);
-    const smStratTotal = [...new Set(bTrades.map(t=>t.entry_date))].reduce((s,d)=>{
-      const smKey = `${strat}|${d}|CE`;
-      const smPE  = smByKey[`${strat}|${d}|PE`];
-      const smCE  = smByKey[`${strat}|${d}|CE`];
-      return s + (smCE?.leg_profit||0) + (smPE?.leg_profit||0);
-    }, 0);
+    const hasSMData = smTrades.some(t=>t.strategy_name===strat);
+    const gId = 'smg_'+si;
+    const bTotal = bTrades.reduce((s,t)=>s+(t.pnl||0),0);
+    const smTotal = bTrades.reduce((s,t)=>{
+      const sm = smByKey[`${strat}|${t.entry_date}|${t.option_type||optType(t.symbol||'')}`];
+      return s+(sm?.leg_profit||0);
+    },0);
 
-    html += `
-    <div class="sm-group-body">
+    html += `<div class="sm-group-body" style="margin-bottom:16px;">
       <div class="sm-group-header" onclick="tgl('${gId}')">
         <div style="display:flex;align-items:center;gap:10px;">
           <span id="arr-${gId}">▼</span>
           <span>${strat}</span>
-          <span style="font-size:0.72rem;font-weight:400;opacity:0.8;">${bTrades.length} legs · ${Object.keys(byDate).length} days</span>
+          <span style="font-size:0.7rem;font-weight:400;opacity:0.75;">${bTrades.length} legs</span>
+          ${!hasSMData?'<span style="font-size:0.7rem;background:#374151;color:#9ca3af;padding:2px 8px;border-radius:4px;">No Stockmock Data</span>':''}
         </div>
-        <div style="display:flex;gap:24px;font-size:0.82rem;">
-          <span>Broker: <strong>${fmt(stratTotal)}</strong></span>
-          <span>SM: <strong>${smStratTotal ? fmt(smStratTotal) : '—'}</strong></span>
-          ${smStratTotal ? `<span>Diff: <strong style="color:${(stratTotal-smStratTotal)>=0?'#16a34a':'#dc2626'}">${fmt(stratTotal-smStratTotal)}</strong></span>` : ''}
+        <div style="display:flex;gap:20px;font-size:0.8rem;">
+          <span>Broker: <strong>${fmt(bTotal)}</strong></span>
+          ${hasSMData?`<span>Stockmock: <strong>${fmt(smTotal)}</strong></span><span>Diff: <strong style="color:${(bTotal-smTotal)>=0?'#16a34a':'#dc2626'}">${fmt(bTotal-smTotal)}</strong></span>`:''}
         </div>
       </div>
-      <div id="${gId}" style="overflow-x:auto;">
-        <table class="sm-table">
-          <thead>
-            <tr>
-              <th style="text-align:left;">Date</th>
-              <th>Type</th>
-              <th>SM Strike</th>
-              <th>Broker Strike</th>
-              <th>SM Entry</th>
-              <th>Broker Entry</th>
-              <th>SM Exit</th>
-              <th>Broker Exit</th>
-              <th>SM P&L</th>
-              <th>Broker P&L</th>
-              <th>Diff</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody>`;
+      <div id="${gId}" style="overflow-x:auto;">`;
 
-    Object.keys(byDate).sort().reverse().forEach(date => {
-      byDate[date].forEach(bt => {
-        const optType = bt.option_type || optType(bt.symbol||'');
-        const smKey   = `${strat}|${date}|${optType}`;
-        const sm      = smByKey[smKey];
+    if (!hasSMData) {
+      html += `<div style="padding:16px 20px;background:#f9fafb;color:#6b7280;font-size:0.82rem;border:1px solid var(--border);border-top:none;border-radius:0 0 6px 6px;">
+        ⚫ No Stockmock data found for <strong>${strat}</strong>. Upload a Stockmock Excel containing this strategy.
+      </div>`;
+    } else {
+      // Group by date
+      const byDate = {};
+      bTrades.forEach(t=>{ const d=t.entry_date||''; if(!byDate[d])byDate[d]=[]; byDate[d].push(t); });
 
-        // Extract broker strike from symbol
-        const brkStrike = extractStrike(bt.symbol||'');
-        const brkStrikeNum = brkStrike?.strike || 0;
+      html += `<table class="sm-table">
+        <thead><tr>
+          <th style="text-align:left;min-width:90px;">Date</th>
+          <th>Type</th>
+          <th>Stockmock<br>Strike</th>
+          <th>Broker<br>Strike</th>
+          <th>Stockmock<br>Entry</th>
+          <th>Broker<br>Entry</th>
+          <th>Stockmock<br>Exit</th>
+          <th>Broker<br>Exit</th>
+          <th>Stockmock<br>P&L</th>
+          <th>Broker<br>P&L</th>
+          <th>Diff</th>
+          <th>Status</th>
+        </tr></thead><tbody>`;
 
-        // SM values
-        const smStrike  = sm?.strike || null;
-        const smEntry   = sm?.entry_price || null;
-        const smExit    = sm?.exit_price || null;
-        const smPnl     = sm?.leg_profit || null;
+      Object.keys(byDate).sort().reverse().forEach(date => {
+        byDate[date].forEach(bt => {
+          const ot = bt.option_type || optType(bt.symbol||'');
+          const sm = smByKey[`${strat}|${date}|${ot}`];
+          const brkStrike = extractStrike(bt.symbol||'')?.strike || 0;
 
-        // Broker values
-        const bEntry  = bt.entry_price || 0;
-        const bExit   = bt.exit_price  || 0;
-        const bPnl    = bt.pnl || 0;
+          const smStrike = sm?.strike||null;
+          const smEntry  = sm?.entry_price||null;
+          const smExit   = sm?.exit_price||null;
+          const smPnl    = sm?.leg_profit||null;
+          const bEntry   = bt.entry_price||0;
+          const bExit    = bt.exit_price||0;
+          const bPnl     = bt.pnl||0;
 
-        // Compare each field
-        const ckStrike = sm ? withinTolerance(smStrike, brkStrikeNum, tolerance) : null;
-        const ckEntry  = sm ? withinTolerance(smEntry,  bEntry,        tolerance) : null;
-        const ckExit   = sm ? withinTolerance(smExit,   bExit,         tolerance) : null;
-        const ckPnl    = sm ? withinTolerance(smPnl,    bPnl,          tolerance) : null;
+          const ckStrike = sm ? withinTolerance(smStrike, brkStrike, tolerance) : null;
+          const ckEntry  = sm ? withinTolerance(smEntry,  bEntry,    tolerance) : null;
+          const ckExit   = sm ? withinTolerance(smExit,   bExit,     tolerance) : null;
+          const ckPnl    = sm ? withinTolerance(smPnl,    bPnl,      tolerance) : null;
 
-        const checks = [ckStrike, ckEntry, ckExit, ckPnl].filter(c => c !== null);
-        const allOk  = checks.length > 0 && checks.every(c => c === true);
-        const anyBad = checks.some(c => c === false);
-        const noSM   = !sm;
+          const checks  = [ckStrike,ckEntry,ckExit,ckPnl].filter(c=>c!==null);
+          const allOk   = checks.length>0 && checks.every(c=>c===true);
+          const anyBad  = checks.some(c=>c===false);
+          const rowCls  = !sm ? 'sm-no-match' : allOk ? 'sm-match-full' : anyBad ? 'sm-match-part' : 'sm-match-full';
+          const statusEl = !sm
+            ? '<span class="sm-status-none">⚫ No SM</span>'
+            : allOk ? '<span class="sm-status-full">🟢 Match</span>'
+            : '<span class="sm-status-part">🟡 Partial</span>';
 
-        const rowCls = noSM ? 'sm-no-match' : (allOk ? 'sm-match-full' : (anyBad ? 'sm-match-part' : 'sm-match-full'));
-        const status = noSM ? '<span class="sm-status-none">⚫ No SM</span>' :
-                       allOk ? '<span class="sm-status-full">🟢 Match</span>' :
-                       '<span class="sm-status-part">🟡 Partial</span>';
+          const cell = (smV, bV, ok) => {
+            const sf = smV!==null ? smV.toLocaleString('en-IN') : '—';
+            const bf = typeof bV==='number' ? bV.toLocaleString('en-IN') : (bV||'—');
+            const bcls = ok===false ? 'sm-cell-diff' : ok===true ? 'sm-cell-ok' : '';
+            return `<td style="color:var(--text2);">${sf}</td><td class="${bcls}">${bf}</td>`;
+          };
 
-        const fmtCell = (smVal, bVal, ok) => {
-          if (smVal === null) return `<td class="sm-cell-na">—</td><td>${bVal||'—'}</td>`;
-          const smFmt = typeof smVal === 'number' ? smVal.toLocaleString('en-IN') : smVal;
-          const bFmt  = typeof bVal  === 'number' ? bVal.toLocaleString('en-IN')  : bVal;
-          const bCls  = ok === false ? 'sm-cell-diff' : (ok === true ? 'sm-cell-ok' : '');
-          return `<td>${smFmt}</td><td class="${bCls}">${bFmt}</td>`;
-        };
+          const diff = (sm&&smPnl!==null) ? (bPnl-smPnl) : null;
 
-        const pnlDiff = (sm && bPnl !== null && smPnl !== null) ? (bPnl - smPnl) : null;
-
-        html += `<tr class="${rowCls}">
-          <td>${date}</td>
-          <td><span class="badge ${optType==='CE'?'b-blue':'b-red'}">${optType}</span></td>
-          ${fmtCell(smStrike, brkStrikeNum, ckStrike)}
-          ${fmtCell(smEntry,  bEntry,        ckEntry)}
-          ${fmtCell(smExit,   bExit,         ckExit)}
-          ${fmtCell(smPnl,    bPnl,          ckPnl)}
-          <td>${pnlDiff !== null ? `<span style="color:${pnlDiff>=0?'#16a34a':'#dc2626'};font-weight:600;">${fmt(pnlDiff)}</span>` : '—'}</td>
-          <td>${status}</td>
-        </tr>`;
+          html += `<tr class="${rowCls}">
+            <td>${date}</td>
+            <td><span class="badge ${ot==='CE'?'b-blue':'b-red'}">${ot}</span></td>
+            ${cell(smStrike, brkStrike, ckStrike)}
+            ${cell(smEntry,  bEntry,    ckEntry)}
+            ${cell(smExit,   bExit,     ckExit)}
+            ${cell(smPnl,    bPnl,      ckPnl)}
+            <td>${diff!==null?`<span style="color:${diff>=0?'#16a34a':'#dc2626'};font-weight:600;">${fmt(diff)}</span>`:'—'}</td>
+            <td>${statusEl}</td>
+          </tr>`;
+        });
       });
-    });
-
-    html += `</tbody></table></div></div>`;
+      html += '</tbody></table>';
+    }
+    html += '</div></div>';
   });
 
-  container.innerHTML = html || '<div style="text-align:center;padding:40px;color:var(--text3);">No data to compare</div>';
+  container.innerHTML = html || '<div style="text-align:center;padding:40px;color:var(--text3);">No data</div>';
 }
 
 function saveDisplayPrefs() {
