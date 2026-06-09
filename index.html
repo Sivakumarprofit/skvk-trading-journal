@@ -2,6 +2,12 @@
 ==========================================================
   SKVK TRADING JOURNAL — VERSION HISTORY
 ==========================================================
+  v13.34| 2026-06-10 | Renamed SM Compare nav tab to StockMock Compare (wraps 2 lines),
+         |            | Settings: Firebase Usage Estimation (per path, in MB, with progress bar),
+         |            | Settings: Clear Stockmock Data by date range with preview + confirm
+  ──────────────────────────────────────────────────────
+  v13.33| 2026-06-10 | Fix: Trim strategy names on save and lookup (trailing spaces caused No SM Data)
+  ──────────────────────────────────────────────────────
   v13.32| 2026-06-10 | Renamed Stockmock tab to SM Compare
   ──────────────────────────────────────────────────────
   v13.31| 2026-06-10 | Further fixed Stockmock parser: handles double header rows,
@@ -260,7 +266,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>SKVK Trading Journal v13.32</title>
+<title>SKVK Trading Journal v13.34</title>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -1080,7 +1086,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
 <div id="topbar">
   <div class="brand">
     <span class="brand-dot"></span>
-    SKVK Trading Journal <span style="font-size:0.85rem;background:#1a73e8;color:#fff;padding:3px 10px;border-radius:10px;font-weight:700;margin-left:6px;vertical-align:middle;">v13.32</span>
+    SKVK Trading Journal <span style="font-size:0.85rem;background:#1a73e8;color:#fff;padding:3px 10px;border-radius:10px;font-weight:700;margin-left:6px;vertical-align:middle;">v13.34</span>
   </div>
   <nav class="nav-tabs">
     <button class="nav-tab active" onclick="showPage('journal')"    data-page="journal">📋 <span class="tl">Journal</span></button>
@@ -1088,7 +1094,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <button class="nav-tab" onclick="showPage('compare')"    data-page="compare">⚖️ <span class="tl">Compare</span></button>
     <button class="nav-tab" onclick="showPage('manual')"     data-page="manual">✏️ <span class="tl">Manual</span></button>
     <button class="nav-tab" onclick="showPage('upload')"     data-page="upload">⬆ <span class="tl">Upload Results</span></button>
-    <button class="nav-tab" onclick="showPage('stockmock')"  data-page="stockmock">🔬 <span class="tl">SM Compare</span></button>
+    <button class="nav-tab" onclick="showPage('stockmock')"  data-page="stockmock">🔬 <span class="tl">StockMock<br>Compare</span></button>
     <button class="nav-tab" onclick="showPage('settings')"   data-page="settings">⚙️ <span class="tl">Settings</span></button>
   </nav>
   <div class="topbar-right">
@@ -1377,6 +1383,45 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
       <div id="capital-grid" style="overflow-x:auto;"></div>
     </div>
 
+
+    <!-- ── Firebase Usage ── -->
+    <div style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:22px;box-shadow:var(--shadow-sm);">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span style="font-size:1.3rem;">📦</span>
+          <div>
+            <div style="font-size:0.95rem;font-weight:700;color:var(--text0);">Firebase Usage (Estimated)</div>
+            <div style="font-size:0.72rem;color:var(--text2);margin-top:2px;">Based on loaded JSON data · Free tier limit: 1 GB</div>
+          </div>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="estimateDBSize()">🔄 Refresh</button>
+      </div>
+      <div id="db-size-breakdown">
+        <div style="color:var(--text3);font-size:0.8rem;">Click Refresh to estimate usage</div>
+      </div>
+    </div>
+
+    <!-- ── Clear Stockmock Data ── -->
+    <div style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:22px;box-shadow:var(--shadow-sm);">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+        <span style="font-size:1.3rem;">🔬</span>
+        <span style="font-size:0.95rem;font-weight:700;color:var(--text0);">Clear Stockmock Data</span>
+      </div>
+      <p style="font-size:0.8rem;color:var(--text2);margin-bottom:16px;">Delete Stockmock trades within a date range to free up Firebase storage.</p>
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px;">
+        <div style="display:flex;align-items:center;gap:6px;">
+          <label style="font-size:0.8rem;font-weight:600;color:var(--text1);">From:</label>
+          <input type="date" id="sm-clear-from" style="padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:0.82rem;outline:none;">
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;">
+          <label style="font-size:0.8rem;font-weight:600;color:var(--text1);">To:</label>
+          <input type="date" id="sm-clear-to" style="padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:0.82rem;outline:none;">
+        </div>
+        <button onclick="previewSMClear()" class="btn btn-ghost btn-sm">🔍 Preview</button>
+        <button id="sm-clear-btn" onclick="executeSMClear()" class="btn btn-sm" style="background:var(--red);color:#fff;display:none;">🗑 Delete</button>
+      </div>
+      <div id="sm-clear-preview" style="font-size:0.78rem;color:var(--text2);"></div>
+    </div>
 
     <!-- ── Data Management ── -->
     <div style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:22px;box-shadow:var(--shadow-sm);">
@@ -1976,7 +2021,7 @@ function showPage(name) {
   if (pg) pg.classList.add('active');
   const tab = document.querySelector(`[data-page="${name}"]`);
   if (tab) tab.classList.add('active');
-  if (name === 'settings') { renderGroupList(); renderAlgoPage(); loadDisplayPrefs(); loadCapitalTable(); buildNicknameList(); }
+  if (name === 'settings') { renderGroupList(); renderAlgoPage(); loadDisplayPrefs(); loadCapitalTable(); buildNicknameList(); estimateDBSize(); }
   if (name === 'stockmock') { updateSMStrategyDropdown(); updateSMLoadedSummary(); renderSMComparison(); }
   if (name === 'algos') { renderGroupList(); renderAlgoPage(); }
   if (name === 'compare') { populateCompareSelects(); }
@@ -2810,6 +2855,114 @@ function getClientLabel(cid) {
   return nick ? `${nick} (${cid})` : cid;
 }
 
+// ════════════════════════════════════════════════════
+//  FIREBASE USAGE ESTIMATION
+// ════════════════════════════════════════════════════
+async function estimateDBSize() {
+  const container = document.getElementById('db-size-breakdown');
+  if (!container) return;
+  container.innerHTML = '<div style="color:var(--text2);font-size:0.8rem;">⏳ Calculating…</div>';
+
+  const toMB = bytes => (bytes / (1024*1024)).toFixed(3) + ' MB';
+  const sizeOf = obj => new Blob([JSON.stringify(obj)]).size;
+
+  const sections = [];
+  let totalBytes = 0;
+
+  // Read each Firebase path
+  const paths = [
+    { key:'journal/trades',          label:'Options Trades',    icon:'📋' },
+    { key:'journal/stockmock_trades', label:'Stockmock Trades', icon:'🔬' },
+    { key:'journal/mcx_trades',       label:'MCX Trades',       icon:'🥇' },
+    { key:'journal/algos',            label:'Algo Settings',    icon:'⚙️' },
+    { key:'journal/uploads',          label:'Upload History',   icon:'📤' },
+    { key:'journal/sm_uploads',       label:'SM Upload History',icon:'📥' },
+    { key:'journal/capital',          label:'Capital Data',     icon:'💰' },
+    { key:'journal/nicknames',        label:'Nicknames',        icon:'🏷️' },
+    { key:'journal/settings',         label:'Settings',         icon:'🔧' },
+    { key:'journal/last_updated',     label:'Last Updated',     icon:'🕐' },
+  ];
+
+  for (const p of paths) {
+    try {
+      const snap = db ? await db.ref(p.key).get() : null;
+      const data = snap ? snap.val() : null;
+      const bytes = data ? sizeOf(data) : 0;
+      totalBytes += bytes;
+      const count = data && typeof data === 'object' ? Object.keys(data).length : (data ? 1 : 0);
+      sections.push({ ...p, bytes, count });
+    } catch(e) {
+      sections.push({ ...p, bytes: 0, count: 0 });
+    }
+  }
+
+  const FREE_LIMIT = 1024 * 1024 * 1024; // 1 GB
+  const pct = (totalBytes / FREE_LIMIT * 100).toFixed(4);
+  const barW = Math.min(100, totalBytes / FREE_LIMIT * 100);
+  const barColor = barW > 80 ? 'var(--red)' : barW > 50 ? 'var(--orange)' : 'var(--green)';
+
+  container.innerHTML = `
+    <div style="margin-bottom:12px;">
+      <div style="display:flex;justify-content:space-between;font-size:0.8rem;margin-bottom:4px;">
+        <span style="font-weight:600;">Total: <strong>${toMB(totalBytes)}</strong></span>
+        <span style="color:var(--text2);">${pct}% of 1 GB free tier</span>
+      </div>
+      <div style="background:var(--bg3);border-radius:4px;height:8px;overflow:hidden;">
+        <div style="background:${barColor};height:100%;width:${barW}%;transition:width 0.5s;border-radius:4px;"></div>
+      </div>
+    </div>
+    <div style="display:grid;gap:4px;">
+      ${sections.filter(s=>s.bytes>0).map(s=>`
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:5px 10px;background:var(--bg2);border-radius:6px;font-size:0.76rem;">
+          <span>${s.icon} ${s.label} <span style="color:var(--text3);">(${s.count} records)</span></span>
+          <strong>${toMB(s.bytes)}</strong>
+        </div>`).join('')}
+      ${sections.filter(s=>s.bytes===0).map(s=>`
+        <div style="display:flex;justify-content:space-between;padding:5px 10px;font-size:0.76rem;color:var(--text3);">
+          <span>${s.icon} ${s.label}</span><span>empty</span>
+        </div>`).join('')}
+    </div>
+    <div style="font-size:0.68rem;color:var(--text3);margin-top:8px;">* Estimate based on JSON size of loaded data. Actual Firebase usage may differ slightly.</div>`;
+}
+
+// ════════════════════════════════════════════════════
+//  CLEAR STOCKMOCK BY DATE RANGE
+// ════════════════════════════════════════════════════
+function previewSMClear() {
+  const from = document.getElementById('sm-clear-from')?.value;
+  const to   = document.getElementById('sm-clear-to')?.value;
+  const preview = document.getElementById('sm-clear-preview');
+  const btn = document.getElementById('sm-clear-btn');
+  if (!from || !to) { preview.innerHTML='<span style="color:var(--red);">Please select both From and To dates</span>'; return; }
+  if (from > to)    { preview.innerHTML='<span style="color:var(--red);">From date must be before To date</span>'; return; }
+  const matches = smTrades.filter(t => t.trade_date >= from && t.trade_date <= to);
+  if (!matches.length) {
+    preview.innerHTML='<span style="color:var(--text2);">No Stockmock trades found in this date range</span>';
+    btn.style.display='none'; return;
+  }
+  const strats = [...new Set(matches.map(t=>t.strategy_name))];
+  preview.innerHTML=`<span style="color:var(--orange);">⚠ Found <strong>${matches.length}</strong> Stockmock legs across <strong>${strats.length}</strong> strategies (${from} to ${to}). This cannot be undone.</span>`;
+  btn.style.display='inline-block';
+}
+
+async function executeSMClear() {
+  const from = document.getElementById('sm-clear-from')?.value;
+  const to   = document.getElementById('sm-clear-to')?.value;
+  const preview = document.getElementById('sm-clear-preview');
+  const btn = document.getElementById('sm-clear-btn');
+  if (!from || !to) return;
+  const matches = smTrades.filter(t => t.trade_date >= from && t.trade_date <= to);
+  if (!matches.length) return;
+  preview.innerHTML='<span style="color:var(--text2);">⏳ Deleting…</span>';
+  btn.style.display='none';
+  let deleted=0;
+  for (const t of matches) {
+    if (db && t.hash) { await db.ref('journal/stockmock_trades/'+t.hash).remove(); deleted++; }
+  }
+  preview.innerHTML=`<span style="color:var(--green);">✓ Deleted ${deleted} Stockmock legs</span>`;
+  toast(`✓ Deleted ${deleted} Stockmock trades`, 'success');
+}
+
 function buildCapitalTable() {
   const grid = document.getElementById('capital-grid');
   if (!grid) return;
@@ -2995,7 +3148,7 @@ function parseSMExcel(arrayBuffer) {
 
         trades.push({
           source:        'stockmock',
-          strategy_name: stratName,
+          strategy_name: (stratName||).trim(),
           trade_date:    tradeDate,
           option_type:   sk.type,
           strike:        sk.strike,
@@ -3132,7 +3285,7 @@ function renderSMComparison() {
   // SM lookup: strategy+date+optionType → trade
   const smByKey = {};
   smTrades.forEach(t => {
-    const k = `${t.strategy_name}|${t.trade_date}|${t.option_type}`;
+    const k = `${(t.strategy_name||'').trim()}|${t.trade_date}|${t.option_type}`;
     if (!smByKey[k]) smByKey[k] = t;
   });
 
@@ -3142,7 +3295,7 @@ function renderSMComparison() {
     const bTrades = brokerTrades.filter(t=>t.algo_name===strat);
     if (!bTrades.length) return;
 
-    const hasSMData = smTrades.some(t=>t.strategy_name===strat);
+    const hasSMData = smTrades.some(t=>(t.strategy_name||"").trim()===strat.trim());
     const gId = 'smg_'+si;
     const bTotal = bTrades.reduce((s,t)=>s+(t.pnl||0),0);
     const smTotal = bTrades.reduce((s,t)=>{
@@ -3193,7 +3346,7 @@ function renderSMComparison() {
       Object.keys(byDate).sort().reverse().forEach(date => {
         byDate[date].forEach(bt => {
           const ot = bt.option_type || optType(bt.symbol||'');
-          const sm = smByKey[`${strat}|${date}|${ot}`];
+          const sm = smByKey[`${strat.trim()}|${date}|${ot}`];
           const brkStrike = extractStrike(bt.symbol||'')?.strike || 0;
 
           const smStrike = sm?.strike||null;
