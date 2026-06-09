@@ -2,6 +2,10 @@
 ==========================================================
   SKVK TRADING JOURNAL — VERSION HISTORY
 ==========================================================
+  v13.36| 2026-06-10 | Fix: SM parser backward scan increased from 10 to 20 columns,
+         |            | Now correctly finds both CE and PE leg data in wider column layouts,
+         |            | Was only saving 4 legs instead of all legs per file
+  ──────────────────────────────────────────────────────
   v13.35| 2026-06-10 | Fix: Syntax error in parseSMExcel (stratName||) caused page crash
   ──────────────────────────────────────────────────────
   v13.34| 2026-06-10 | Renamed SM Compare nav tab to StockMock Compare (wraps 2 lines),
@@ -268,7 +272,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>SKVK Trading Journal v13.35</title>
+<title>SKVK Trading Journal v13.36</title>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -1088,7 +1092,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
 <div id="topbar">
   <div class="brand">
     <span class="brand-dot"></span>
-    SKVK Trading Journal <span style="font-size:0.85rem;background:#1a73e8;color:#fff;padding:3px 10px;border-radius:10px;font-weight:700;margin-left:6px;vertical-align:middle;">v13.35</span>
+    SKVK Trading Journal <span style="font-size:0.85rem;background:#1a73e8;color:#fff;padding:3px 10px;border-radius:10px;font-weight:700;margin-left:6px;vertical-align:middle;">v13.36</span>
   </div>
   <nav class="nav-tabs">
     <button class="nav-tab active" onclick="showPage('journal')"    data-page="journal">📋 <span class="tl">Journal</span></button>
@@ -3114,8 +3118,9 @@ function parseSMExcel(arrayBuffer) {
     // For each Strike column, find the associated leg columns by scanning backwards
     const legDefs = strikeIdxs.map(si => {
       // Walk backwards from strike to find: entry price, exit price, profit
+      // Range increased to 20 to handle wider column layouts
       let entryPriceIdx=-1, exitPriceIdx=-1, profitIdx=-1, entryTimeIdx=-1, exitTimeIdx=-1;
-      for (let ci = si-1; ci >= Math.max(0, si-10); ci--) {
+      for (let ci = si-1; ci >= Math.max(0, si-20); ci--) {
         const h = hdrs[ci];
         if (h === 'entry price' && entryPriceIdx < 0) entryPriceIdx = ci;
         if (h === 'exit price'  && exitPriceIdx  < 0) exitPriceIdx  = ci;
