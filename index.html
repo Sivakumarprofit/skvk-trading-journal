@@ -2,6 +2,10 @@
 ==========================================================
   SKVK TRADING JOURNAL — VERSION HISTORY
 ==========================================================
+  v14.1 | 2026-06-11 | Heatmap: Red/Green colors (more intuitive),
+         |            | Combined always shown + drill-down dropdown for strategy/group,
+         |            | Larger cells (90px) with better readability
+  ──────────────────────────────────────────────────────
   v14.0 | 2026-06-11 | Daily P&L Heatmap below Broker P&L,
          |            | Combined and By Group dropdown, Teal=profit, Charcoal=loss,
          |            | 5 intensity levels, value + % of monthly capital per cell
@@ -283,7 +287,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>SKVK Trading Journal v14.0</title>
+<title>SKVK Trading Journal v14.1</title>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -575,16 +579,16 @@ tbody tr.grand-total-row:hover td { background: #d8e2f0 !important; color: var(-
 .delta-row { display: none; }
 
 /* P&L HEATMAP */
-.heatmap-cell{width:76px;min-height:46px;border-radius:6px;text-align:center;vertical-align:middle;cursor:default;transition:transform .12s,box-shadow .12s;padding:3px 4px;position:relative;}
+.heatmap-cell{width:90px;min-height:58px;border-radius:8px;text-align:center;vertical-align:middle;cursor:default;transition:transform .12s,box-shadow .12s;padding:4px 6px;position:relative;}
 .heatmap-cell:hover{transform:scale(1.1);box-shadow:0 3px 10px rgba(0,0,0,.2);z-index:2;}
-.heatmap-cell .hm-day{font-size:.58rem;opacity:.7;line-height:1.2;}
-.heatmap-cell .hm-val{font-weight:700;font-size:.7rem;line-height:1.3;}
-.heatmap-cell .hm-pct{font-size:.6rem;opacity:.85;}
+.heatmap-cell .hm-day{font-size:.65rem;opacity:.75;line-height:1.3;font-weight:500;}
+.heatmap-cell .hm-val{font-weight:700;font-size:.78rem;line-height:1.4;}
+.heatmap-cell .hm-pct{font-size:.65rem;opacity:.9;margin-top:1px;}
 .heatmap-table{border-collapse:separate;border-spacing:2px;}
 .heatmap-empty{background:#f3f4f6;color:#d1d5db;}
 .heatmap-zero{background:#f9fafb;color:#9ca3af;}
-.hm-p1{background:#ccfbf1;color:#0f766e;}.hm-p2{background:#99f6e4;color:#0d6b63;}.hm-p3{background:#2dd4bf;color:#134e4a;}.hm-p4{background:#0d9488;color:#fff;}.hm-p5{background:#0f766e;color:#fff;}
-.hm-l1{background:#e5e7eb;color:#374151;}.hm-l2{background:#d1d5db;color:#1f2937;}.hm-l3{background:#9ca3af;color:#fff;}.hm-l4{background:#4b5563;color:#fff;}.hm-l5{background:#1f2937;color:#e5e7eb;}
+.hm-p1{background:#dcfce7;color:#166534;}.hm-p2{background:#bbf7d0;color:#15803d;}.hm-p3{background:#4ade80;color:#14532d;}.hm-p4{background:#16a34a;color:#fff;}.hm-p5{background:#166534;color:#fff;}
+.hm-l1{background:#fee2e2;color:#991b1b;}.hm-l2{background:#fca5a5;color:#7f1d1d;}.hm-l3{background:#f87171;color:#fff;}.hm-l4{background:#dc2626;color:#fff;}.hm-l5{background:#991b1b;color:#fef2f2;}
 /* ── STOCKMOCK COMPARISON ── */
 .sm-match-full  { background: #f0fdf4 !important; }
 .sm-match-part  { background: #fffbeb !important; }
@@ -1115,7 +1119,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
 <div id="topbar">
   <div class="brand">
     <span class="brand-dot"></span>
-    SKVK Trading Journal <span style="font-size:0.85rem;background:#1a73e8;color:#fff;padding:3px 10px;border-radius:10px;font-weight:700;margin-left:6px;vertical-align:middle;">v14.0</span>
+    SKVK Trading Journal <span style="font-size:0.85rem;background:#1a73e8;color:#fff;padding:3px 10px;border-radius:10px;font-weight:700;margin-left:6px;vertical-align:middle;">v14.1</span>
   </div>
   <nav class="nav-tabs">
     <button class="nav-tab active" onclick="showPage('journal')"    data-page="journal">📋 <span class="tl">Journal</span></button>
@@ -1239,8 +1243,8 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
           <option value="group">By Group</option>
         </select>
         <div style="display:flex;gap:5px;font-size:0.68rem;">
-          <span style="background:#0f766e;color:#fff;padding:2px 8px;border-radius:4px;">Profit</span>
-          <span style="background:#4b5563;color:#fff;padding:2px 8px;border-radius:4px;">Loss</span>
+          <span style="background:#16a34a;color:#fff;padding:2px 8px;border-radius:4px;">Profit</span>
+          <span style="background:#dc2626;color:#fff;padding:2px 8px;border-radius:4px;">Loss</span>
           <span style="background:#f3f4f6;color:#9ca3af;padding:2px 8px;border-radius:4px;border:1px solid #e5e7eb;">No trade</span>
         </div>
       </div>
@@ -2536,7 +2540,51 @@ function renderDashTable(tr, mMap) {
 // DAILY P&L HEATMAP
 function getHeatClass(pnl,maxAbs){if(!pnl||pnl===0)return'heatmap-zero';const r=Math.abs(pnl)/(maxAbs||1);const t=r<.1?1:r<.25?2:r<.5?3:r<.75?4:5;return pnl>0?'hm-p'+t:'hm-l'+t;}
 function fmtHeat(pnl){if(pnl===null||pnl===undefined)return'—';const a=Math.abs(pnl),s=pnl<0?'-':'';return a>=100000?s+'\u20b9'+(a/100000).toFixed(1)+'L':a>=1000?s+'\u20b9'+(a/1000).toFixed(1)+'K':s+'\u20b9'+a.toFixed(0);}
-function renderHeatmap(){const container=document.getElementById('heatmap-content');if(!container)return;const mode=document.getElementById('heatmap-mode')?.value||'combined';const tr=allTrades.filter(t=>!t.archived&&t.status!=='CANCELLED'&&(t.entry_date||'').startsWith(currentYear));if(!tr.length){container.innerHTML='<div style="padding:20px;color:var(--text3);">No data</div>';return;}let html='';if(mode==='combined'){html=buildOneHeatmap('Combined — All Strategies',tr,null);}else{const groups=Object.values(algoGroups);if(!groups.length){container.innerHTML='<div style="padding:20px;color:var(--text3);">No groups defined in Settings.</div>';return;}groups.forEach(g=>{const gtr=tr.filter(t=>(g.algos||[]).includes(t.algo_name));if(gtr.length)html+=buildOneHeatmap(g.name,gtr,g.color);});const grouped=new Set(groups.flatMap(g=>g.algos||[]));const ung=tr.filter(t=>!grouped.has(t.algo_name));if(ung.length)html+=buildOneHeatmap('Ungrouped',ung,'#6b7280');}container.innerHTML=html||'<div style="padding:20px;color:var(--text3);">No data</div>';}
+function renderHeatmap(){
+  const tr=allTrades.filter(t=>!t.archived&&t.status!=='CANCELLED'&&(t.entry_date||'').startsWith(currentYear));
+  const combined=document.getElementById('heatmap-combined');
+  if(combined) combined.innerHTML=tr.length?buildOneHeatmap('Combined — All Strategies',tr,null):'<div style="padding:20px;color:var(--text3);">No data</div>';
+  // Build strategy dropdown
+  const sel=document.getElementById('heatmap-strategy');
+  if(sel){
+    const cur=sel.value;
+    sel.innerHTML='<option value="">— Select a Strategy or Group —</option>';
+    // Add groups
+    const groups=Object.values(algoGroups);
+    if(groups.length){
+      const og=document.createElement('optgroup'); og.label='Groups';
+      groups.forEach(g=>{ const o=document.createElement('option'); o.value='grp:'+g.name; o.textContent=g.name; og.appendChild(o); });
+      sel.appendChild(og);
+    }
+    // Add individual strategies
+    const strats=[...new Set(tr.map(t=>t.algo_name).filter(Boolean))].sort();
+    if(strats.length){
+      const os=document.createElement('optgroup'); os.label='Individual Strategies';
+      strats.forEach(s=>{ const o=document.createElement('option'); o.value='strat:'+s; o.textContent=s; os.appendChild(o); });
+      sel.appendChild(os);
+    }
+    if(cur) sel.value=cur;
+  }
+  renderHeatmapDrilldown();
+}
+function renderHeatmapDrilldown(){
+  const container=document.getElementById('heatmap-drilldown');
+  if(!container) return;
+  const val=document.getElementById('heatmap-strategy')?.value||'';
+  if(!val){container.innerHTML='';return;}
+  const tr=allTrades.filter(t=>!t.archived&&t.status!=='CANCELLED'&&(t.entry_date||'').startsWith(currentYear));
+  if(val.startsWith('grp:')){
+    const gName=val.slice(4);
+    const g=Object.values(algoGroups).find(x=>x.name===gName);
+    if(!g){container.innerHTML='';return;}
+    const gtr=tr.filter(t=>(g.algos||[]).includes(t.algo_name));
+    container.innerHTML=gtr.length?buildOneHeatmap(gName,gtr,g.color):'<div style="padding:12px;color:var(--text3);">No trades for this group</div>';
+  } else if(val.startsWith('strat:')){
+    const sName=val.slice(6);
+    const str=tr.filter(t=>t.algo_name===sName);
+    container.innerHTML=str.length?buildOneHeatmap(sName,str,null):'<div style="padding:12px;color:var(--text3);">No trades for this strategy</div>';
+  }
+}
 function buildOneHeatmap(title,trades,color){const dayMap={};trades.forEach(t=>{if(t.entry_date)dayMap[t.entry_date]=(dayMap[t.entry_date]||0)+(t.pnl||0);});const maxAbs=Math.max(...Object.values(dayMap).map(v=>Math.abs(v)),1);const months=[];for(let m=1;m<=12;m++)months.push(currentYear+'-'+String(m).padStart(2,'0'));let html='<div style="margin-bottom:24px;"><div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">'+(color?'<span style="width:10px;height:10px;border-radius:50%;background:'+color+';display:inline-block;flex-shrink:0;"></span>':'')+'<span style="font-size:0.85rem;font-weight:700;color:var(--text0);">'+title+'</span></div><div style="overflow-x:auto;"><div style="display:flex;gap:8px;">';months.forEach(mk=>{const yr=parseInt(currentYear),mo=parseInt(mk.slice(5,7));const dim=new Date(yr,mo,0).getDate();const mLabel=new Date(mk+'-01').toLocaleDateString('en-IN',{month:'short',year:'2-digit'});const mTotal=Object.entries(dayMap).filter(([d])=>d.startsWith(mk)).reduce((s,[,v])=>s+v,0);const cap=capitalData[mk]||0;const mPct=(mTotal&&cap)?(mTotal/cap*100).toFixed(1)+'%':'';html+='<div style="flex-shrink:0;"><div style="font-size:.7rem;font-weight:700;color:var(--text1);text-align:center;margin-bottom:3px;white-space:nowrap;">'+mLabel+(mTotal?'<span style="color:'+(mTotal>=0?'#0d9488':'#4b5563')+';margin-left:3px;">'+fmtHeat(mTotal)+(mPct?' ('+mPct+')':'')+'</span>':'')+'</div><table class="heatmap-table"><tbody>';for(let d=1;d<=dim;d++){const ds=mk+'-'+String(d).padStart(2,'0');const pnl=dayMap[ds]??null;const dow=new Date(ds).toLocaleDateString('en-IN',{weekday:'short'});const isW=['Sat','Sun'].includes(dow);const cls=pnl===null?(isW?'heatmap-empty':'heatmap-zero'):getHeatClass(pnl,maxAbs);const pct=(pnl!==null&&cap)?(pnl/cap*100).toFixed(1)+'%':'';html+='<tr><td class="heatmap-cell '+cls+'" title="'+ds+(pnl!==null?' '+fmt(pnl)+(pct?' ('+pct+')':''):'')+'"><div class="hm-day">'+d+' '+dow+'</div><div class="hm-val">'+(pnl!==null?fmtHeat(pnl):(isW?'-':'-'))+'</div>'+(pct?'<div class="hm-pct">'+pct+'</div>':'')+'</td></tr>';}html+='</tbody></table></div>';});html+='</div></div></div>';return html;}
 
 function renderBrokerTable(tr, months) {
