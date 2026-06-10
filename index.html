@@ -2,6 +2,10 @@
 ==========================================================
   SKVK TRADING JOURNAL — VERSION HISTORY
 ==========================================================
+  v13.38| 2026-06-11 | CRITICAL FIX: SM hash was truncated to 32 chars causing CE/PE collision,
+         |            | CE and PE legs now get unique Firebase keys using safeKey(),
+         |            | This caused all uploads to show 0 added / all skipped
+  ──────────────────────────────────────────────────────
   v13.37| 2026-06-10 | Fix: SM parser now scans back to previous Strike (no fixed limit),
          |            | Works regardless of how many extra columns exist between legs
   ──────────────────────────────────────────────────────
@@ -275,7 +279,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>SKVK Trading Journal v13.37</title>
+<title>SKVK Trading Journal v13.38</title>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -1095,7 +1099,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
 <div id="topbar">
   <div class="brand">
     <span class="brand-dot"></span>
-    SKVK Trading Journal <span style="font-size:0.85rem;background:#1a73e8;color:#fff;padding:3px 10px;border-radius:10px;font-weight:700;margin-left:6px;vertical-align:middle;">v13.37</span>
+    SKVK Trading Journal <span style="font-size:0.85rem;background:#1a73e8;color:#fff;padding:3px 10px;border-radius:10px;font-weight:700;margin-left:6px;vertical-align:middle;">v13.38</span>
   </div>
   <nav class="nav-tabs">
     <button class="nav-tab active" onclick="showPage('journal')"    data-page="journal">📋 <span class="tl">Journal</span></button>
@@ -3200,7 +3204,7 @@ async function handleSMFile(file) {
       let added=0, skipped=0;
       for (const t of trades) {
         const key = `${t.strategy_name}|${t.trade_date}|${t.option_type}|${t.strike}`;
-        const safeK = btoa(unescape(encodeURIComponent(key))).replace(/[/+=]/g,'_').slice(0,32);
+        const safeK = safeKey(`${t.strategy_name}_${t.trade_date}_${t.option_type}_${t.strike}`);
         t.hash = safeK;
         if (db) {
           const snap = await db.ref('journal/stockmock_trades/'+safeK).get();
