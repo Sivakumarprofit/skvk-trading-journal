@@ -2,6 +2,9 @@
 ==========================================================
   SKVK TRADING JOURNAL — VERSION HISTORY
 ==========================================================
+  v14.3 | 2026-06-11 | Fix: Heatmap HTML now matches JS (combined + drilldown layout),
+         |            | v14.1 HTML swap had silently failed leaving stuck Loading spinner
+  ──────────────────────────────────────────────────────
   v14.2 | 2026-06-11 | Fix: setSelect crash when filter bar elements missing (null check)
   ──────────────────────────────────────────────────────
   v14.1 | 2026-06-11 | Heatmap: Red/Green colors (more intuitive),
@@ -289,7 +292,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>SKVK Trading Journal v14.2</title>
+<title>SKVK Trading Journal v14.3</title>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -1121,7 +1124,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
 <div id="topbar">
   <div class="brand">
     <span class="brand-dot"></span>
-    SKVK Trading Journal <span style="font-size:0.85rem;background:#1a73e8;color:#fff;padding:3px 10px;border-radius:10px;font-weight:700;margin-left:6px;vertical-align:middle;">v14.2</span>
+    SKVK Trading Journal <span style="font-size:0.85rem;background:#1a73e8;color:#fff;padding:3px 10px;border-radius:10px;font-weight:700;margin-left:6px;vertical-align:middle;">v14.3</span>
   </div>
   <nav class="nav-tabs">
     <button class="nav-tab active" onclick="showPage('journal')"    data-page="journal">📋 <span class="tl">Journal</span></button>
@@ -1237,21 +1240,25 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:10px;">
       <div>
         <div style="font-size:1.1rem;font-weight:800;font-family:var(--display);">Daily P&L Heatmap</div>
-        <div style="font-size:0.75rem;color:var(--text2);margin-top:2px;">Combined P&L per day · value + % of monthly capital</div>
+        <div style="font-size:0.75rem;color:var(--text2);margin-top:2px;">P&L per day · value + % of monthly capital</div>
       </div>
-      <div style="display:flex;align-items:center;gap:10px;">
-        <select id="heatmap-mode" onchange="renderHeatmap()" style="padding:6px 12px;border:1px solid var(--border);border-radius:8px;font-size:0.82rem;outline:none;background:#fff;">
-          <option value="combined">Combined (All Strategies)</option>
-          <option value="group">By Group</option>
-        </select>
-        <div style="display:flex;gap:5px;font-size:0.68rem;">
-          <span style="background:#16a34a;color:#fff;padding:2px 8px;border-radius:4px;">Profit</span>
-          <span style="background:#dc2626;color:#fff;padding:2px 8px;border-radius:4px;">Loss</span>
-          <span style="background:#f3f4f6;color:#9ca3af;padding:2px 8px;border-radius:4px;border:1px solid #e5e7eb;">No trade</span>
-        </div>
+      <div style="display:flex;gap:5px;font-size:0.68rem;align-items:center;">
+        <span style="background:#16a34a;color:#fff;padding:2px 8px;border-radius:4px;">Profit</span>
+        <span style="background:#dc2626;color:#fff;padding:2px 8px;border-radius:4px;">Loss</span>
+        <span style="background:#f3f4f6;color:#9ca3af;padding:2px 8px;border-radius:4px;border:1px solid #e5e7eb;">No trade</span>
       </div>
     </div>
-    <div id="heatmap-content"><div class="loading"><div class="spinner"></div> Loading…</div></div>
+    <!-- Combined always shown -->
+    <div id="heatmap-combined"><div class="loading"><div class="spinner"></div> Loading…</div></div>
+    <!-- Strategy/Group selector -->
+    <div style="margin-top:20px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+      <span style="font-size:0.82rem;font-weight:600;color:var(--text1);">Drill down:</span>
+      <select id="heatmap-strategy" onchange="renderHeatmapDrilldown()"
+        style="padding:6px 12px;border:1px solid var(--border);border-radius:8px;font-size:0.82rem;outline:none;background:#fff;min-width:280px;">
+        <option value="">— Select a Strategy or Group —</option>
+      </select>
+    </div>
+    <div id="heatmap-drilldown" style="margin-top:12px;"></div>
   </div>
 </div>
 
