@@ -2,6 +2,11 @@
 ==========================================================
   SKVK TRADING JOURNAL — VERSION HISTORY
 ==========================================================
+  v14.6 | 2026-06-17 | StockMock: Split tolerance into Price % and P&L % (both saved to Firebase),
+         |            | Counter label per strategy occurrence (Cntr1 — 17Jun26 — strategy name),
+         |            | Removed separate Diff column — diff shown inline in brackets when > threshold,
+         |            | Nav tabs: larger font, better spacing and readability
+  ──────────────────────────────────────────────────────
   v14.5 | 2026-06-12 | Fix: Day-cards now expand correctly (tglSMCard instead of tgl),
          |            | Settings: One-time strike migration button (re-decodes 923150→23150),
          |            | Migration scans all trades, updates option_type in Firebase
@@ -392,17 +397,18 @@ body {
 }
 @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(0.85)} }
 
-.nav-tabs { display: flex; align-items: stretch; height: 56px; gap: 0; flex-wrap: nowrap; overflow-x: auto; flex: 1; }
+.nav-tabs { display: flex; align-items: stretch; height: 56px; gap: 2px; flex-wrap: nowrap; overflow-x: auto; flex: 1; }
 .nav-tab {
   display: flex; align-items: center; gap: 6px;
-  padding: 0 12px;
-  font-size: 0.82rem; font-weight: 500;
+  padding: 0 16px;
+  font-size: 0.88rem; font-weight: 500;
   color: var(--text2);
   background: none; border: none; cursor: pointer;
   position: relative;
   transition: color 0.15s;
   white-space: nowrap;
   flex-shrink: 0;
+  letter-spacing: 0.01em;
 }
 .nav-tab:hover { color: var(--text0); background: var(--bg2); border-radius: 6px; }
 .nav-tab.active { color: var(--blue); font-weight: 700; }
@@ -1135,7 +1141,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
 <div id="topbar">
   <div class="brand">
     <span class="brand-dot"></span>
-    SKVK Trading Journal <span style="font-size:0.85rem;background:#1a73e8;color:#fff;padding:3px 10px;border-radius:10px;font-weight:700;margin-left:6px;vertical-align:middle;">v14.5</span>
+    SKVK Trading Journal <span style="font-size:0.85rem;background:#1a73e8;color:#fff;padding:3px 10px;border-radius:10px;font-weight:700;margin-left:6px;vertical-align:middle;">v14.6</span>
   </div>
   <nav class="nav-tabs">
     <button class="nav-tab active" onclick="showPage('journal')"    data-page="journal">📋 <span class="tl">Journal</span></button>
@@ -1609,15 +1615,26 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:20px;box-shadow:var(--shadow-sm);">
       <div style="font-size:0.9rem;font-weight:700;color:var(--text0);margin-bottom:14px;">⚙️ Comparison Settings</div>
       <div style="display:flex;flex-direction:column;gap:12px;">
-        <label style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border:1px solid var(--border);border-radius:8px;">
-          <div>
-            <div style="font-size:0.82rem;font-weight:600;">Match Tolerance %</div>
-            <div style="font-size:0.7rem;color:var(--text3);">Max % diff for Strike, Entry, Exit, P&L</div>
-          </div>
-          <input type="number" id="sm-tolerance" value="2" min="0" max="20" step="0.5"
-            style="width:70px;padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:0.85rem;text-align:center;outline:none;"
-            onchange="renderSMComparison()">
-        </label>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <label style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border:1px solid var(--border);border-radius:8px;">
+            <div>
+              <div style="font-size:0.82rem;font-weight:600;">Price Tolerance %</div>
+              <div style="font-size:0.7rem;color:var(--text3);">Max % diff for Strike, Entry, Exit</div>
+            </div>
+            <input type="number" id="sm-tolerance-price" value="2" min="0" max="20" step="0.5"
+              style="width:70px;padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:0.85rem;text-align:center;outline:none;"
+              onchange="saveSMTolerances();renderSMComparison()">
+          </label>
+          <label style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border:1px solid var(--border);border-radius:8px;">
+            <div>
+              <div style="font-size:0.82rem;font-weight:600;">P&L Tolerance %</div>
+              <div style="font-size:0.7rem;color:var(--text3);">Max % diff for P&L comparison</div>
+            </div>
+            <input type="number" id="sm-tolerance-pnl" value="5" min="0" max="50" step="0.5"
+              style="width:70px;padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:0.85rem;text-align:center;outline:none;"
+              onchange="saveSMTolerances();renderSMComparison()">
+          </label>
+        </div>
         <!-- Strategy selector -->
         <div style="padding:10px 14px;border:1px solid var(--border);border-radius:8px;">
           <div style="font-size:0.82rem;font-weight:600;margin-bottom:6px;">Strategy / Group</div>
@@ -2145,7 +2162,7 @@ function showPage(name) {
   const tab = document.querySelector(`[data-page="${name}"]`);
   if (tab) tab.classList.add('active');
   if (name === 'settings') { renderGroupList(); renderAlgoPage(); loadDisplayPrefs(); loadCapitalTable(); buildNicknameList(); estimateDBSize(); populateBrokerClearDropdown(); }
-  if (name === 'stockmock') { updateSMStrategyDropdown(); updateSMLoadedSummary(); renderSMComparison(); }
+  if (name === 'stockmock') { loadSMTolerances(); updateSMStrategyDropdown(); updateSMLoadedSummary(); renderSMComparison(); }
   if (name === 'algos') { renderGroupList(); renderAlgoPage(); }
   if (name === 'compare') { populateCompareSelects(); }
 }
@@ -3565,7 +3582,8 @@ function renderSMUploadHistory(uploads) {
 function renderSMComparison() {
   const container = document.getElementById('sm-comparison-content');
   if (!container) return;
-  const tolerance = parseFloat(document.getElementById('sm-tolerance')?.value||2);
+  const tolerancePrice = parseFloat(document.getElementById('sm-tolerance-price')?.value||2);
+  const tolerancePnl   = parseFloat(document.getElementById('sm-tolerance-pnl')?.value||5);
   const selVal  = document.getElementById('sm-strategy-select')?.value||'';
 
   // Resolve selection → list of strategy names
@@ -3579,7 +3597,7 @@ function renderSMComparison() {
   } else if (selVal.startsWith('strat:')) {
     strategies = [selVal.slice(6)];
   } else {
-    strategies = [selVal]; // legacy plain value
+    strategies = [selVal];
   }
 
   if (!strategies.length) {
@@ -3594,7 +3612,7 @@ function renderSMComparison() {
     if (!smByKey[k]) smByKey[k] = t;
   });
 
-  // Build a flat list of day-blocks: {strat, date, legs[]}
+  // Build flat list of day-blocks
   const dayBlocks = [];
   strategies.forEach(strat => {
     const bTrades = brokerTrades.filter(t=>t.algo_name===strat);
@@ -3614,6 +3632,33 @@ function renderSMComparison() {
     return;
   }
 
+  // Build counter map: strategy → sorted array of dates → Cntr index
+  // Group all blocks by strategy, sort dates ascending, assign counter
+  const stratDateMap = {}; // stratName → [date asc]
+  dayBlocks.forEach(blk => {
+    if (!stratDateMap[blk.strat]) stratDateMap[blk.strat] = [];
+    if (!stratDateMap[blk.strat].includes(blk.date)) stratDateMap[blk.strat].push(blk.date);
+  });
+  Object.keys(stratDateMap).forEach(s => stratDateMap[s].sort());
+
+  // Format date as 17Jun26
+  function fmtCntrDate(d) {
+    if (!d) return '';
+    const dt = new Date(d);
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    return dt.getDate() + months[dt.getMonth()] + String(dt.getFullYear()).slice(2);
+  }
+
+  // Format diff for inline bracket display — only show if exceeds threshold
+  function fmtDiffBracket(diff, refVal, tol) {
+    if (diff === null || diff === undefined) return '';
+    if (!refVal) return '';
+    const pct = Math.abs(diff / refVal) * 100;
+    if (pct <= tol) return '';
+    const col = diff >= 0 ? '#16a34a' : '#dc2626';
+    return ` <span style="color:${col};font-size:0.72rem;font-weight:700;">(${fmt(diff)})</span>`;
+  }
+
   let html = '';
   dayBlocks.forEach((blk, bi) => {
     const { strat, date, legs } = blk;
@@ -3621,7 +3666,12 @@ function renderSMComparison() {
     const reviewKey = safeKey(`${strat}_${date}`);
     const isReviewed = !!smReviewed[reviewKey];
 
-    // Compute per-day broker/SM totals and overall status
+    // Counter for this strategy+date
+    const cntrIdx = (stratDateMap[strat]||[]).indexOf(date);
+    const cntrLabel = cntrIdx >= 0 ? `Cntr${cntrIdx+1}` : 'Cntr?';
+    const cntrDateStr = fmtCntrDate(date);
+
+    // Compute per-day totals and status
     let bDayTotal=0, smDayTotal=0, anySM=false, anyBad=false, allMatched=true, anyMatchable=false;
     const legRows = legs.map(bt => {
       const ot = bt.option_type || optType(bt.symbol||'');
@@ -3635,10 +3685,10 @@ function renderSMComparison() {
       bDayTotal += bPnl;
       if (sm) { anySM=true; smDayTotal += (smPnl||0); }
 
-      const ckStrike = sm ? withinTolerance(smStrike, brkStrike, tolerance) : null;
-      const ckEntry  = sm ? withinTolerance(smEntry,  bEntry,    tolerance) : null;
-      const ckExit   = sm ? withinTolerance(smExit,   bExit,     tolerance) : null;
-      const ckPnl    = sm ? withinTolerance(smPnl,    bPnl,      tolerance) : null;
+      const ckStrike = sm ? withinTolerance(smStrike, brkStrike, tolerancePrice) : null;
+      const ckEntry  = sm ? withinTolerance(smEntry,  bEntry,    tolerancePrice) : null;
+      const ckExit   = sm ? withinTolerance(smExit,   bExit,     tolerancePrice) : null;
+      const ckPnl    = sm ? withinTolerance(smPnl,    bPnl,      tolerancePnl)   : null;
       const checks   = [ckStrike,ckEntry,ckExit,ckPnl].filter(c=>c!==null);
       if (checks.length) { anyMatchable=true; if(checks.some(c=>c===false)){anyBad=true; allMatched=false;} }
       else allMatched=false;
@@ -3657,23 +3707,24 @@ function renderSMComparison() {
     else if (anyMatchable) statusBadge = '<span style="background:#dcfce7;color:#15803d;padding:2px 9px;border-radius:5px;font-size:0.7rem;font-weight:700;">🟢 Match</span>';
     else                   statusBadge = '<span style="background:#374151;color:#9ca3af;padding:2px 9px;border-radius:5px;font-size:0.7rem;font-weight:700;">⚫ No SM</span>';
 
-    // Reviewed cards get a blue tint + accent
     const cardBorder = isReviewed ? '#1e3a8a' : 'var(--border)';
     const cardBg     = isReviewed ? '#eff4ff' : '#fff';
+
+    // Inline diff bracket for day total (shown only if exceeds pnl threshold)
+    const dayDiffBracket = dayDiff !== null ? fmtDiffBracket(dayDiff, smDayTotal, tolerancePnl) : '';
 
     html += `<div style="border:1px solid ${cardBorder};border-left:4px solid ${cardBorder};border-radius:10px;margin-bottom:10px;overflow:hidden;background:${cardBg};">
       <div onclick="tglSMCard('${cardId}')" style="display:flex;align-items:center;justify-content:space-between;padding:11px 16px;cursor:pointer;flex-wrap:wrap;gap:8px;">
         <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
           <span id="arr-${cardId}" style="color:var(--text2);font-size:0.8rem;">▶</span>
-          <span style="font-weight:700;font-size:0.85rem;color:var(--text0);">${date} <span style="color:var(--text3);font-weight:400;">${dow}</span></span>
+          <span style="font-size:0.75rem;font-weight:700;color:#6366f1;background:#eef2ff;padding:2px 8px;border-radius:5px;white-space:nowrap;">${cntrLabel} — ${cntrDateStr}</span>
           <span style="font-size:0.72rem;color:var(--text2);">${strat}</span>
           <span style="font-size:0.68rem;color:var(--text3);">${legs.length} legs</span>
           ${statusBadge}
         </div>
         <div style="display:flex;gap:16px;font-size:0.78rem;align-items:center;">
           <span>Broker: <strong>${fmt(bDayTotal)}</strong></span>
-          ${anySM?`<span style="color:var(--text2);">SM: <strong>${fmt(smDayTotal)}</strong></span>`:''}
-          ${dayDiff!==null?`<span>Diff: <strong style="color:${dayDiff>=0?'#16a34a':'#dc2626'}">${fmt(dayDiff)}</strong></span>`:''}
+          ${anySM?`<span style="color:var(--text2);">SM: <strong>${fmt(smDayTotal)}</strong>${dayDiffBracket}</span>`:''}
           <button onclick="event.stopPropagation();toggleSMReviewed('${reviewKey}')"
             style="border:1px solid ${isReviewed?'#1e3a8a':'var(--border)'};background:${isReviewed?'#1e3a8a':'#fff'};color:${isReviewed?'#fff':'var(--text2)'};border-radius:6px;padding:3px 10px;font-size:0.7rem;font-weight:600;cursor:pointer;white-space:nowrap;">
             ${isReviewed?'✓ Reviewed':'Mark Reviewed'}
@@ -3683,7 +3734,6 @@ function renderSMComparison() {
       <div id="${cardId}" style="display:none;border-top:1px solid var(--border);overflow-x:auto;">`;
 
     if (!anySM) {
-      // Broker-only card
       html += `<table class="sm-table"><thead><tr>
           <th style="text-align:left;">Type</th><th>Broker Strike</th><th>Broker Entry</th><th>Broker Exit</th><th>Broker P&L</th>
         </tr></thead><tbody>`;
@@ -3697,17 +3747,24 @@ function renderSMComparison() {
       html += `</tbody></table>
         <div style="padding:8px 16px;font-size:0.74rem;color:#6b7280;background:#f9fafb;">⚫ No Stockmock data for this day — showing broker trades only.</div>`;
     } else {
-      // Stacked SM/Broker mini-table per leg
       const reviewTint = isReviewed ? 'opacity:0.95;' : '';
-      const cellPair = (smV, bV, ok, fmtNum) => {
-        const f = fmtNum || (v => v!==null ? v.toLocaleString('en-IN') : '—');
+      // cellPair: SM on top (muted), Broker below (bold) — diff in brackets if over threshold
+      const cellPair = (smV, bV, ok, tol, fmtFn) => {
+        const f = fmtFn || (v => v!==null ? v.toLocaleString('en-IN') : '—');
         const smTxt = smV!==null ? f(smV) : '—';
-        const bTxt  = bV!==null ? f(bV) : '—';
+        const bTxt  = bV!==null  ? f(bV)  : '—';
         const bColor = isReviewed ? '#1e3a8a' : (ok===false ? '#dc2626' : ok===true ? '#16a34a' : 'var(--text0)');
         const mark = ok===true ? '🟢' : ok===false ? '🔴' : '';
+        // Inline bracket diff — only for numeric values when there is a mismatch
+        let bracketHtml = '';
+        if (smV !== null && bV !== null && ok === false) {
+          const diff = bV - smV;
+          const col = diff >= 0 ? '#16a34a' : '#dc2626';
+          bracketHtml = `<span style="color:${col};font-size:0.62rem;">(${f(diff)})</span>`;
+        }
         return `<td style="text-align:right;${reviewTint}">
           <div style="color:var(--text3);font-size:0.7rem;">${smTxt}</div>
-          <div style="font-weight:700;color:${bColor};">${bTxt} <span style="font-size:0.62rem;">${mark}</span></div>
+          <div style="font-weight:700;color:${bColor};">${bTxt} <span style="font-size:0.62rem;">${mark}</span> ${bracketHtml}</div>
         </td>`;
       };
       html += `<table class="sm-table"><thead><tr>
@@ -3716,17 +3773,14 @@ function renderSMComparison() {
           <th>Entry<br><span style="font-weight:400;font-size:0.62rem;color:var(--text3);">SM / Broker</span></th>
           <th>Exit<br><span style="font-weight:400;font-size:0.62rem;color:var(--text3);">SM / Broker</span></th>
           <th>P&L<br><span style="font-weight:400;font-size:0.62rem;color:var(--text3);">SM / Broker</span></th>
-          <th>Diff</th>
         </tr></thead><tbody>`;
       legRows.forEach(r => {
-        const diff = (r.sm && r.smPnl!==null) ? (r.bPnl - r.smPnl) : null;
         html += `<tr>
           <td><span class="badge ${r.ot==='CE'?'b-blue':'b-red'}">${r.ot}</span></td>
-          ${cellPair(r.smStrike, r.brkStrike, r.ckStrike)}
-          ${cellPair(r.smEntry,  r.bEntry,    r.ckEntry)}
-          ${cellPair(r.smExit,   r.bExit,     r.ckExit)}
-          ${cellPair(r.smPnl,    r.bPnl,      r.ckPnl, fmt)}
-          <td style="text-align:right;font-weight:600;color:${diff===null?'var(--text3)':diff>=0?'#16a34a':'#dc2626'};">${diff!==null?fmt(diff):'—'}</td>
+          ${cellPair(r.smStrike, r.brkStrike, r.ckStrike, tolerancePrice)}
+          ${cellPair(r.smEntry,  r.bEntry,    r.ckEntry,  tolerancePrice)}
+          ${cellPair(r.smExit,   r.bExit,     r.ckExit,   tolerancePrice)}
+          ${cellPair(r.smPnl,    r.bPnl,      r.ckPnl,    tolerancePnl, fmt)}
         </tr>`;
       });
       html += '</tbody></table>';
@@ -3747,6 +3801,29 @@ function toggleSMReviewed(key) {
   }
   renderSMComparison();
   toast(newState ? '🔵 Marked as reviewed' : 'Review flag removed', 'success');
+}
+
+function saveSMTolerances() {
+  const price = parseFloat(document.getElementById('sm-tolerance-price')?.value||2);
+  const pnl   = parseFloat(document.getElementById('sm-tolerance-pnl')?.value||5);
+  if (db) {
+    db.ref('journal/settings/sm_tolerance_price').set(price);
+    db.ref('journal/settings/sm_tolerance_pnl').set(pnl);
+  }
+}
+
+function loadSMTolerances() {
+  if (!db) return;
+  db.ref('journal/settings/sm_tolerance_price').once('value', snap => {
+    const v = snap.val();
+    const el = document.getElementById('sm-tolerance-price');
+    if (el && v !== null) el.value = v;
+  });
+  db.ref('journal/settings/sm_tolerance_pnl').once('value', snap => {
+    const v = snap.val();
+    const el = document.getElementById('sm-tolerance-pnl');
+    if (el && v !== null) el.value = v;
+  });
 }
 
 function saveDisplayPrefs() {
