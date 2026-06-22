@@ -2,6 +2,9 @@
 ==========================================================
   SKVK TRADING JOURNAL — VERSION HISTORY
 ==========================================================
+  v15.6 | 2026-06-22 | Fix: Nav tabs overflow — reduced padding (16px→11px), font (0.88→0.82rem),
+         |            | brand font shrunk (1.35→1.15rem), styled thin scrollbar on nav so all tabs visible
+  ──────────────────────────────────────────────────────
   v15.5 | 2026-06-22 | Fix: Restored missing toggleConfirm function (eaten by str_replace in v15.4)
   ──────────────────────────────────────────────────────
   v15.4 | 2026-06-22 | Upload: ASP selector (Quantleap / Tradetron) before file pick;
@@ -343,7 +346,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>SKVK Trading Journal v15.5</title>
+<title>SKVK Trading Journal v15.6</title>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -417,10 +420,10 @@ body {
 .brand {
   font-family: var(--display);
   font-weight: 800;
-  font-size: 1.35rem;
+  font-size: 1.15rem;
   letter-spacing: -0.03em;
   color: var(--text0);
-  margin-right: 16px;
+  margin-right: 12px;
   display: flex; align-items: center; gap: 6px;
   flex-shrink: 0;
 }
@@ -432,11 +435,14 @@ body {
 }
 @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(0.85)} }
 
-.nav-tabs { display: flex; align-items: stretch; height: 56px; gap: 2px; flex-wrap: nowrap; overflow-x: auto; flex: 1; }
+.nav-tabs { display: flex; align-items: stretch; height: 56px; gap: 1px; flex-wrap: nowrap; overflow-x: auto; flex: 1; scrollbar-width: thin; scrollbar-color: var(--blue) var(--bg2); }
+.nav-tabs::-webkit-scrollbar { height: 3px; }
+.nav-tabs::-webkit-scrollbar-thumb { background: var(--blue); border-radius: 2px; }
+.nav-tabs::-webkit-scrollbar-track { background: var(--bg2); }
 .nav-tab {
-  display: flex; align-items: center; gap: 6px;
-  padding: 0 16px;
-  font-size: 0.88rem; font-weight: 500;
+  display: flex; align-items: center; gap: 5px;
+  padding: 0 11px;
+  font-size: 0.82rem; font-weight: 500;
   color: var(--text2);
   background: none; border: none; cursor: pointer;
   position: relative;
@@ -1176,7 +1182,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
 <div id="topbar">
   <div class="brand">
     <span class="brand-dot"></span>
-    SKVK Trading Journal <span style="font-size:0.85rem;background:#1a73e8;color:#fff;padding:3px 10px;border-radius:10px;font-weight:700;margin-left:6px;vertical-align:middle;">v15.5</span>
+    SKVK Trading Journal <span style="font-size:0.85rem;background:#1a73e8;color:#fff;padding:3px 10px;border-radius:10px;font-weight:700;margin-left:6px;vertical-align:middle;">v15.6</span>
   </div>
   <nav class="nav-tabs">
     <button class="nav-tab active" onclick="showPage('journal')"    data-page="journal">📋 <span class="tl">Journal</span></button>
