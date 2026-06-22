@@ -2,6 +2,9 @@
 ==========================================================
   SKVK TRADING JOURNAL — VERSION HISTORY
 ==========================================================
+  v15.2 | 2026-06-22 | System Statistics: Counter P&L table shows Strategy column when Group selected,
+         |            | Column order: Strategy (group only) → Symbol → Broker → Action → Entry → Exit → Qty → P&L
+  ──────────────────────────────────────────────────────
   v15.1 | 2026-06-22 | System Statistics: Strategy name shown as purple pill badge (Option A),
          |            | Counter grouped by date (one counter per date, no repeats for group or strategy),
          |            | Equity curve no longer re-renders on counter change (split render functions)
@@ -328,7 +331,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>SKVK Trading Journal v15.1</title>
+<title>SKVK Trading Journal v15.2</title>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -1161,7 +1164,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
 <div id="topbar">
   <div class="brand">
     <span class="brand-dot"></span>
-    SKVK Trading Journal <span style="font-size:0.85rem;background:#1a73e8;color:#fff;padding:3px 10px;border-radius:10px;font-weight:700;margin-left:6px;vertical-align:middle;">v15.1</span>
+    SKVK Trading Journal <span style="font-size:0.85rem;background:#1a73e8;color:#fff;padding:3px 10px;border-radius:10px;font-weight:700;margin-left:6px;vertical-align:middle;">v15.2</span>
   </div>
   <nav class="nav-tabs">
     <button class="nav-tab active" onclick="showPage('journal')"    data-page="journal">📋 <span class="tl">Journal</span></button>
@@ -5376,6 +5379,10 @@ function renderSysStatCounter() {
   const fmtStat = v=>`₹ ${v>=0?'':'-'}${Math.abs(v).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2})}`;
   const clr = v=>v>=0?'color:#16a34a;':'color:#dc2626;';
 
+  // Detect if group is selected
+  const selVal = document.getElementById('sysstat-select')?.value || '';
+  const isGroup = selVal.startsWith('grp:');
+
   ctrTbl.innerHTML = `
   <div style="font-size:0.9rem;font-weight:800;font-family:var(--display);margin-bottom:10px;">Counter P&L
     <span style="font-size:0.72rem;font-weight:400;color:var(--text2);margin-left:8px;">Cntr${c.cntr} · ${_ssFmtFullDate(c.date)}</span>
@@ -5383,6 +5390,7 @@ function renderSysStatCounter() {
   <div class="table-wrap">
     <table style="width:100%;table-layout:auto;">
       <thead><tr>
+        ${isGroup?`<th style="padding:9px 14px;text-align:left;white-space:nowrap;">Strategy</th>`:''}
         <th style="padding:9px 14px;text-align:left;white-space:nowrap;">Symbol</th>
         <th style="padding:9px 14px;text-align:left;white-space:nowrap;">Broker</th>
         <th style="padding:9px 14px;text-align:center;white-space:nowrap;">Action</th>
@@ -5393,6 +5401,7 @@ function renderSysStatCounter() {
       </tr></thead>
       <tbody>
         ${c.trades.map(t=>`<tr class="trade-row">
+          ${isGroup?`<td style="padding:8px 14px;font-size:0.75rem;color:var(--purple);font-weight:600;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${t.algo_name||''}">${t.algo_name||'—'}</td>`:''}
           <td style="padding:8px 14px;font-size:0.8rem;font-weight:600;">${t.symbol||'—'}</td>
           <td style="padding:8px 14px;font-size:0.78rem;color:var(--text2);">${t.broker||'—'}${t.client_id?' · '+t.client_id:''}</td>
           <td style="padding:8px 14px;text-align:center;">
@@ -5406,7 +5415,7 @@ function renderSysStatCounter() {
           <td style="padding:8px 14px;text-align:right;font-weight:700;${clr(t.pnl||0)}">${fmtStat(t.pnl||0)}</td>
         </tr>`).join('')}
         <tr style="background:var(--bg3);border-top:2px solid var(--border2);">
-          <td colspan="6" style="padding:10px 14px;font-weight:800;font-size:0.85rem;">Counter Total</td>
+          <td colspan="${isGroup?8:7}" style="padding:10px 14px;font-weight:800;font-size:0.85rem;">Counter Total</td>
           <td style="padding:10px 14px;text-align:right;font-weight:800;font-size:0.9rem;${clr(c.pnl)}">${fmtStat(c.pnl)}</td>
         </tr>
       </tbody>
