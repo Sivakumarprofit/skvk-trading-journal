@@ -2,6 +2,12 @@
 ==========================================================
   SKVK TRADING JOURNAL — VERSION HISTORY
 ==========================================================
+  v15.4 | 2026-06-22 | Upload: ASP selector (Quantleap / Tradetron) before file pick;
+         |            | Tradetron parser — each CSV row → one journal row, STBT/BTST detection,
+         |            | algo dropdown from existing algoMeta list for Tradetron uploads;
+         |            | New "App Settings" tab (after StockMock Compare) with System Name
+         |            | add / delete / group management; renamed Quantiply → Quantleap
+  ──────────────────────────────────────────────────────
   v15.3 | 2026-06-22 | StockMock Compare: Counter mechanism added — Algo/Group dropdown replaces
          |            | date filter; purple pill + counter dropdown (latest auto-selected);
          |            | shows broker vs SM side-by-side for selected counter date only
@@ -335,7 +341,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>SKVK Trading Journal v15.3</title>
+<title>SKVK Trading Journal v15.4</title>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -1168,7 +1174,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
 <div id="topbar">
   <div class="brand">
     <span class="brand-dot"></span>
-    SKVK Trading Journal <span style="font-size:0.85rem;background:#1a73e8;color:#fff;padding:3px 10px;border-radius:10px;font-weight:700;margin-left:6px;vertical-align:middle;">v15.3</span>
+    SKVK Trading Journal <span style="font-size:0.85rem;background:#1a73e8;color:#fff;padding:3px 10px;border-radius:10px;font-weight:700;margin-left:6px;vertical-align:middle;">v15.4</span>
   </div>
   <nav class="nav-tabs">
     <button class="nav-tab active" onclick="showPage('journal')"    data-page="journal">📋 <span class="tl">Journal</span></button>
@@ -1178,6 +1184,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <button class="nav-tab" onclick="showPage('manual')"     data-page="manual">✏️ <span class="tl">Manual</span></button>
     <button class="nav-tab" onclick="showPage('upload')"     data-page="upload">⬆ <span class="tl">Upload Results</span></button>
     <button class="nav-tab" onclick="showPage('stockmock')"  data-page="stockmock">🔬 <span class="tl">StockMock<br>Compare</span></button>
+    <button class="nav-tab" onclick="showPage('appsettings')" data-page="appsettings">🛠️ <span class="tl">App<br>Settings</span></button>
     <button class="nav-tab" onclick="showPage('settings')"   data-page="settings">⚙️ <span class="tl">Settings</span></button>
   </nav>
   <div class="topbar-right">
@@ -1339,11 +1346,11 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
   <div class="page-header">
     <div>
       <div class="page-title">Upload Reports</div>
-      <div class="page-subtitle">Quantiply CSV · Zebu Positions CSV · Auto-detected format</div>
+      <div class="page-subtitle">Quantleap CSV · Zebu Positions CSV · Tradetron CSV</div>
     </div>
   </div>
 
-  <!-- Uploaded By + Algo Name -->
+  <!-- Uploaded By -->
   <div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:14px 20px;margin-bottom:18px;display:flex;align-items:flex-start;gap:32px;flex-wrap:wrap;">
     <div>
       <div style="font-size:0.78rem;font-weight:600;color:var(--text1);margin-bottom:8px;">Uploaded by:</div>
@@ -1360,7 +1367,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
       </div>
     </div>
     <div>
-      <div style="font-size:0.78rem;font-weight:600;color:var(--text1);margin-bottom:8px;">Algo Name:</div>
+      <div style="font-size:0.78rem;font-weight:600;color:var(--text1);margin-bottom:8px;">Algo Name (Quantleap):</div>
       <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
         <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:0.85rem;color:var(--text0);">
           <input type="radio" name="algo-mode" value="auto" checked onchange="toggleAlgoMode()" style="accent-color:var(--blue);width:14px;height:14px;cursor:pointer;"> AUTO (from report)
@@ -1374,12 +1381,40 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     </div>
   </div>
 
-  <div class="upload-zone" id="upload-zone">
-    <input type="file" accept=".csv,.xlsx,.xls" multiple id="file-input" onchange="handleFileSelect(event)" />
-    <span class="upload-icon">📂</span>
-    <h3>Drop files here or click to browse</h3>
-    <p style="margin-bottom:8px;">Supports Quantiply &amp; Zebu CSV · Also accepts XLSX files</p>
-    <p style="color:var(--text3);">Duplicate uploads are automatically detected and skipped ✓</p>
+  <!-- ASP Selector Step -->
+  <div style="background:var(--bg2);border:1.5px solid var(--blue);border-radius:12px;padding:20px 24px;margin-bottom:18px;">
+    <div style="font-size:0.88rem;font-weight:700;color:var(--text0);margin-bottom:14px;">Step 1 — Select ASP (Algo Service Provider)</div>
+    <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:center;">
+      <button id="asp-btn-quantleap" onclick="selectASP('quantleap')"
+        style="padding:10px 28px;border-radius:8px;font-size:0.88rem;font-weight:700;cursor:pointer;border:2px solid var(--blue);background:var(--blue);color:#fff;transition:all 0.15s;">
+        📊 Quantleap
+      </button>
+      <button id="asp-btn-tradetron" onclick="selectASP('tradetron')"
+        style="padding:10px 28px;border-radius:8px;font-size:0.88rem;font-weight:700;cursor:pointer;border:2px solid var(--border);background:var(--bg);color:var(--text1);transition:all 0.15s;">
+        ⚡ Tradetron
+      </button>
+    </div>
+
+    <!-- Tradetron algo select (hidden by default) -->
+    <div id="tradetron-algo-wrap" style="display:none;margin-top:16px;padding-top:14px;border-top:1px solid var(--border);">
+      <div style="font-size:0.82rem;font-weight:600;color:var(--text1);margin-bottom:8px;">Select Algo for this upload:</div>
+      <select id="tradetron-algo-select"
+        style="padding:7px 12px;border:1.5px solid var(--blue);border-radius:7px;font-size:0.85rem;min-width:280px;outline:none;background:var(--bg);color:var(--text0);">
+        <option value="">— choose algo —</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Step 2: File Upload -->
+  <div id="asp-upload-wrap" style="display:none;">
+    <div style="font-size:0.82rem;font-weight:700;color:var(--text1);margin-bottom:10px;">Step 2 — Drop / Select File</div>
+    <div class="upload-zone" id="upload-zone">
+      <input type="file" accept=".csv,.xlsx,.xls" multiple id="file-input" onchange="handleFileSelect(event)" />
+      <span class="upload-icon">📂</span>
+      <h3>Drop files here or click to browse</h3>
+      <p id="upload-zone-hint" style="margin-bottom:8px;">Supports Quantleap &amp; Zebu CSV · Also accepts XLSX files</p>
+      <p style="color:var(--text3);">Duplicate uploads are automatically detected and skipped ✓</p>
+    </div>
   </div>
 
   <div class="progress-wrap" id="progress-wrap">
@@ -1396,6 +1431,109 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div id="upload-history-list">
       <div style="color:var(--text3);font-size:0.78rem;padding:10px 0;">No uploads yet — upload your first CSV above</div>
     </div>
+  </div>
+</div>
+
+<!-- ══════════ APP SETTINGS ══════════ -->
+<div id="page-appsettings" class="page">
+  <div class="page-header">
+    <div>
+      <div class="page-title">App Settings</div>
+      <div class="page-subtitle">System Names · Groups · Add / Delete / Organise</div>
+    </div>
+  </div>
+
+  <div style="display:grid;gap:24px;max-width:960px;">
+
+    <!-- ── Add System Name ── -->
+    <div style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:22px;box-shadow:var(--shadow-sm);">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px;">
+        <span style="font-size:1.3rem;">➕</span>
+        <span style="font-size:0.95rem;font-weight:700;color:var(--text0);">Add New System Name</span>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;">
+        <div style="display:flex;flex-direction:column;gap:5px;flex:1;min-width:220px;">
+          <label style="font-size:0.75rem;font-weight:600;color:var(--text1);">System Name</label>
+          <input type="text" id="as-new-name" placeholder="e.g. NF_NW_ALL_ATM_SL22…"
+            style="padding:8px 11px;border:1.5px solid var(--border);border-radius:7px;font-size:0.84rem;outline:none;width:100%;box-sizing:border-box;"
+            onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--border)'">
+        </div>
+        <div style="display:flex;flex-direction:column;gap:5px;min-width:150px;">
+          <label style="font-size:0.75rem;font-weight:600;color:var(--text1);">Underlying</label>
+          <select id="as-new-underlying" style="padding:8px 10px;border:1.5px solid var(--border);border-radius:7px;font-size:0.84rem;outline:none;background:var(--bg);color:var(--text0);">
+            <option value="NIFTY">NIFTY</option>
+            <option value="BANKNIFTY">BANKNIFTY</option>
+            <option value="SENSEX">SENSEX</option>
+            <option value="MULTI">MULTI</option>
+          </select>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:5px;min-width:120px;">
+          <label style="font-size:0.75rem;font-weight:600;color:var(--text1);">Type</label>
+          <select id="as-new-type" style="padding:8px 10px;border:1.5px solid var(--border);border-radius:7px;font-size:0.84rem;outline:none;background:var(--bg);color:var(--text0);">
+            <option value="0DTE">0DTE</option>
+            <option value="1DTE">1DTE</option>
+            <option value="POSITIONAL">POSITIONAL</option>
+            <option value="HEDGE">HEDGE</option>
+          </select>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:5px;min-width:90px;">
+          <label style="font-size:0.75rem;font-weight:600;color:var(--text1);">Color</label>
+          <input type="color" id="as-new-color" value="#1a73e8"
+            style="padding:2px;border:1.5px solid var(--border);border-radius:7px;height:36px;width:60px;cursor:pointer;">
+        </div>
+        <div style="display:flex;flex-direction:column;gap:5px;flex:1;min-width:160px;">
+          <label style="font-size:0.75rem;font-weight:600;color:var(--text1);">Group (optional)</label>
+          <select id="as-new-group" style="padding:8px 10px;border:1.5px solid var(--border);border-radius:7px;font-size:0.84rem;outline:none;background:var(--bg);color:var(--text0);">
+            <option value="">— no group —</option>
+          </select>
+        </div>
+        <button onclick="asAddSystem()" class="btn btn-primary" style="height:36px;white-space:nowrap;">
+          ➕ Add System
+        </button>
+      </div>
+    </div>
+
+    <!-- ── Groups Management ── -->
+    <div style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:22px;box-shadow:var(--shadow-sm);">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span style="font-size:1.3rem;">📂</span>
+          <div>
+            <div style="font-size:0.95rem;font-weight:700;color:var(--text0);">Groups</div>
+            <div style="font-size:0.72rem;color:var(--text2);margin-top:2px;">Create and manage system groups</div>
+          </div>
+        </div>
+        <button onclick="asOpenAddGroup()" class="btn btn-primary btn-sm">+ New Group</button>
+      </div>
+      <div id="as-group-list">
+        <div style="color:var(--text3);font-size:0.8rem;">No groups yet</div>
+      </div>
+    </div>
+
+    <!-- ── All System Names ── -->
+    <div style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:22px;box-shadow:var(--shadow-sm);">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span style="font-size:1.3rem;">📋</span>
+          <div>
+            <div style="font-size:0.95rem;font-weight:700;color:var(--text0);">All System Names</div>
+            <div style="font-size:0.72rem;color:var(--text2);margin-top:2px;">Edit, delete or reassign group for each system</div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <input type="text" id="as-search" placeholder="Search systems…" oninput="asRenderSystems()"
+            style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:0.82rem;outline:none;min-width:180px;">
+          <select id="as-filter-group" onchange="asRenderSystems()"
+            style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:0.82rem;outline:none;background:var(--bg);color:var(--text0);">
+            <option value="">All Groups</option>
+          </select>
+        </div>
+      </div>
+      <div id="as-system-list">
+        <div class="loading"><div class="spinner"></div> Loading…</div>
+      </div>
+    </div>
+
   </div>
 </div>
 
@@ -2256,6 +2394,7 @@ function showPage(name) {
   const tab = document.querySelector(`[data-page="${name}"]`);
   if (tab) tab.classList.add('active');
   if (name === 'settings') { renderGroupList(); renderAlgoPage(); loadDisplayPrefs(); loadCapitalTable(); buildNicknameList(); estimateDBSize(); populateBrokerClearDropdown(); }
+  if (name === 'appsettings') { initAppSettings(); }
   if (name === 'stockmock') { loadSMTolerances(); updateSMStrategyDropdown(); updateSMLoadedSummary(); onSMStratChange(); }
   if (name === 'algos') { renderGroupList(); renderAlgoPage(); }
   if (name === 'compare') { populateCompareSelects(); }
@@ -2325,21 +2464,37 @@ async function processFile(file) {
     }
     const header = csvText.split('\n')[0] || '';
     let trades = [];
-    if (header.includes('algo_name') && header.includes('profit_loss')) {
-      trades = parseQuantiply(csvText);
-    } else if (header.includes('strategy_name') && header.includes('position_id')) {
-      trades = parseZebu(csvText);
+
+    // Route by selected ASP
+    if (currentASP === 'tradetron') {
+      // Validate algo selected
+      const ttAlgo = document.getElementById('tradetron-algo-select')?.value?.trim();
+      if (!ttAlgo) { toast('Please select an Algo for Tradetron upload', 'error'); setProgress(false); return; }
+      // Validate Tradetron format (has 'condition_type' and 'run_counter' in header)
+      if (!header.includes('condition_type') && !header.includes('run_counter') && !header.includes('Instrument')) {
+        toast('File does not look like a Tradetron export — expected columns: Instrument, condition_type, run_counter', 'error');
+        setProgress(false); return;
+      }
+      trades = parseTradetron(csvText, ttAlgo);
     } else {
-      toast('Unknown format in "' + file.name + '" — expected Quantiply, Zebu or Zebu Tradebook', 'error');
-      setProgress(false); return;
+      // Quantleap / Zebu auto-detect
+      if (header.includes('algo_name') && header.includes('profit_loss')) {
+        trades = parseQuantiply(csvText);
+      } else if (header.includes('strategy_name') && header.includes('position_id')) {
+        trades = parseZebu(csvText);
+      } else {
+        toast('Unknown format in "' + file.name + '" — expected Quantleap, Zebu or Zebu Tradebook', 'error');
+        setProgress(false); return;
+      }
     }
 
-    // Apply manual algo name if selected
+    // Apply manual algo name if selected (Quantleap only)
     const algoMode = document.querySelector('input[name="algo-mode"]:checked')?.value || 'auto';
-    if (algoMode === 'manual') {
+    if (currentASP !== 'tradetron' && algoMode === 'manual') {
       const manualAlgo = document.getElementById('manual-algo-name')?.value?.trim();
       if (!manualAlgo) { toast('Please enter an algo name for Manual mode', 'error'); setProgress(false); return; }
       trades.forEach(t => t.algo_name = manualAlgo);
+
     }
 
     let added = 0, skipped = 0, updated = 0;
@@ -2493,6 +2648,120 @@ function parseZebu(csv) {
 // ════════════════════════════════════════════════════
 //  HELPERS
 // ════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════
+//  TRADETRON PARSER
+//  Each row in the CSV → one journal row
+//  Trade type: STBT (Sell entry day → Buy exit next day)
+//              BTST (Buy entry day → Sell exit next day)
+// ════════════════════════════════════════════════════
+function parseTradetron(csv, algoName) {
+  const { data } = Papa.parse(csv, { header: true, skipEmptyLines: true, trimHeaders: true });
+
+  return data.filter(r => r.Instrument && r.entry_date && r.price).map(r => {
+    // Parse instrument: OPTIDX_NIFTY_23JUN2026_CE_24100
+    const parts = (r.Instrument || '').split('_');
+    // underlying = parts[1] (NIFTY), expiry = parts[2] (23JUN2026), type = parts[3] (CE/PE), strike = parts[4]
+    const underlying = parts[1] || r.underlying || 'NIFTY';
+    const expiry     = parts[2] || '';
+    const optionType = r.option_type || parts[3] || 'CE';
+    const strike     = r.strike || parts[4] || '';
+
+    // Normalise dates  (format in file: "16-Jun-26")
+    const entryDate = normTTDate(r.entry_date || '');
+    const exitDate  = normTTDate(r.entry_date || ''); // For Tradetron each row is standalone; exit tracked by condition_type
+
+    // Determine if this row is an Entry or Exit leg
+    const condType = (r.condition_type || '').toLowerCase(); // entry / exit / universal exit
+    const isEntry  = condType === 'entry';
+    const isExit   = condType === 'exit' || condType === 'universal exit';
+
+    // txn_type: S=Sell, B=Buy
+    const txn = (r.txn_type || '').toUpperCase();
+    const action = txn === 'B' ? 'BUY' : 'SELL';
+
+    // STBT: Sell on entry day, Buy back next day → short overnight
+    // BTST: Buy on entry day, Sell next day → long overnight
+    // Within Tradetron export each row is one execution leg.
+    // We detect the pattern from action + condition_type:
+    // STBT row: action=SELL + Entry, or action=BUY + Exit(next day)
+    // BTST row: action=BUY + Entry, or action=SELL + Exit(next day)
+    let tradeType = 'INTRADAY';
+    if (isEntry && txn === 'S') tradeType = 'STBT';
+    else if (isEntry && txn === 'B') tradeType = 'BTST';
+    else if (isExit) {
+      // For exit legs, check if entry_date differs from "created_at" or just label as EXIT
+      tradeType = txn === 'B' ? 'STBT_EXIT' : 'BTST_EXIT';
+    }
+
+    const qty  = Math.abs(parseFloat((r.quantity || '0').toString().replace(/,/g,'')) || 0);
+    const price = parseFloat((r.price || '0').toString().replace(/,/g,'')) || 0;
+    const runCounter = parseInt(r.run_counter || '1') || 1;
+
+    // Symbol reconstruction for display
+    const symbol = `${underlying}${expiry}${optionType}${strike}`;
+
+    return {
+      source:       'tradetron',
+      broker:       (r.broker || 'tradetron').toLowerCase() || 'tradetron',
+      client_id:    r.broker || '',
+      algo_name:    algoName,
+      underlying:   underlying,
+      symbol:       symbol,
+      option_type:  optionType,
+      strike:       strike,
+      expiry_date:  normTTDate(r.expiry || ''),
+      action:       action,
+      quantity:     qty,
+      entry_date:   entryDate,
+      entry_time:   normTTTime(r.entry_time || ''),
+      entry_price:  price,
+      exit_date:    '',
+      exit_time:    '',
+      exit_price:   0,
+      exit_reason:  isExit ? 'EOD' : '',
+      pnl:          parseFloat((r.amount || '0').toString().replace(/,/g,'')) || 0,
+      condition_type: condType,
+      trade_type:   tradeType,
+      run_counter:  runCounter,
+      leg_id:       r.leg_id || '',
+      is_re_entry:  false,
+      status:       'ACTIVE',
+      created_at:   new Date().toISOString()
+    };
+  }).filter(t => t.entry_date);
+}
+
+// Parse Tradetron date: "16-Jun-26" → "2026-06-16"
+function normTTDate(d) {
+  if (!d) return '';
+  d = d.trim();
+  // Format: DD-Mon-YY  e.g. 16-Jun-26
+  const m = d.match(/^(\d{1,2})-([A-Za-z]{3})-(\d{2})$/);
+  if (m) {
+    const months = {jan:'01',feb:'02',mar:'03',apr:'04',may:'05',jun:'06',
+                    jul:'07',aug:'08',sep:'09',oct:'10',nov:'11',dec:'12'};
+    const mm = months[m[2].toLowerCase()] || '01';
+    const yy = parseInt(m[3]) < 50 ? '20'+m[3] : '19'+m[3];
+    return `${yy}-${mm}-${m[1].padStart(2,'0')}`;
+  }
+  // Format: DD-MM-YYYY
+  if (/^\d{2}-\d{2}-\d{4}$/.test(d)) { const [dd,mm,yy]=d.split('-'); return `${yy}-${mm}-${dd}`; }
+  return d.slice(0,10);
+}
+
+// Parse Tradetron time: "9:35:07 AM" → "09:35"
+function normTTTime(t) {
+  if (!t) return '';
+  const m = t.match(/(\d{1,2}):(\d{2})(?::\d{2})?\s*(AM|PM)?/i);
+  if (!m) return '';
+  let h = parseInt(m[1]);
+  const min = m[2];
+  const ap = (m[3]||'').toUpperCase();
+  if (ap === 'PM' && h !== 12) h += 12;
+  if (ap === 'AM' && h === 12) h = 0;
+  return `${h.toString().padStart(2,'0')}:${min}`;
+}
+
 function normDate(d) {
   if (!d) return '';
   d = d.trim();
@@ -4224,7 +4493,41 @@ function toggleAlgoMode() {
   if (inp) { inp.style.display = isManual ? 'inline-block' : 'none'; if (isManual) inp.focus(); }
 }
 
-function toggleConfirm(el, hash, field) {
+// ════════════════════════════════════════════════════
+//  ASP SELECTOR (Upload tab)
+// ════════════════════════════════════════════════════
+let currentASP = 'quantleap';
+
+function selectASP(asp) {
+  currentASP = asp;
+  const btnQ = document.getElementById('asp-btn-quantleap');
+  const btnT = document.getElementById('asp-btn-tradetron');
+  const ttWrap = document.getElementById('tradetron-algo-wrap');
+  const upWrap = document.getElementById('asp-upload-wrap');
+  const hint  = document.getElementById('upload-zone-hint');
+
+  if (asp === 'quantleap') {
+    btnQ.style.background = 'var(--blue)'; btnQ.style.color = '#fff'; btnQ.style.borderColor = 'var(--blue)';
+    btnT.style.background = 'var(--bg)';   btnT.style.color = 'var(--text1)'; btnT.style.borderColor = 'var(--border)';
+    ttWrap.style.display = 'none';
+    if (hint) hint.textContent = 'Supports Quantleap & Zebu CSV · Also accepts XLSX files';
+  } else {
+    btnT.style.background = 'var(--blue)'; btnT.style.color = '#fff'; btnT.style.borderColor = 'var(--blue)';
+    btnQ.style.background = 'var(--bg)';   btnQ.style.color = 'var(--text1)'; btnQ.style.borderColor = 'var(--border)';
+    ttWrap.style.display = 'block';
+    // Populate algo dropdown from algoMeta
+    const sel = document.getElementById('tradetron-algo-select');
+    if (sel) {
+      const names = Object.keys(algoMeta).sort();
+      sel.innerHTML = '<option value="">— choose algo —</option>' +
+        names.map(n => `<option value="${n}">${algoMeta[n]?.display_name || n}</option>`).join('');
+    }
+    if (hint) hint.textContent = 'Tradetron CSV export — each row will be one journal entry';
+  }
+  upWrap.style.display = 'block';
+}
+
+
   const isOn = el.classList.toggle('confirmed');
   const priceEl = el.previousElementSibling;
   if (priceEl) priceEl.classList.toggle('price-confirmed', isOn);
@@ -5577,6 +5880,206 @@ function _ssFmtFullDate(d) {
   if (!d) return '';
   const p=d.split('-');
   return p[2]+' '+['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][parseInt(p[1])-1]+' '+p[0];
+}
+
+// ════════════════════════════════════════════════════
+//  APP SETTINGS — System Name Management
+// ════════════════════════════════════════════════════
+
+function initAppSettings() {
+  asRenderGroups();
+  asRenderSystems();
+  asPopulateGroupDropdowns();
+}
+
+function asPopulateGroupDropdowns() {
+  const groups = Object.values(algoGroups).sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+  const opts = '<option value="">— no group —</option>' + groups.map(g=>`<option value="${g.name}">${g.name}</option>`).join('');
+  const selAdd    = document.getElementById('as-new-group');
+  const selFilter = document.getElementById('as-filter-group');
+  if (selAdd)    selAdd.innerHTML = opts;
+  if (selFilter) selFilter.innerHTML = '<option value="">All Groups</option>' + groups.map(g=>`<option value="${g.name}">${g.name}</option>`).join('');
+}
+
+function asRenderGroups() {
+  const list = document.getElementById('as-group-list');
+  if (!list) return;
+  const groups = Object.values(algoGroups).sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+  if (!groups.length) { list.innerHTML = '<div style="color:var(--text3);font-size:0.8rem;">No groups yet — create one below</div>'; return; }
+  list.innerHTML = groups.map(g => {
+    const color = g.color || '#1a73e8';
+    const members = (g.algos || []).length;
+    return `
+      <div style="display:flex;align-items:center;gap:12px;padding:10px 14px;border:1px solid var(--border);border-radius:8px;margin-bottom:8px;">
+        <span style="width:14px;height:14px;border-radius:50%;background:${color};flex-shrink:0;display:inline-block;"></span>
+        <div style="flex:1;">
+          <div style="font-size:0.85rem;font-weight:600;color:var(--text0);">${g.name}</div>
+          <div style="font-size:0.72rem;color:var(--text2);">${members} system${members!==1?'s':''}</div>
+        </div>
+        <button onclick="asEditGroup('${g.name}')" class="btn btn-ghost btn-sm">✏️ Edit</button>
+        <button onclick="asDeleteGroup('${g.name}')" class="btn btn-sm" style="background:var(--red-lt);color:var(--red);border:none;">🗑</button>
+      </div>`;
+  }).join('');
+}
+
+function asRenderSystems() {
+  const list = document.getElementById('as-system-list');
+  if (!list) return;
+  const search = (document.getElementById('as-search')?.value || '').toLowerCase();
+  const filterGroup = document.getElementById('as-filter-group')?.value || '';
+
+  let algos = Object.values(algoMeta).sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+  if (search) algos = algos.filter(a => (a.name||'').toLowerCase().includes(search) || (a.display_name||'').toLowerCase().includes(search));
+  if (filterGroup) {
+    const g = algoGroups[filterGroup] || Object.values(algoGroups).find(x=>x.name===filterGroup);
+    const members = new Set(g?.algos || []);
+    algos = algos.filter(a => members.has(a.name));
+  }
+
+  if (!algos.length) { list.innerHTML = '<div style="color:var(--text3);font-size:0.8rem;padding:10px 0;">No systems found</div>'; return; }
+
+  const groupLookup = {};
+  Object.values(algoGroups).forEach(g => { (g.algos||[]).forEach(n => { groupLookup[n] = g.name; }); });
+
+  const groupOpts = '<option value="">— no group —</option>' +
+    Object.values(algoGroups).sort((a,b)=>(a.name||'').localeCompare(b.name||'')).map(g=>`<option value="${g.name}">${g.name}</option>`).join('');
+
+  list.innerHTML = `
+    <table style="width:100%;border-collapse:collapse;font-size:0.82rem;">
+      <thead>
+        <tr style="background:var(--bg2);">
+          <th style="padding:8px 10px;text-align:left;font-weight:600;color:var(--text1);border-bottom:1px solid var(--border);">System Name</th>
+          <th style="padding:8px 10px;text-align:left;font-weight:600;color:var(--text1);border-bottom:1px solid var(--border);">Underlying</th>
+          <th style="padding:8px 10px;text-align:left;font-weight:600;color:var(--text1);border-bottom:1px solid var(--border);">Type</th>
+          <th style="padding:8px 10px;text-align:left;font-weight:600;color:var(--text1);border-bottom:1px solid var(--border);">Group</th>
+          <th style="padding:8px 10px;text-align:center;font-weight:600;color:var(--text1);border-bottom:1px solid var(--border);">Color</th>
+          <th style="padding:8px 10px;text-align:center;font-weight:600;color:var(--text1);border-bottom:1px solid var(--border);">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${algos.map((a,i) => {
+          const grp = groupLookup[a.name] || '';
+          const gopts = groupOpts.replace(`value="${grp}"`, `value="${grp}" selected`);
+          return `
+          <tr style="border-bottom:1px solid var(--border);${i%2===1?'background:var(--bg2);':''}">
+            <td style="padding:8px 10px;">
+              <div style="font-weight:600;color:var(--text0);">${a.name}</div>
+              ${a.display_name && a.display_name !== a.name ? `<div style="font-size:0.7rem;color:var(--text2);">${a.display_name}</div>` : ''}
+            </td>
+            <td style="padding:8px 10px;">
+              <select onchange="asUpdateField('${a.name}','underlying',this.value)"
+                style="padding:4px 7px;border:1px solid var(--border);border-radius:5px;font-size:0.8rem;background:var(--bg);color:var(--text0);">
+                ${['NIFTY','BANKNIFTY','SENSEX','MULTI'].map(u=>`<option value="${u}"${a.underlying===u?' selected':''}>${u}</option>`).join('')}
+              </select>
+            </td>
+            <td style="padding:8px 10px;">
+              <select onchange="asUpdateField('${a.name}','type',this.value)"
+                style="padding:4px 7px;border:1px solid var(--border);border-radius:5px;font-size:0.8rem;background:var(--bg);color:var(--text0);">
+                ${['0DTE','1DTE','POSITIONAL','HEDGE'].map(t=>`<option value="${t}"${a.type===t?' selected':''}>${t}</option>`).join('')}
+              </select>
+            </td>
+            <td style="padding:8px 10px;">
+              <select onchange="asAssignGroup('${a.name}',this.value)"
+                style="padding:4px 7px;border:1px solid var(--border);border-radius:5px;font-size:0.8rem;background:var(--bg);color:var(--text0);">
+                ${gopts}
+              </select>
+            </td>
+            <td style="padding:8px 10px;text-align:center;">
+              <input type="color" value="${a.color||'#1a73e8'}" onchange="asUpdateField('${a.name}','color',this.value)"
+                style="width:32px;height:24px;padding:1px;border:1px solid var(--border);border-radius:4px;cursor:pointer;">
+            </td>
+            <td style="padding:8px 10px;text-align:center;">
+              <button onclick="asDeleteSystem('${a.name}')" title="Delete system"
+                class="btn btn-sm" style="background:var(--red-lt);color:var(--red);border:none;padding:4px 10px;">🗑</button>
+            </td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>`;
+}
+
+async function asAddSystem() {
+  const name = document.getElementById('as-new-name')?.value?.trim();
+  if (!name) { toast('System name is required', 'error'); return; }
+  if (algoMeta[name]) { toast(`"${name}" already exists`, 'error'); return; }
+  const meta = {
+    name,
+    display_name: name,
+    underlying: document.getElementById('as-new-underlying')?.value || 'NIFTY',
+    type:       document.getElementById('as-new-type')?.value || '0DTE',
+    color:      document.getElementById('as-new-color')?.value || '#1a73e8',
+    created_at: new Date().toISOString()
+  };
+  algoMeta[name] = meta;
+  if (db) await db.ref('journal/algos/' + safeKey(name)).set(meta);
+
+  // Assign to group if selected
+  const grp = document.getElementById('as-new-group')?.value;
+  if (grp) await asAssignGroup(name, grp);
+
+  document.getElementById('as-new-name').value = '';
+  asRenderSystems();
+  asRenderGroups();
+  asPopulateGroupDropdowns();
+  toast(`"${name}" added`, 'success');
+}
+
+async function asUpdateField(name, field, value) {
+  if (!algoMeta[name]) return;
+  algoMeta[name][field] = value;
+  if (db) await db.ref('journal/algos/' + safeKey(name) + '/' + field).set(value);
+  toast(`Updated ${field} for "${name}"`, 'success');
+}
+
+async function asAssignGroup(algoName, groupName) {
+  // Remove from all groups first
+  for (const [gk, g] of Object.entries(algoGroups)) {
+    if ((g.algos||[]).includes(algoName)) {
+      g.algos = g.algos.filter(n => n !== algoName);
+      if (db) await db.ref('journal/groups/' + gk + '/algos').set(g.algos);
+    }
+  }
+  // Add to new group
+  if (groupName) {
+    const gk = Object.keys(algoGroups).find(k => algoGroups[k].name === groupName) || safeKey(groupName);
+    if (algoGroups[gk]) {
+      algoGroups[gk].algos = [...new Set([...(algoGroups[gk].algos||[]), algoName])];
+      if (db) await db.ref('journal/groups/' + gk + '/algos').set(algoGroups[gk].algos);
+    }
+  }
+  asRenderGroups();
+  toast(groupName ? `Assigned to "${groupName}"` : 'Removed from group', 'success');
+}
+
+async function asDeleteSystem(name) {
+  if (!confirm(`Delete system "${name}"? This only removes the system definition — existing trades are kept.`)) return;
+  delete algoMeta[name];
+  if (db) await db.ref('journal/algos/' + safeKey(name)).remove();
+  asRenderSystems();
+  asPopulateGroupDropdowns();
+  toast(`"${name}" deleted`, 'info');
+}
+
+function asOpenAddGroup() {
+  // Reuse existing openAddGroupModal from Settings page
+  if (typeof openAddGroupModal === 'function') openAddGroupModal();
+  else toast('Use Settings → Algo Groups to add groups', 'info');
+}
+
+async function asEditGroup(name) {
+  if (typeof editGroup === 'function') editGroup(name);
+}
+
+async function asDeleteGroup(name) {
+  if (!confirm(`Delete group "${name}"? Systems in this group will be unassigned.`)) return;
+  const gk = Object.keys(algoGroups).find(k => algoGroups[k].name === name);
+  if (!gk) return;
+  delete algoGroups[gk];
+  if (db) await db.ref('journal/groups/' + gk).remove();
+  asRenderGroups();
+  asRenderSystems();
+  asPopulateGroupDropdowns();
+  toast(`Group "${name}" deleted`, 'info');
 }
 
 // ════════════════════════════════════════════════════
