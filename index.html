@@ -2,6 +2,10 @@
 ==========================================================
   SKVK TRADING JOURNAL — VERSION HISTORY
 ==========================================================
+  v15.3 | 2026-06-22 | StockMock Compare: Counter mechanism added — Algo/Group dropdown replaces
+         |            | date filter; purple pill + counter dropdown (latest auto-selected);
+         |            | shows broker vs SM side-by-side for selected counter date only
+  ──────────────────────────────────────────────────────
   v15.2 | 2026-06-22 | System Statistics: Counter P&L table shows Strategy column when Group selected,
          |            | Column order: Strategy (group only) → Symbol → Broker → Action → Entry → Exit → Qty → P&L
   ──────────────────────────────────────────────────────
@@ -331,7 +335,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>SKVK Trading Journal v15.2</title>
+<title>SKVK Trading Journal v15.3</title>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -1164,7 +1168,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
 <div id="topbar">
   <div class="brand">
     <span class="brand-dot"></span>
-    SKVK Trading Journal <span style="font-size:0.85rem;background:#1a73e8;color:#fff;padding:3px 10px;border-radius:10px;font-weight:700;margin-left:6px;vertical-align:middle;">v15.2</span>
+    SKVK Trading Journal <span style="font-size:0.85rem;background:#1a73e8;color:#fff;padding:3px 10px;border-radius:10px;font-weight:700;margin-left:6px;vertical-align:middle;">v15.3</span>
   </div>
   <nav class="nav-tabs">
     <button class="nav-tab active" onclick="showPage('journal')"    data-page="journal">📋 <span class="tl">Journal</span></button>
@@ -1659,12 +1663,12 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
               onchange="saveSMTolerances();renderSMComparison()">
           </label>
         </div>
-        <!-- Strategy selector -->
+        <!-- Strategy / Group selector -->
         <div style="padding:10px 14px;border:1px solid var(--border);border-radius:8px;">
           <div style="font-size:0.82rem;font-weight:600;margin-bottom:6px;">Strategy / Group</div>
-          <select id="sm-strategy-select" onchange="renderSMComparison()"
+          <select id="sm-strategy-select" onchange="onSMStratChange()"
             style="width:100%;padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:0.82rem;outline:none;">
-            <option value="">All Strategies</option>
+            <option value="">— Select Strategy or Group —</option>
           </select>
         </div>
         <!-- SM loaded summary -->
@@ -1702,13 +1706,31 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     </div>
   </div>
 
-  <!-- Comparison Table -->
-  <div id="sm-comparison-content">
-    <div style="text-align:center;padding:40px;color:var(--text3);">
-      <div style="font-size:2rem;">🔬</div>
-      <div style="margin-top:8px;">Select a strategy above to compare</div>
+  <!-- Empty state -->
+  <div id="sm-empty-state" style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 20px;color:var(--text3);">
+    <div style="font-size:3rem;margin-bottom:16px;">🔬</div>
+    <div style="font-size:1.1rem;font-weight:700;color:var(--text1);margin-bottom:6px;">Select a Strategy or Group</div>
+    <div style="font-size:0.85rem;">Choose from the dropdown above to compare broker vs StockMock</div>
+  </div>
+
+  <!-- Counter section (shown after strategy selected) -->
+  <div id="sm-counter-section" style="display:none;margin-bottom:20px;">
+    <!-- Purple pill -->
+    <div style="margin-bottom:12px;">
+      <span id="sm-label-pill" style="display:inline-block;background:#EEEDFE;color:#3C3489;font-size:0.85rem;font-weight:600;padding:5px 16px;border-radius:20px;"></span>
+    </div>
+    <!-- Counter dropdown -->
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+      <span style="font-size:0.8rem;font-weight:700;color:var(--text2);">Counter</span>
+      <select id="sm-counter-sel" onchange="renderSMComparison()"
+        style="padding:6px 12px;border:1.5px solid var(--border);border-radius:8px;background:var(--bg2);color:var(--text0);font-size:0.82rem;min-width:260px;cursor:pointer;">
+      </select>
+      <span id="sm-counter-meta" style="font-size:0.75rem;color:var(--text3);"></span>
     </div>
   </div>
+
+  <!-- Comparison content -->
+  <div id="sm-comparison-content"></div>
 </div>
 
 <!-- ══════════ MANUAL ENTRY ══════════ -->
@@ -2234,7 +2256,7 @@ function showPage(name) {
   const tab = document.querySelector(`[data-page="${name}"]`);
   if (tab) tab.classList.add('active');
   if (name === 'settings') { renderGroupList(); renderAlgoPage(); loadDisplayPrefs(); loadCapitalTable(); buildNicknameList(); estimateDBSize(); populateBrokerClearDropdown(); }
-  if (name === 'stockmock') { loadSMTolerances(); updateSMStrategyDropdown(); updateSMLoadedSummary(); renderSMComparison(); }
+  if (name === 'stockmock') { loadSMTolerances(); updateSMStrategyDropdown(); updateSMLoadedSummary(); onSMStratChange(); }
   if (name === 'algos') { renderGroupList(); renderAlgoPage(); }
   if (name === 'compare') { populateCompareSelects(); }
   if (name === 'sysstat') { updateSysStatDropdown(); renderSysStat(); }
@@ -3585,7 +3607,7 @@ function loadSMTrades() {
     smTrades = Object.values(snap.val()||{});
     updateSMStrategyDropdown();
     updateSMLoadedSummary();
-    renderSMComparison();
+    onSMStratChange();
   });
   db.ref('journal/sm_uploads').on('value', snap => {
     renderSMUploadHistory(Object.values(snap.val()||{}));
@@ -3599,16 +3621,14 @@ function loadSMTrades() {
 function updateSMStrategyDropdown() {
   const sel = document.getElementById('sm-strategy-select');
   if (!sel) return;
-  const brokerStrats = [...new Set(allTrades.map(t=>t.algo_name).filter(Boolean))].sort();
-  const smStrats = new Set(smTrades.map(t=>(t.strategy_name||'').trim()));
   const cur = sel.value;
-  sel.innerHTML = '<option value="">All Strategies</option>';
 
-  // Groups defined in Settings
+  sel.innerHTML = '<option value="">— Select Strategy or Group —</option>';
+
   const groups = Object.values(algoGroups);
   if (groups.length) {
     const og = document.createElement('optgroup');
-    og.label = 'Groups';
+    og.label = '── Groups ──';
     groups.forEach(g => {
       const o = document.createElement('option');
       o.value = 'grp:' + g.name;
@@ -3618,9 +3638,10 @@ function updateSMStrategyDropdown() {
     sel.appendChild(og);
   }
 
-  // Individual strategies
+  const brokerStrats = [...new Set(allTrades.filter(t=>!t.archived).map(t=>t.algo_name).filter(Boolean))].sort();
+  const smStrats = new Set(smTrades.map(t=>(t.strategy_name||'').trim()));
   const os = document.createElement('optgroup');
-  os.label = 'Individual Strategies';
+  os.label = '── Individual Strategies ──';
   brokerStrats.forEach(s => {
     const o = document.createElement('option');
     o.value = 'strat:' + s;
@@ -3628,171 +3649,127 @@ function updateSMStrategyDropdown() {
     os.appendChild(o);
   });
   sel.appendChild(os);
-
   if (cur) sel.value = cur;
 }
 
-function updateSMLoadedSummary() {
-  const el2 = document.getElementById('sm-loaded-summary');
-  if (!el2) return;
-  if (!smTrades.length) { el2.innerHTML = 'No Stockmock data loaded yet'; return; }
-  const strats = [...new Set(smTrades.map(t=>t.strategy_name))];
-  el2.innerHTML = `✓ <strong>${strats.length}</strong> strategies · <strong>${smTrades.length}</strong> legs loaded in Stockmock`;
-}
+function onSMStratChange() {
+  const selVal  = document.getElementById('sm-strategy-select')?.value || '';
+  const emptyEl = document.getElementById('sm-empty-state');
+  const ctrSec  = document.getElementById('sm-counter-section');
+  const content = document.getElementById('sm-comparison-content');
 
-function renderSMUploadHistory(uploads) {
-  const el2 = document.getElementById('sm-upload-history');
-  if (!el2 || !uploads) return;
-  if (!uploads.length) { el2.innerHTML='<span style="color:var(--text3);">No uploads yet</span>'; return; }
-  el2.innerHTML=[...uploads].reverse().slice(0,5).map(u=>
-    `<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border);">
-      <span style="color:var(--text1);font-size:0.75rem;overflow:hidden;text-overflow:ellipsis;max-width:160px;">${u.filename}</span>
-      <span style="color:var(--text3);font-size:0.7rem;white-space:nowrap;">+${u.added} · ${fmtDT(u.uploaded_at)}</span>
-    </div>`
+  if (!selVal) {
+    emptyEl.style.display='flex'; ctrSec.style.display='none'; content.innerHTML=''; return;
+  }
+
+  let strategies, label;
+  const brokerTrades = allTrades.filter(t=>!t.archived && t.status!=='CANCELLED');
+  if (selVal.startsWith('grp:')) {
+    const gName=selVal.slice(4); const g=Object.values(algoGroups).find(x=>x.name===gName);
+    strategies=g?(g.algos||[]): []; label=gName;
+  } else { strategies=[selVal.slice(6)]; label=selVal.slice(6); }
+
+  const dateMap={};
+  brokerTrades.filter(t=>strategies.includes(t.algo_name)).forEach(t=>{
+    const d=t.entry_date||''; if(!d)return;
+    if(!dateMap[d])dateMap[d]={date:d,legs:0}; dateMap[d].legs++;
+  });
+  const counters=Object.values(dateMap).sort((a,b)=>a.date.localeCompare(b.date));
+  counters.forEach((c,i)=>c.cntr=i+1);
+
+  if (!counters.length) {
+    emptyEl.style.display='flex';
+    emptyEl.innerHTML=`<div style="font-size:2rem;margin-bottom:12px;">🔍</div><div style="font-size:1rem;font-weight:700;color:var(--text1);">No trades found for "${label}"</div>`;
+    ctrSec.style.display='none'; content.innerHTML=''; return;
+  }
+
+  emptyEl.style.display='none'; ctrSec.style.display='block';
+  document.getElementById('sm-label-pill').textContent=label;
+
+  const fmtCD=d=>{if(!d)return'';const p=d.split('-');return['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][parseInt(p[1])-1]+p[2].replace(/^0/,'')+"'"+p[0].slice(2);};
+  const ctrSel=document.getElementById('sm-counter-sel');
+  ctrSel.innerHTML=counters.slice().reverse().map(c=>
+    `<option value="${c.date}">Cntr${c.cntr} — ${fmtCD(c.date)} (${c.legs} legs)</option>`
   ).join('');
+  ctrSel.value=counters[counters.length-1].date;
+  document.getElementById('sm-counter-meta').textContent=`${counters[counters.length-1].legs} leg(s) · ${counters[counters.length-1].date}`;
+
+  renderSMComparison();
 }
 
 function renderSMComparison() {
-  const container = document.getElementById('sm-comparison-content');
-  if (!container) return;
-  const tolerancePrice = parseFloat(document.getElementById('sm-tolerance-price')?.value||2);
-  const tolerancePnl   = parseFloat(document.getElementById('sm-tolerance-pnl')?.value||5);
-  const selVal  = document.getElementById('sm-strategy-select')?.value||'';
+  const container=document.getElementById('sm-comparison-content'); if(!container)return;
+  const tolerancePrice=parseFloat(document.getElementById('sm-tolerance-price')?.value||2);
+  const tolerancePnl  =parseFloat(document.getElementById('sm-tolerance-pnl')?.value||5);
+  const selVal =document.getElementById('sm-strategy-select')?.value||'';
+  const selDate=document.getElementById('sm-counter-sel')?.value||'';
+  if(!selVal||!selDate){container.innerHTML='';return;}
 
-  // Resolve selection → list of strategy names
-  const brokerTrades = allTrades.filter(t=>!t.archived && t.status!=='CANCELLED');
+  const metaEl=document.getElementById('sm-counter-meta');
+  const ctrSel=document.getElementById('sm-counter-sel');
+  if(metaEl&&ctrSel&&ctrSel.options[ctrSel.selectedIndex])
+    metaEl.textContent=ctrSel.options[ctrSel.selectedIndex].textContent;
+
+  const brokerTrades=allTrades.filter(t=>!t.archived&&t.status!=='CANCELLED');
   let strategies;
-  if (!selVal) {
-    strategies = [...new Set(brokerTrades.map(t=>t.algo_name).filter(Boolean))].sort();
-  } else if (selVal.startsWith('grp:')) {
-    const g = Object.values(algoGroups).find(x=>x.name===selVal.slice(4));
-    strategies = g ? (g.algos||[]).slice().sort() : [];
-  } else if (selVal.startsWith('strat:')) {
-    strategies = [selVal.slice(6)];
-  } else {
-    strategies = [selVal];
-  }
+  if(selVal.startsWith('grp:')){const g=Object.values(algoGroups).find(x=>x.name===selVal.slice(4));strategies=g?(g.algos||[]):[];}
+  else strategies=[selVal.slice(6)];
 
-  if (!strategies.length) {
-    container.innerHTML='<div style="text-align:center;padding:40px;color:var(--text3);">No strategies to compare</div>';
-    return;
-  }
+  const dayTrades=brokerTrades.filter(t=>strategies.includes(t.algo_name)&&t.entry_date===selDate);
+  if(!dayTrades.length){container.innerHTML='<div style="text-align:center;padding:40px;color:var(--text3);">No broker trades found for this counter date</div>';return;}
 
-  // SM lookup: strategy|date|optionType → trade
-  const smByKey = {};
-  smTrades.forEach(t => {
-    const k = `${(t.strategy_name||'').trim()}|${t.trade_date}|${t.option_type}`;
-    if (!smByKey[k]) smByKey[k] = t;
-  });
+  const smByKey={};
+  smTrades.forEach(t=>{const k=`${(t.strategy_name||'').trim()}|${t.trade_date}|${t.option_type}`;if(!smByKey[k])smByKey[k]=t;});
 
-  // Build flat list of day-blocks
-  const dayBlocks = [];
-  strategies.forEach(strat => {
-    const bTrades = brokerTrades.filter(t=>t.algo_name===strat);
-    if (!bTrades.length) return;
-    const byDate = {};
-    bTrades.forEach(t=>{ const d=t.entry_date||''; if(!byDate[d])byDate[d]=[]; byDate[d].push(t); });
-    Object.keys(byDate).forEach(date => {
-      dayBlocks.push({ strat, date, legs: byDate[date] });
-    });
-  });
+  const stratMap={};
+  dayTrades.forEach(t=>{const s=t.algo_name||'';if(!stratMap[s])stratMap[s]=[];stratMap[s].push(t);});
 
-  // Sort latest day on top
-  dayBlocks.sort((a,b)=> (b.date||'').localeCompare(a.date||'') || a.strat.localeCompare(b.strat));
+  const isGroup=selVal.startsWith('grp:');
+  const fmtCD=d=>{if(!d)return'';const p=d.split('-');return['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][parseInt(p[1])-1]+p[2].replace(/^0/,'')+"'"+p[0].slice(2);};
 
-  if (!dayBlocks.length) {
-    container.innerHTML='<div style="text-align:center;padding:40px;color:var(--text3);">No broker trades found</div>';
-    return;
-  }
+  let html='';
+  Object.keys(stratMap).sort().forEach((strat,si)=>{
+    const legs=stratMap[strat];
+    const cardId='smday_'+si;
+    const reviewKey=safeKey(`${strat}_${selDate}`);
+    const isReviewed=!!smReviewed[reviewKey];
 
-  // Build counter map: strategy → sorted array of dates → Cntr index
-  // Group all blocks by strategy, sort dates ascending, assign counter
-  const stratDateMap = {}; // stratName → [date asc]
-  dayBlocks.forEach(blk => {
-    if (!stratDateMap[blk.strat]) stratDateMap[blk.strat] = [];
-    if (!stratDateMap[blk.strat].includes(blk.date)) stratDateMap[blk.strat].push(blk.date);
-  });
-  Object.keys(stratDateMap).forEach(s => stratDateMap[s].sort());
-
-  // Format date as 17Jun26
-  function fmtCntrDate(d) {
-    if (!d) return '';
-    const dt = new Date(d);
-    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-    return dt.getDate() + months[dt.getMonth()] + String(dt.getFullYear()).slice(2);
-  }
-
-  // Format diff for inline bracket display — only show if exceeds threshold
-  function fmtDiffBracket(diff, refVal, tol) {
-    if (diff === null || diff === undefined) return '';
-    if (!refVal) return '';
-    const pct = Math.abs(diff / refVal) * 100;
-    if (pct <= tol) return '';
-    const col = diff >= 0 ? '#16a34a' : '#dc2626';
-    return ` <span style="color:${col};font-size:0.72rem;font-weight:700;">(${fmt(diff)})</span>`;
-  }
-
-  let html = '';
-  dayBlocks.forEach((blk, bi) => {
-    const { strat, date, legs } = blk;
-    const cardId = 'smday_' + bi;
-    const reviewKey = safeKey(`${strat}_${date}`);
-    const isReviewed = !!smReviewed[reviewKey];
-
-    // Counter for this strategy+date
-    const cntrIdx = (stratDateMap[strat]||[]).indexOf(date);
-    const cntrLabel = cntrIdx >= 0 ? `Cntr${cntrIdx+1}` : 'Cntr?';
-    const cntrDateStr = fmtCntrDate(date);
-
-    // Compute per-day totals and status
-    let bDayTotal=0, smDayTotal=0, anySM=false, anyBad=false, allMatched=true, anyMatchable=false;
-    const legRows = legs.map(bt => {
-      const ot = bt.option_type || optType(bt.symbol||'');
-      const sm = smByKey[`${strat.trim()}|${date}|${ot}`];
-      const brkStrike = extractStrike(bt.symbol||'')?.strike || 0;
-      const smStrike = sm?.strike ?? null;
-      const smEntry  = sm?.entry_price ?? null;
-      const smExit   = sm?.exit_price ?? null;
-      const smPnl    = sm?.leg_profit ?? null;
-      const bEntry=bt.entry_price||0, bExit=bt.exit_price||0, bPnl=bt.pnl||0;
-      bDayTotal += bPnl;
-      if (sm) { anySM=true; smDayTotal += (smPnl||0); }
-
-      const ckStrike = sm ? withinTolerance(smStrike, brkStrike, tolerancePrice) : null;
-      const ckEntry  = sm ? withinTolerance(smEntry,  bEntry,    tolerancePrice) : null;
-      const ckExit   = sm ? withinTolerance(smExit,   bExit,     tolerancePrice) : null;
-      const ckPnl    = sm ? withinTolerance(smPnl,    bPnl,      tolerancePnl)   : null;
-      const checks   = [ckStrike,ckEntry,ckExit,ckPnl].filter(c=>c!==null);
-      if (checks.length) { anyMatchable=true; if(checks.some(c=>c===false)){anyBad=true; allMatched=false;} }
-      else allMatched=false;
-
-      return { ot, smStrike, brkStrike, smEntry, bEntry, smExit, bExit, smPnl, bPnl, ckStrike, ckEntry, ckExit, ckPnl, sm };
+    let bDayTotal=0,smDayTotal=0,anySM=false,anyBad=false,allMatched=true,anyMatchable=false;
+    const legRows=legs.map(bt=>{
+      const ot=bt.option_type||optType(bt.symbol||'');
+      const sm=smByKey[`${strat.trim()}|${selDate}|${ot}`];
+      const brkStrike=extractStrike(bt.symbol||'')?.strike||0;
+      const smStrike=sm?.strike??null,smEntry=sm?.entry_price??null,smExit=sm?.exit_price??null,smPnl=sm?.leg_profit??null;
+      const bEntry=bt.entry_price||0,bExit=bt.exit_price||0,bPnl=bt.pnl||0;
+      bDayTotal+=bPnl; if(sm){anySM=true;smDayTotal+=(smPnl||0);}
+      const ckStrike=sm?withinTolerance(smStrike,brkStrike,tolerancePrice):null;
+      const ckEntry =sm?withinTolerance(smEntry, bEntry,   tolerancePrice):null;
+      const ckExit  =sm?withinTolerance(smExit,  bExit,   tolerancePrice):null;
+      const ckPnl   =sm?withinTolerance(smPnl,   bPnl,   tolerancePnl)  :null;
+      const checks=[ckStrike,ckEntry,ckExit,ckPnl].filter(c=>c!==null);
+      if(checks.length){anyMatchable=true;if(checks.some(c=>c===false)){anyBad=true;allMatched=false;}}else allMatched=false;
+      return{ot,smStrike,brkStrike,smEntry,bEntry,smExit,bExit,smPnl,bPnl,ckStrike,ckEntry,ckExit,ckPnl,sm};
     });
 
-    const dayDiff = anySM ? (bDayTotal - smDayTotal) : null;
-    const dow = new Date(date).toLocaleDateString('en-IN',{weekday:'short'});
-
-    // Status badge
+    const dayDiff=anySM?(bDayTotal-smDayTotal):null;
     let statusBadge;
-    if (isReviewed)        statusBadge = '<span style="background:#1e3a8a;color:#fff;padding:2px 9px;border-radius:5px;font-size:0.7rem;font-weight:700;">🔵 Reviewed</span>';
-    else if (!anySM)       statusBadge = '<span style="background:#374151;color:#9ca3af;padding:2px 9px;border-radius:5px;font-size:0.7rem;font-weight:700;">⚫ No SM</span>';
-    else if (anyBad)       statusBadge = '<span style="background:#fef3c7;color:#b45309;padding:2px 9px;border-radius:5px;font-size:0.7rem;font-weight:700;">🟡 Partial</span>';
-    else if (anyMatchable) statusBadge = '<span style="background:#dcfce7;color:#15803d;padding:2px 9px;border-radius:5px;font-size:0.7rem;font-weight:700;">🟢 Match</span>';
-    else                   statusBadge = '<span style="background:#374151;color:#9ca3af;padding:2px 9px;border-radius:5px;font-size:0.7rem;font-weight:700;">⚫ No SM</span>';
+    if(isReviewed)       statusBadge='<span style="background:#1e3a8a;color:#fff;padding:2px 9px;border-radius:5px;font-size:0.7rem;font-weight:700;">🔵 Reviewed</span>';
+    else if(!anySM)      statusBadge='<span style="background:#374151;color:#9ca3af;padding:2px 9px;border-radius:5px;font-size:0.7rem;font-weight:700;">⚫ No SM</span>';
+    else if(anyBad)      statusBadge='<span style="background:#fef3c7;color:#b45309;padding:2px 9px;border-radius:5px;font-size:0.7rem;font-weight:700;">🟡 Partial</span>';
+    else if(anyMatchable)statusBadge='<span style="background:#dcfce7;color:#15803d;padding:2px 9px;border-radius:5px;font-size:0.7rem;font-weight:700;">🟢 Match</span>';
+    else                 statusBadge='<span style="background:#374151;color:#9ca3af;padding:2px 9px;border-radius:5px;font-size:0.7rem;font-weight:700;">⚫ No SM</span>';
 
-    const cardBorder = isReviewed ? '#1e3a8a' : 'var(--border)';
-    const cardBg     = isReviewed ? '#eff4ff' : '#fff';
+    const cardBorder=isReviewed?'#1e3a8a':'var(--border)';
+    const cardBg=isReviewed?'#eff4ff':'#fff';
+    let dayDiffBracket='';
+    if(dayDiff!==null){const pct=smDayTotal?Math.abs(dayDiff/smDayTotal)*100:0;if(pct>tolerancePnl){const col=dayDiff>=0?'#16a34a':'#dc2626';dayDiffBracket=` <span style="color:${col};font-size:0.72rem;font-weight:700;">(${fmt(dayDiff)})</span>`;}}
 
-    // Inline diff bracket for day total (shown only if exceeds pnl threshold)
-    const dayDiffBracket = dayDiff !== null ? fmtDiffBracket(dayDiff, smDayTotal, tolerancePnl) : '';
-
-    html += `<div style="border:1px solid ${cardBorder};border-left:4px solid ${cardBorder};border-radius:10px;margin-bottom:10px;overflow:hidden;background:${cardBg};">
+    html+=`<div style="border:1px solid ${cardBorder};border-left:4px solid ${cardBorder};border-radius:10px;margin-bottom:10px;overflow:hidden;background:${cardBg};">
       <div onclick="tglSMCard('${cardId}')" style="display:flex;align-items:center;justify-content:space-between;padding:11px 16px;cursor:pointer;flex-wrap:wrap;gap:8px;">
         <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
           <span id="arr-${cardId}" style="color:var(--text2);font-size:0.8rem;">▶</span>
-          <span style="font-size:0.75rem;font-weight:700;color:#6366f1;background:#eef2ff;padding:2px 8px;border-radius:5px;white-space:nowrap;">${cntrLabel} — ${cntrDateStr}</span>
-          <span style="font-size:0.72rem;color:var(--text2);">${strat}</span>
-          <span style="font-size:0.68rem;color:var(--text3);">${legs.length} legs</span>
+          ${isGroup?`<span style="font-size:0.75rem;font-weight:700;color:#6366f1;background:#eef2ff;padding:2px 8px;border-radius:5px;white-space:nowrap;">${strat}</span>`:`<span style="font-size:0.72rem;color:var(--text2);">${strat}</span>`}
+          <span style="font-size:0.68rem;color:var(--text3);">${legs.length} legs · ${fmtCD(selDate)}</span>
           ${statusBadge}
         </div>
         <div style="display:flex;gap:16px;font-size:0.78rem;align-items:center;">
@@ -3800,70 +3777,49 @@ function renderSMComparison() {
           ${anySM?`<span style="color:var(--text2);">SM: <strong>${fmt(smDayTotal)}</strong>${dayDiffBracket}</span>`:''}
           <button onclick="event.stopPropagation();toggleSMReviewed('${reviewKey}')"
             style="border:1px solid ${isReviewed?'#1e3a8a':'var(--border)'};background:${isReviewed?'#1e3a8a':'#fff'};color:${isReviewed?'#fff':'var(--text2)'};border-radius:6px;padding:3px 10px;font-size:0.7rem;font-weight:600;cursor:pointer;white-space:nowrap;">
-            ${isReviewed?'✓ Reviewed':'Mark Reviewed'}
-          </button>
+            ${isReviewed?'✓ Reviewed':'Mark Reviewed'}</button>
         </div>
       </div>
       <div id="${cardId}" style="display:none;border-top:1px solid var(--border);overflow-x:auto;">`;
 
-    if (!anySM) {
-      html += `<table class="sm-table"><thead><tr>
+    if(!anySM){
+      html+=`<table class="sm-table"><thead><tr>
           <th style="text-align:left;">Type</th><th>Broker Strike</th><th>Broker Entry</th><th>Broker Exit</th><th>Broker P&L</th>
         </tr></thead><tbody>`;
-      legRows.forEach(r => {
-        html += `<tr><td><span class="badge ${r.ot==='CE'?'b-blue':'b-red'}">${r.ot}</span></td>
-          <td>${r.brkStrike.toLocaleString('en-IN')}</td>
-          <td>${r.bEntry.toLocaleString('en-IN')}</td>
+      legRows.forEach(r=>{html+=`<tr><td><span class="badge ${r.ot==='CE'?'b-blue':'b-red'}">${r.ot}</span></td>
+          <td>${r.brkStrike.toLocaleString('en-IN')}</td><td>${r.bEntry.toLocaleString('en-IN')}</td>
           <td>${r.bExit.toLocaleString('en-IN')}</td>
-          <td style="font-weight:600;color:${r.bPnl>=0?'#16a34a':'#dc2626'};">${fmt(r.bPnl)}</td></tr>`;
-      });
-      html += `</tbody></table>
-        <div style="padding:8px 16px;font-size:0.74rem;color:#6b7280;background:#f9fafb;">⚫ No Stockmock data for this day — showing broker trades only.</div>`;
+          <td style="font-weight:600;color:${r.bPnl>=0?'#16a34a':'#dc2626'};">${fmt(r.bPnl)}</td></tr>`;});
+      html+=`</tbody></table><div style="padding:8px 16px;font-size:0.74rem;color:#6b7280;background:#f9fafb;">⚫ No Stockmock data for this day — showing broker trades only.</div>`;
     } else {
-      const reviewTint = isReviewed ? 'opacity:0.95;' : '';
-      // cellPair: SM on top (muted), Broker below (bold) — diff in brackets if over threshold
-      const cellPair = (smV, bV, ok, tol, fmtFn) => {
-        const f = fmtFn || (v => v!==null ? v.toLocaleString('en-IN') : '—');
-        const smTxt = smV!==null ? f(smV) : '—';
-        const bTxt  = bV!==null  ? f(bV)  : '—';
-        const bColor = isReviewed ? '#1e3a8a' : (ok===false ? '#dc2626' : ok===true ? '#16a34a' : 'var(--text0)');
-        const mark = ok===true ? '🟢' : ok===false ? '🔴' : '';
-        // Inline bracket diff — only for numeric values when there is a mismatch
-        let bracketHtml = '';
-        if (smV !== null && bV !== null && ok === false) {
-          const diff = bV - smV;
-          const col = diff >= 0 ? '#16a34a' : '#dc2626';
-          bracketHtml = `<span style="color:${col};font-size:0.62rem;">(${f(diff)})</span>`;
-        }
-        return `<td style="text-align:right;${reviewTint}">
-          <div style="color:var(--text3);font-size:0.7rem;">${smTxt}</div>
-          <div style="font-weight:700;color:${bColor};">${bTxt} <span style="font-size:0.62rem;">${mark}</span> ${bracketHtml}</div>
-        </td>`;
+      const reviewTint=isReviewed?'opacity:0.95;':'';
+      const cellPair=(smV,bV,ok,tol,fmtFn)=>{
+        const f=fmtFn||(v=>v!==null?v.toLocaleString('en-IN'):'—');
+        const smTxt=smV!==null?f(smV):'—',bTxt=bV!==null?f(bV):'—';
+        const bColor=isReviewed?'#1e3a8a':(ok===false?'#dc2626':ok===true?'#16a34a':'var(--text0)');
+        const mark=ok===true?'🟢':ok===false?'🔴':'';
+        let bH=''; if(smV!==null&&bV!==null&&ok===false){const d=bV-smV;const col=d>=0?'#16a34a':'#dc2626';bH=`<span style="color:${col};font-size:0.62rem;">(${f(d)})</span>`;}
+        return `<td style="text-align:right;${reviewTint}"><div style="color:var(--text3);font-size:0.7rem;">${smTxt}</div><div style="font-weight:700;color:${bColor};">${bTxt} <span style="font-size:0.62rem;">${mark}</span> ${bH}</div></td>`;
       };
-      html += `<table class="sm-table"><thead><tr>
+      html+=`<table class="sm-table"><thead><tr>
           <th style="text-align:left;">Leg</th>
           <th>Strike<br><span style="font-weight:400;font-size:0.62rem;color:var(--text3);">SM / Broker</span></th>
           <th>Entry<br><span style="font-weight:400;font-size:0.62rem;color:var(--text3);">SM / Broker</span></th>
           <th>Exit<br><span style="font-weight:400;font-size:0.62rem;color:var(--text3);">SM / Broker</span></th>
           <th>P&L<br><span style="font-weight:400;font-size:0.62rem;color:var(--text3);">SM / Broker</span></th>
         </tr></thead><tbody>`;
-      legRows.forEach(r => {
-        html += `<tr>
-          <td><span class="badge ${r.ot==='CE'?'b-blue':'b-red'}">${r.ot}</span></td>
-          ${cellPair(r.smStrike, r.brkStrike, r.ckStrike, tolerancePrice)}
-          ${cellPair(r.smEntry,  r.bEntry,    r.ckEntry,  tolerancePrice)}
-          ${cellPair(r.smExit,   r.bExit,     r.ckExit,   tolerancePrice)}
-          ${cellPair(r.smPnl,    r.bPnl,      r.ckPnl,    tolerancePnl, fmt)}
-        </tr>`;
-      });
-      html += '</tbody></table>';
+      legRows.forEach(r=>{html+=`<tr><td><span class="badge ${r.ot==='CE'?'b-blue':'b-red'}">${r.ot}</span></td>
+          ${cellPair(r.smStrike,r.brkStrike,r.ckStrike,tolerancePrice)}
+          ${cellPair(r.smEntry, r.bEntry,   r.ckEntry, tolerancePrice)}
+          ${cellPair(r.smExit,  r.bExit,    r.ckExit,  tolerancePrice)}
+          ${cellPair(r.smPnl,   r.bPnl,     r.ckPnl,   tolerancePnl,fmt)}</tr>`;});
+      html+='</tbody></table>';
     }
-    html += '</div></div>';
+    html+='</div></div>';
   });
 
-  container.innerHTML = html;
+  container.innerHTML=html||'<div style="text-align:center;padding:40px;color:var(--text3);">No trades found for this counter</div>';
 }
-
 // Manually-reviewed flag (per strategy+date), persisted to Firebase
 function toggleSMReviewed(key) {
   const newState = !smReviewed[key];
