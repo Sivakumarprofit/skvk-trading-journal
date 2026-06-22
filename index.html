@@ -2,6 +2,8 @@
 ==========================================================
   SKVK TRADING JOURNAL — VERSION HISTORY
 ==========================================================
+  v15.5 | 2026-06-22 | Fix: Restored missing toggleConfirm function (eaten by str_replace in v15.4)
+  ──────────────────────────────────────────────────────
   v15.4 | 2026-06-22 | Upload: ASP selector (Quantleap / Tradetron) before file pick;
          |            | Tradetron parser — each CSV row → one journal row, STBT/BTST detection,
          |            | algo dropdown from existing algoMeta list for Tradetron uploads;
@@ -341,7 +343,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>SKVK Trading Journal v15.4</title>
+<title>SKVK Trading Journal v15.5</title>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -1174,7 +1176,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
 <div id="topbar">
   <div class="brand">
     <span class="brand-dot"></span>
-    SKVK Trading Journal <span style="font-size:0.85rem;background:#1a73e8;color:#fff;padding:3px 10px;border-radius:10px;font-weight:700;margin-left:6px;vertical-align:middle;">v15.4</span>
+    SKVK Trading Journal <span style="font-size:0.85rem;background:#1a73e8;color:#fff;padding:3px 10px;border-radius:10px;font-weight:700;margin-left:6px;vertical-align:middle;">v15.5</span>
   </div>
   <nav class="nav-tabs">
     <button class="nav-tab active" onclick="showPage('journal')"    data-page="journal">📋 <span class="tl">Journal</span></button>
@@ -4527,7 +4529,7 @@ function selectASP(asp) {
   upWrap.style.display = 'block';
 }
 
-
+function toggleConfirm(el, hash, field) {
   const isOn = el.classList.toggle('confirmed');
   const priceEl = el.previousElementSibling;
   if (priceEl) priceEl.classList.toggle('price-confirmed', isOn);
