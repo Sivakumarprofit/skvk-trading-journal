@@ -2,6 +2,9 @@
 ==========================================================
   SKVK TRADING JOURNAL — VERSION HISTORY
 ==========================================================
+  v14.9 | 2026-06-22 | Fix: Orphaned JS code after BOOT comment caused SyntaxError (return not in function),
+         |            | Fix: showPage not defined error — script was broken before DOMContentLoaded
+  ──────────────────────────────────────────────────────
   v14.8 | 2026-06-22 | System Statistics: Empty state until strategy selected,
          |            | Counter pills at top (auto-selects latest), counter section shows selected run only,
          |            | Equity curve/stats/daily summary/month PNL always show full year for strategy
@@ -316,7 +319,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>SKVK Trading Journal v14.8</title>
+<title>SKVK Trading Journal v14.9</title>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -1149,7 +1152,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
 <div id="topbar">
   <div class="brand">
     <span class="brand-dot"></span>
-    SKVK Trading Journal <span style="font-size:0.85rem;background:#1a73e8;color:#fff;padding:3px 10px;border-radius:10px;font-weight:700;margin-left:6px;vertical-align:middle;">v14.8</span>
+    SKVK Trading Journal <span style="font-size:0.85rem;background:#1a73e8;color:#fff;padding:3px 10px;border-radius:10px;font-weight:700;margin-left:6px;vertical-align:middle;">v14.9</span>
   </div>
   <nav class="nav-tabs">
     <button class="nav-tab active" onclick="showPage('journal')"    data-page="journal">📋 <span class="tl">Journal</span></button>
@@ -5601,51 +5604,6 @@ function renderSysStat() {
   }, 50);
 }
 
-// ════════════════════════════════════════════════════
-//  BOOT
-  const sel = document.getElementById('sysstat-select');
-  const yrSel = document.getElementById('sysstat-year');
-  if (!sel || !yrSel) return;
-  const cur = sel.value;
-
-  sel.innerHTML = '<option value="">All Strategies</option>';
-
-  const groups = Object.values(algoGroups);
-  if (groups.length) {
-    const og = document.createElement('optgroup');
-    og.label = '── Groups ──';
-    groups.forEach(g => {
-      const o = document.createElement('option');
-      o.value = 'grp:' + g.name;
-      o.textContent = `${g.name} (${(g.algos||[]).length} algos)`;
-      og.appendChild(o);
-    });
-    sel.appendChild(og);
-  }
-
-  const brokerStrats = [...new Set(allTrades.map(t=>t.algo_name).filter(Boolean))].sort();
-  const os = document.createElement('optgroup');
-  os.label = '── Individual Strategies ──';
-  brokerStrats.forEach(s => {
-    const o = document.createElement('option');
-    o.value = 'strat:' + s;
-    o.textContent = s;
-    os.appendChild(o);
-  });
-  sel.appendChild(os);
-  if (cur) sel.value = cur;
-
-  // Year dropdown
-  const years = [...new Set(allTrades.map(t=>(t.entry_date||'').slice(0,4)).filter(Boolean))].sort().reverse();
-  const curYr = yrSel.value;
-  yrSel.innerHTML = '<option value="ALL">All Years</option>';
-  years.forEach(y => {
-    const o = document.createElement('option');
-    o.value = y; o.textContent = y;
-    yrSel.appendChild(o);
-  });
-  if (curYr) yrSel.value = curYr;
-}
 
 // ════════════════════════════════════════════════════
 //  BOOT
