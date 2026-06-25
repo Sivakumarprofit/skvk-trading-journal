@@ -2,6 +2,13 @@
 ==========================================================
   SKVK TRADING JOURNAL — VERSION HISTORY
 ==========================================================
+  v16.7 | 2026-06-25 | Fix: parseQuantiply handles both old format (algo_name, profit_loss,
+         |            | entry_price, exit_price) and new Quantleap format (strategy_name, pnl,
+         |            | average_entry_price, exit_average_price, execution_date, closed_date)
+  ──────────────────────────────────────────────────────
+  v16.6 | 2026-06-25 | Journal: CntrN pill moved to CNTR column (first td);
+         |            | Account wise: dropdown uses client_id only with nicknames, filters junk brokers
+  ──────────────────────────────────────────────────────
   v16.5 | 2026-06-25 | Tradetron parser: proper Entry/Exit pairing by condition_id→condition_parent_id
          |            | + Instrument match; real P&L from price diff × qty; OPEN legs flagged;
          |            | Journal: CntrN uses run_counter for Tradetron, computed for Quantleap;
@@ -386,7 +393,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>SKVK Trading Journal v16.5</title>
+<title>SKVK Trading Journal v16.7</title>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -1320,7 +1327,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div class="login-logo">📋</div>
     <div class="login-title">
       SKVK Trading Journal
-      <span class="login-vbadge">v16.5</span>
+      <span class="login-vbadge">v16.7</span>
     </div>
     <div class="login-sub">Sign in with your authorised Google account to access the journal.</div>
     <button class="google-signin-btn" id="googleSignInBtn" onclick="signInWithGoogle()">
@@ -1351,7 +1358,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div class="brand">
       <span class="brand-dot"></span>
       SKVK Trading Journal
-      <span style="font-size:0.78rem;background:#1a73e8;color:#fff;padding:2px 8px;border-radius:8px;font-weight:700;margin-left:4px;">v16.5</span>
+      <span style="font-size:0.78rem;background:#1a73e8;color:#fff;padding:2px 8px;border-radius:8px;font-weight:700;margin-left:4px;">v16.7</span>
     </div>
     <div id="brand-subline">
       <div id="db-status">● connecting…</div>
@@ -2565,13 +2572,14 @@ let acctWeekOffset = 0; // 0 = current week, -1 = last week, etc.
 let currentAcct = '';
 
 function initAcctReport() {
-  // Populate account dropdown from all trades
-  const accounts = [...new Set(allTrades.map(t => t.client_id||t.broker||'').filter(Boolean))].sort();
+  // Use client_id only (same as journal tabs), skip junk broker defaults
+  const junk = new Set(['tradetron', 'quantleap', 'quantiply', 'zebu', 'upstox', 'iifl', '']);
+  const accounts = [...new Set(allTrades.map(t => t.client_id||'').filter(id => id && !junk.has(id.toLowerCase())))].sort();
   const sel = document.getElementById('acct-select');
   if (!sel) return;
   sel.innerHTML = '<option value="">— Select Account —</option>' +
-    accounts.map(a => `<option value="${a}">${a}</option>`).join('');
-  if (currentAcct) { sel.value = currentAcct; renderAcctReport(); }
+    accounts.map(a => `<option value="${a}">${getClientLabel(a)}</option>`).join('');
+  if (currentAcct && accounts.includes(currentAcct)) { sel.value = currentAcct; renderAcctReport(); }
 }
 
 function renderAcctReport() {
@@ -2582,7 +2590,7 @@ function renderAcctReport() {
   document.getElementById('acct-year-section').style.display = currentAcct ? '' : 'none';
   if (!currentAcct) return;
 
-  const tr = allTrades.filter(t => !t.archived && (t.client_id||t.broker||'') === currentAcct);
+  const tr = allTrades.filter(t => !t.archived && (t.client_id||'') === currentAcct);
   renderAcctWeekTiles(tr);
   renderAcctYearStats(tr);
 }
@@ -2591,7 +2599,7 @@ function acctWeekNav(dir) {
   acctWeekOffset += dir;
   const sel = document.getElementById('acct-select');
   currentAcct = sel?.value || '';
-  const tr = allTrades.filter(t => !t.archived && (t.client_id||t.broker||'') === currentAcct);
+  const tr = allTrades.filter(t => !t.archived && (t.client_id||'') === currentAcct);
   renderAcctWeekTiles(tr);
 }
 
@@ -2992,28 +3000,61 @@ async function processFile(file) {
 // ════════════════════════════════════════════════════
 function parseQuantiply(csv) {
   const { data } = Papa.parse(csv, { header:true, skipEmptyLines:true, trimHeaders:true });
-  return data.filter(r => r.algo_name?.trim()).map(r => ({
-    source:      'quantiply',
-    broker:      (r.broker||'').toLowerCase(),
-    client_id:   r.client_id||'',
-    algo_name:   r.algo_name.trim(),
-    underlying:  r.underlying||'',
-    symbol:      r.symbol||'',
-    option_type: optType(r.symbol||''),
-    action:      (r.entry_order||r.action||'').toUpperCase(),
-    quantity:    parseFloat((r.quantity||'0').toString().replace(/,/g,''))||0,
-    entry_date:  normDate(r.entry_date||r.date||''),
-    entry_time:  r.entry_time||'',
-    entry_price: parseFloat((r.entry_price||'0').toString().replace(/,/g,''))||0,
-    exit_date:   normDate(r.exit_date||''),
-    exit_time:   r.exit_time||'',
-    exit_price:  parseFloat((r.exit_price||'0').toString().replace(/,/g,''))||0,
-    exit_reason: normExit(r.exit_reason||''),
-    pnl:         parseFloat((r.profit_loss||'0').toString().replace(/,/g,''))||0,
-    expiry_date: '',
-    is_re_entry: (r.is_re_entry||'').toLowerCase()==='true',
-    created_at:  new Date().toISOString()
-  })).filter(t => t.entry_date);
+  if (!data.length) return [];
+
+  // Detect format: new format has 'strategy_name', old has 'algo_name'
+  const isNewFormat = 'strategy_name' in data[0];
+
+  return data.filter(r => {
+    const name = isNewFormat ? r.strategy_name : r.algo_name;
+    return name?.trim();
+  }).map(r => {
+    const algoName   = isNewFormat ? (r.strategy_name||'').trim() : (r.algo_name||'').trim();
+    const entryPrice = isNewFormat
+      ? parseFloat((r.average_entry_price||'0').toString().replace(/,/g,''))||0
+      : parseFloat((r.entry_price||'0').toString().replace(/,/g,''))||0;
+    const exitPrice  = isNewFormat
+      ? parseFloat((r.exit_average_price||'0').toString().replace(/,/g,''))||0
+      : parseFloat((r.exit_price||'0').toString().replace(/,/g,''))||0;
+    const pnl        = isNewFormat
+      ? parseFloat((r.pnl||'0').toString().replace(/,/g,''))||0
+      : parseFloat((r.profit_loss||'0').toString().replace(/,/g,''))||0;
+    const entryDate  = isNewFormat
+      ? normDate((r.execution_date||'').slice(0,10))
+      : normDate(r.entry_date||r.date||'');
+    const exitDate   = isNewFormat
+      ? normDate((r.closed_date||'').slice(0,10))
+      : normDate(r.exit_date||'');
+    const exitReason = isNewFormat
+      ? normExit(r.exit_type||'')
+      : normExit(r.exit_reason||'');
+    const action     = isNewFormat
+      ? (r.action||'').toUpperCase()
+      : (r.entry_order||r.action||'').toUpperCase();
+
+    return {
+      source:      'quantiply',
+      broker:      (r.broker||'').toLowerCase(),
+      client_id:   r.client_id||'',
+      algo_name:   algoName,
+      underlying:  r.underlying||'',
+      symbol:      r.symbol||'',
+      option_type: optType(r.symbol||''),
+      action:      action,
+      quantity:    parseFloat((r.quantity||'0').toString().replace(/,/g,''))||0,
+      entry_date:  entryDate,
+      entry_time:  r.entry_time||'',
+      entry_price: entryPrice,
+      exit_date:   exitDate,
+      exit_time:   r.exit_time||'',
+      exit_price:  exitPrice,
+      exit_reason: exitReason,
+      pnl:         pnl,
+      expiry_date: normDate(r.expiry_date||''),
+      is_re_entry: (r.is_re_entry||'').toLowerCase()==='true',
+      created_at:  new Date().toISOString()
+    };
+  }).filter(t => t.entry_date);
 }
 
 function parseZebu(csv) {
@@ -3666,7 +3707,7 @@ function renderJournal() {
       const clientLabel = clientId ? `<span class="badge b-gray" style="font-size:0.65rem;">${clientId}</span>` : '';
 
       html+=`<tr class="algo-group-header ${aPnl>=0?'pnl-pos-row':'pnl-neg-row'}" data-group="${dId}" style="display:none" onclick="tgl('${aId}')">
-        <td></td>
+        <td><span style="background:#EEEDFE;color:#3C3489;font-size:0.68rem;font-weight:700;padding:2px 8px;border-radius:20px;">Cntr${dayN}</span></td>
         <td colspan="9">
           <div style="display:flex;align-items:center;gap:8px;">
             <span id="arr-${aId}">▶</span>
@@ -3674,7 +3715,6 @@ function renderJournal() {
             <span class="badge b-gray" style="font-size:0.65rem;">${broker}</span>
             ${clientLabel}
             <span class="badge b-gray">${legs.length} legs</span>
-            <span style="background:#EEEDFE;color:#3C3489;font-size:0.68rem;font-weight:700;padding:2px 8px;border-radius:20px;">Cntr${dayN}</span>
           </div>
         </td>
         <td class="${aPnl>=0?'pnl-pos':'pnl-neg'}" style="font-weight:700;">${fmt(aPnl)}</td>
