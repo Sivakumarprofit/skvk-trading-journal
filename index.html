@@ -2,6 +2,11 @@
 ==========================================================
   SKVK TRADING JOURNAL — VERSION HISTORY
 ==========================================================
+  v16.3 | 2026-06-25 | Fix: Journal trade rows now start hidden (collapsed view working correctly);
+         |            | Nav tabs: taller topbar (64px), solid blue pill active state, bigger font,
+         |            | text wrapping enabled, darker inactive color;
+         |            | Last Updated: max-width 240→340px, font 0.65→0.7rem
+  ──────────────────────────────────────────────────────
   v16.2 | 2026-06-25 | Daily Journal: default collapsed view; CntrN badge on algo-group headers;
          |            | Nav reorder + renames: Daily Journal, System Statistics moved to 2nd,
          |            | Upload Trade Reports, Compare Broker Execution, Manual Entry
@@ -371,7 +376,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>SKVK Trading Journal v16.2</title>
+<title>SKVK Trading Journal v16.3</title>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -439,7 +444,7 @@ body {
   border-bottom: 1px solid var(--border);
   box-shadow: var(--shadow-sm);
   display: flex; align-items: center;
-  height: 56px;
+  height: 64px;
   padding: 0 16px 0 20px;
   gap: 0;
 }
@@ -469,8 +474,8 @@ body {
   display: flex; align-items: center; gap: 8px; margin-top: 2px;
 }
 #last-updated-tag {
-  font-size: 0.65rem; color: var(--text2);
-  white-space: nowrap; max-width: 240px;
+  font-size: 0.7rem; color: var(--text2);
+  white-space: nowrap; max-width: 340px;
   overflow: hidden; text-overflow: ellipsis;
 }
 #db-status {
@@ -481,7 +486,7 @@ body {
 #db-status.connected { color: var(--green); }
 
 .nav-tabs {
-  display: flex; align-items: stretch; height: 56px; gap: 1px;
+  display: flex; align-items: stretch; height: 64px; gap: 1px;
   flex-wrap: nowrap; overflow-x: auto; flex: 1;
   scrollbar-width: thin; scrollbar-color: var(--blue) var(--bg2);
 }
@@ -489,22 +494,18 @@ body {
 .nav-tabs::-webkit-scrollbar-thumb { background: var(--blue); border-radius: 2px; }
 .nav-tabs::-webkit-scrollbar-track { background: var(--bg2); }
 .nav-tab {
-  display: flex; align-items: center; gap: 5px;
-  padding: 0 11px;
-  font-size: 0.82rem; font-weight: 500;
-  color: var(--text2);
+  display: flex; align-items: center; justify-content: center; gap: 5px;
+  padding: 0 14px;
+  font-size: 0.84rem; font-weight: 600;
+  color: var(--text1);
   background: none; border: none; cursor: pointer;
-  position: relative; transition: color 0.15s;
-  white-space: nowrap; flex-shrink: 0;
-  letter-spacing: 0.01em;
+  position: relative; transition: all 0.15s;
+  white-space: normal; text-align: center; flex-shrink: 0;
+  letter-spacing: 0.01em; line-height: 1.25;
 }
 .nav-tab:hover { color: var(--text0); background: var(--bg2); border-radius: 6px; }
-.nav-tab.active { color: var(--blue); font-weight: 700; }
-.nav-tab.active::after {
-  content: '';
-  position: absolute; bottom: 0; left: 0; right: 0; height: 3px;
-  background: var(--blue); border-radius: 2px 2px 0 0;
-}
+.nav-tab.active { color: #fff; font-weight: 700; background: var(--blue); border-radius: 8px; }
+.nav-tab.active::after { display: none; }
 
 .topbar-right {
   display: flex; align-items: center;
@@ -615,7 +616,7 @@ body {
 .btn-sm { padding: 5px 10px; font-size: 0.72rem; }
 
 /* ── MAIN ── */
-#main { margin-top: 76px; padding: 24px; max-width: 1600px; margin-left: auto; margin-right: auto; }
+#main { margin-top: 84px; padding: 24px; max-width: 1600px; margin-left: auto; margin-right: auto; }
 .page { display: none; }
 .page.active { display: block; }
 
@@ -1309,7 +1310,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div class="login-logo">📋</div>
     <div class="login-title">
       SKVK Trading Journal
-      <span class="login-vbadge">v16.2</span>
+      <span class="login-vbadge">v16.3</span>
     </div>
     <div class="login-sub">Sign in with your authorised Google account to access the journal.</div>
     <button class="google-signin-btn" id="googleSignInBtn" onclick="signInWithGoogle()">
@@ -1340,7 +1341,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div class="brand">
       <span class="brand-dot"></span>
       SKVK Trading Journal
-      <span style="font-size:0.78rem;background:#1a73e8;color:#fff;padding:2px 8px;border-radius:8px;font-weight:700;margin-left:4px;">v16.2</span>
+      <span style="font-size:0.78rem;background:#1a73e8;color:#fff;padding:2px 8px;border-radius:8px;font-weight:700;margin-left:4px;">v16.3</span>
     </div>
     <div id="brand-subline">
       <div id="db-status">● connecting…</div>
@@ -3439,7 +3440,7 @@ function renderJournal() {
 
       legs.forEach(t=>{
         const h = t.hash||'';
-        html+=`<tr class="trade-row ${t.action==='BUY'?'buy-row':'sell-row'}${t.archived?' archived-row':''}${t.status==='CANCELLED'?' cancelled-row':''}" data-group="${aId}" ${t.is_re_entry&&!t.archived?'style="opacity:0.7"':''}>
+        html+=`<tr class="trade-row ${t.action==='BUY'?'buy-row':'sell-row'}${t.archived?' archived-row':''}${t.status==='CANCELLED'?' cancelled-row':''}" data-group="${aId}" style="display:none;${t.is_re_entry&&!t.archived?'opacity:0.7;':''}">
             <td>${t.is_re_entry?`<span class="badge b-amber">RE-ENTRY</span>`:''}</td>
             <td style="color:var(--text2);font-size:0.72rem;max-width:180px;overflow:hidden;text-overflow:ellipsis;" title="${algoName}">${algoName.length>22?algoName.slice(0,20)+'…':algoName}</td>
             <td><span class="badge b-gray">${t.broker}</span></td>
