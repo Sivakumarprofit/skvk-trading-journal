@@ -2,6 +2,12 @@
 ==========================================================
   SKVK TRADING JOURNAL — VERSION HISTORY
 ==========================================================
+  v15.8 | 2026-06-25 | Security: Google Auth login gate — permanent admins
+         |            | kayal.profit@gmail.com & sivakumar.profit@gmail.com;
+         |            | allowed_emails whitelist in Firebase; Access Control
+         |            | section in App Settings (admins only); sign-out button
+         |            | in topbar; DB listeners start only after auth granted
+  ──────────────────────────────────────────────────────
   v15.7 | 2026-06-22 | Merged Settings into App Settings tab — single unified tab;
          |            | Removed standalone Settings tab from nav; App Settings now contains
          |            | System Names, Groups, Display Prefs, Nicknames, Capital, Firebase,
@@ -351,10 +357,11 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>SKVK Trading Journal v15.7</title>
+<title>SKVK Trading Journal v15.8</title>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
@@ -473,6 +480,87 @@ body {
 #last-updated-tag { font-size:0.68rem; color:var(--text2); white-space:nowrap; max-width:220px; overflow:hidden; text-overflow:ellipsis; }
 #db-status { font-size: 0.72rem; color: var(--text3); display: flex; align-items: center; gap: 5px; white-space:nowrap; flex-shrink:0; }
 #db-status.connected { color: var(--green); }
+
+/* ── LOGIN SCREEN ── */
+#loginScreen {
+  display: none; position: fixed; inset: 0; z-index: 9999;
+  background: #0d1b2e;
+  align-items: center; justify-content: center; padding: 20px;
+}
+.login-box {
+  background: #ffffff; border-radius: 16px; padding: 44px 40px;
+  max-width: 400px; width: 100%; text-align: center;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.35);
+}
+.login-logo {
+  width: 72px; height: 72px; background: #0d1b2e; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  margin: 0 auto 20px; font-size: 32px;
+}
+.login-title {
+  font-size: 20px; font-weight: 800; color: #1a1f36;
+  font-family: var(--display); margin-bottom: 6px;
+}
+.login-sub {
+  font-size: 12px; color: #6b7280; margin-bottom: 30px; line-height: 1.6;
+}
+.login-vbadge {
+  display: inline-block; background: #1a73e8; color: #fff;
+  font-size: 11px; font-weight: 700; padding: 2px 10px;
+  border-radius: 10px; margin-left: 6px; vertical-align: middle;
+}
+.google-signin-btn {
+  width: 100%; height: 50px; display: flex; align-items: center;
+  justify-content: center; gap: 12px; background: #fff;
+  border: 1.5px solid #dadce0; border-radius: 6px; cursor: pointer;
+  font-size: 15px; font-weight: 600; color: #3c4043;
+  font-family: var(--font); box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+  transition: box-shadow 0.2s;
+}
+.google-signin-btn:hover { box-shadow: 0 3px 10px rgba(0,0,0,0.18); }
+.login-error {
+  font-size: 12px; color: #d93025; margin-top: 14px; display: none;
+  padding: 10px 14px; background: #fce8e6; border-radius: 8px;
+  text-align: left; border: 1px solid rgba(217,48,37,.2);
+}
+.login-spinner { display: none; margin-top: 18px; }
+.login-spinner-ring {
+  width: 26px; height: 26px; border: 3px solid #e2e5ee;
+  border-top-color: #1a73e8; border-radius: 50%;
+  animation: lspin 0.8s linear infinite; margin: 0 auto;
+}
+@keyframes lspin { to { transform: rotate(360deg); } }
+.login-note { font-size: 11px; color: #9ca3af; margin-top: 20px; }
+
+/* ── SIGN-OUT BUTTON in topbar ── */
+.signout-btn {
+  height: 28px; padding: 0 12px; border-radius: 20px;
+  border: 1px solid rgba(255,255,255,0.2); background: transparent;
+  color: rgba(255,255,255,0.75); font-size: 11px; font-family: var(--font);
+  cursor: pointer; display: flex; align-items: center; gap: 5px;
+  font-weight: 600; transition: all 0.15s; white-space: nowrap;
+  max-width: 180px; overflow: hidden; text-overflow: ellipsis;
+}
+.signout-btn:hover { background: rgba(255,255,255,0.12); color: #fff; }
+
+/* ── ACCESS CONTROL section in App Settings ── */
+.access-card {
+  background: #fff; border: 1px solid var(--border);
+  border-radius: 12px; padding: 22px; box-shadow: var(--shadow-sm);
+}
+.access-card h4 {
+  font-size: 0.95rem; font-weight: 700; color: var(--text0);
+  display: flex; align-items: center; gap: 8px; margin-bottom: 6px;
+}
+.access-email-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 14px; border: 1px solid var(--border);
+  border-radius: 8px; margin-bottom: 8px;
+}
+.access-email-row.admin { background: var(--blue-lt); border-color: rgba(26,115,232,.2); }
+.access-email-left { display: flex; align-items: center; gap: 10px; }
+.access-email-addr { font-size: 13px; font-weight: 600; color: var(--text0); }
+.access-email-role { font-size: 10px; color: var(--blue); font-weight: 700; margin-top: 1px; }
 
 /* ── BUTTONS ── */
 .btn {
@@ -1183,11 +1271,41 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
 </head>
 <body>
 
+<!-- ══ LOGIN SCREEN ══ -->
+<div id="loginScreen" style="display:none;position:fixed;inset:0;z-index:9999;background:#0d1b2e;align-items:center;justify-content:center;padding:20px;flex-direction:column">
+  <div class="login-box">
+    <div class="login-logo">📋</div>
+    <div class="login-title">
+      SKVK Trading Journal
+      <span class="login-vbadge">v15.8</span>
+    </div>
+    <div class="login-sub">Sign in with your authorised Google account to access the journal.</div>
+    <button class="google-signin-btn" id="googleSignInBtn" onclick="signInWithGoogle()">
+      <svg width="20" height="20" viewBox="0 0 48 48">
+        <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+        <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+        <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+        <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+      </svg>
+      Sign in with Google
+    </button>
+    <div class="login-error" id="loginError"></div>
+    <div class="login-spinner" id="loginSpinner">
+      <div class="login-spinner-ring"></div>
+      <p style="font-size:11px;color:#9ca3af;margin-top:8px">Signing in…</p>
+    </div>
+    <p class="login-note">Access restricted to authorised accounts only</p>
+  </div>
+</div>
+
+<!-- ══ MAIN APP ══ -->
+<div id="appShell" style="display:none">
+
 <!-- TOP BAR -->
 <div id="topbar">
   <div class="brand">
     <span class="brand-dot"></span>
-    SKVK Trading Journal <span style="font-size:0.85rem;background:#1a73e8;color:#fff;padding:3px 10px;border-radius:10px;font-weight:700;margin-left:6px;vertical-align:middle;">v15.7</span>
+    SKVK Trading Journal <span style="font-size:0.85rem;background:#1a73e8;color:#fff;padding:3px 10px;border-radius:10px;font-weight:700;margin-left:6px;vertical-align:middle;">v15.8</span>
   </div>
   <nav class="nav-tabs">
     <button class="nav-tab active" onclick="showPage('journal')"    data-page="journal">📋 <span class="tl">Journal</span></button>
@@ -1202,6 +1320,9 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
   <div class="topbar-right">
     <div id="last-updated-tag" style="font-size:0.72rem;color:var(--text2);margin-right:10px;white-space:nowrap;"></div>
     <div id="db-status">● connecting…</div>
+    <button class="signout-btn" id="signoutBtn" onclick="signOut()" title="Sign out">
+      🔓 <span id="topUserEmail"></span>
+    </button>
   </div>
 </div>
 
@@ -1456,6 +1577,23 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
   </div>
 
   <div style="display:grid;gap:24px;max-width:960px;">
+
+    <!-- ── Access Control (admin only) ── -->
+    <div class="access-card" id="accessControlCard" style="display:none">
+      <h4>🔐 Access Control</h4>
+      <p style="font-size:0.8rem;color:var(--text2);margin-bottom:16px">
+        Manage which Google accounts can access this app. Only permanent admins can add or remove users.
+      </p>
+      <div id="acEmailList" style="margin-bottom:14px"></div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <input type="email" id="acNewEmail" placeholder="new.user@gmail.com"
+          style="flex:1;min-width:220px;padding:8px 11px;border:1.5px solid var(--border);
+                 border-radius:7px;font-size:0.84rem;outline:none;font-family:var(--font)">
+        <button class="btn btn-primary" onclick="acAddEmail()">
+          ➕ Add Email
+        </button>
+      </div>
+    </div>
 
     <!-- ── Add System Name ── -->
     <div style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:22px;box-shadow:var(--shadow-sm);">
@@ -2306,15 +2444,15 @@ let algoGroups = {};           // groupName → { name, color, algos:[] }
 
 
 // ════════════════════════════════════════════════════
-//  FIREBASE INIT
+//  AUTH CONSTANTS
 // ════════════════════════════════════════════════════
-try {
-  firebase.initializeApp(FIREBASE_CONFIG);
-  db = firebase.database();
-  setDbStatus(true);
-} catch(e) {
-  setDbStatus(false);
-}
+const PERMANENT_ADMINS = ['kayal.profit@gmail.com', 'sivakumar.profit@gmail.com'];
+let currentUserEmail = null;
+
+// ════════════════════════════════════════════════════
+//  FIREBASE INIT  (app + auth only — DB starts after auth)
+// ════════════════════════════════════════════════════
+try { firebase.initializeApp(FIREBASE_CONFIG); } catch(e) {}
 
 function setDbStatus(ok) {
   const el = document.getElementById('db-status');
@@ -2392,7 +2530,7 @@ function showPage(name) {
   if (pg) pg.classList.add('active');
   const tab = document.querySelector(`[data-page="${name}"]`);
   if (tab) tab.classList.add('active');
-  if (name === 'appsettings') { initAppSettings(); renderGroupList(); renderAlgoPage(); loadDisplayPrefs(); loadCapitalTable(); buildNicknameList(); estimateDBSize(); populateBrokerClearDropdown(); }
+  if (name === 'appsettings') { initAppSettings(); renderGroupList(); renderAlgoPage(); loadDisplayPrefs(); loadCapitalTable(); buildNicknameList(); estimateDBSize(); populateBrokerClearDropdown(); acLoadEmails(); }
   if (name === 'stockmock') { loadSMTolerances(); updateSMStrategyDropdown(); updateSMLoadedSummary(); onSMStratChange(); }
   if (name === 'algos') { renderGroupList(); renderAlgoPage(); }
   if (name === 'compare') { populateCompareSelects(); }
@@ -6081,13 +6219,174 @@ async function asDeleteGroup(name) {
 }
 
 // ════════════════════════════════════════════════════
-//  BOOT
+//  AUTH — GOOGLE SIGN-IN
 // ════════════════════════════════════════════════════
-window.addEventListener('DOMContentLoaded', ()=>{
+function signInWithGoogle() {
+  const btn     = document.getElementById('googleSignInBtn');
+  const spinner = document.getElementById('loginSpinner');
+  const errEl   = document.getElementById('loginError');
+  btn.style.display     = 'none';
+  spinner.style.display = 'block';
+  errEl.style.display   = 'none';
+
+  const provider = new firebase.auth.GoogleAuthProvider();
+  provider.setCustomParameters({ prompt: 'select_account' });
+
+  firebase.auth().signInWithPopup(provider)
+    .then(() => { /* onAuthStateChanged handles the rest */ })
+    .catch(err => {
+      btn.style.display     = 'flex';
+      spinner.style.display = 'none';
+      if (err.code !== 'auth/popup-closed-by-user') {
+        errEl.textContent   = '⚠️ Sign-in failed: ' + err.message;
+        errEl.style.display = 'block';
+      }
+    });
+}
+
+function signOut() {
+  if (!confirm('Sign out of SKVK Trading Journal?')) return;
+  firebase.auth().signOut().then(() => location.reload());
+}
+
+function grantAccess(email) {
+  currentUserEmail = email;
+  document.getElementById('loginScreen').style.display  = 'none';
+  document.getElementById('appShell').style.display     = 'block';
+  const emailEl = document.getElementById('topUserEmail');
+  if (emailEl) emailEl.textContent = email;
+  // Now start Firebase DB and app
+  try {
+    db = firebase.database();
+    setDbStatus(true);
+  } catch(e) {
+    setDbStatus(false);
+  }
   el('m-entry-date').value = new Date().toISOString().slice(0,10);
   startListeners();
   showPage('journal');
-});
+}
+
+// ════════════════════════════════════════════════════
+//  ACCESS CONTROL — email management (admins only)
+// ════════════════════════════════════════════════════
+function acLoadEmails() {
+  if (!PERMANENT_ADMINS.includes(currentUserEmail)) return;
+  const card = document.getElementById('accessControlCard');
+  if (card) card.style.display = 'block';
+  if (!db) return;
+  db.ref('allowed_emails').once('value').then(snap => {
+    acRenderEmails(snap.val() || {});
+  });
+}
+
+function acRenderEmails(data) {
+  const list = document.getElementById('acEmailList');
+  if (!list) return;
+
+  let rows = PERMANENT_ADMINS.map(admin => `
+    <div class="access-email-row admin">
+      <div class="access-email-left">
+        <span style="font-size:16px">🛡️</span>
+        <div>
+          <div class="access-email-addr">${admin}</div>
+          <div class="access-email-role">Permanent Admin — cannot be removed</div>
+        </div>
+      </div>
+    </div>`).join('');
+
+  const entries = Object.entries(data).filter(([,email]) => !PERMANENT_ADMINS.includes(email));
+  if (!entries.length) {
+    rows += '<div style="font-size:12px;color:var(--text2);padding:8px 0">No additional emails added yet.</div>';
+  } else {
+    entries.forEach(([key, email]) => {
+      rows += `
+        <div class="access-email-row">
+          <div class="access-email-left">
+            <span style="font-size:16px">✅</span>
+            <div class="access-email-addr">${email}</div>
+          </div>
+          <button class="btn btn-sm" onclick="acRemoveEmail('${key}','${email}')"
+            style="color:var(--red);border-color:var(--red);background:var(--red-lt)">
+            🗑 Remove
+          </button>
+        </div>`;
+    });
+  }
+  list.innerHTML = rows;
+}
+
+function acAddEmail() {
+  const inp   = document.getElementById('acNewEmail');
+  const email = (inp.value || '').trim().toLowerCase();
+  if (!email) { toast('Enter an email address', 'error'); return; }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { toast('Invalid email address', 'error'); return; }
+  if (PERMANENT_ADMINS.includes(email)) { toast('Already a permanent admin', 'error'); return; }
+  if (!db) { toast('No database connection', 'error'); return; }
+  db.ref('allowed_emails').once('value').then(snap => {
+    const data = snap.val() || {};
+    const exists = Object.values(data).some(e => e === email);
+    if (exists) { toast(email + ' is already in the list', 'error'); return; }
+    db.ref('allowed_emails').push(email).then(() => {
+      inp.value = '';
+      acLoadEmails();
+      toast('Added ' + email + ' ✓', 'success');
+    }).catch(e => toast('Error: ' + e.message, 'error'));
+  });
+}
+
+function acRemoveEmail(key, email) {
+  if (!confirm('Remove ' + email + ' from allowed list?')) return;
+  if (!db) return;
+  db.ref('allowed_emails/' + key).remove().then(() => {
+    acLoadEmails();
+    toast('Removed ' + email, 'info');
+  }).catch(e => toast('Error: ' + e.message, 'error'));
+}
+
+// ════════════════════════════════════════════════════
+//  BOOT — AUTH GATE
+// ════════════════════════════════════════════════════
+(function boot() {
+  document.getElementById('loginScreen').style.display = 'flex';
+  document.getElementById('appShell').style.display    = 'none';
+
+  firebase.auth().onAuthStateChanged(user => {
+    if (user) {
+      const email = user.email;
+      // Permanent admins — always allowed
+      if (PERMANENT_ADMINS.includes(email)) { grantAccess(email); return; }
+      // Others — check allowed_emails in Firebase
+      firebase.database().ref('allowed_emails').once('value').then(snap => {
+        const data = snap.val() || {};
+        const ok   = Object.values(data).some(e => e === email);
+        if (ok) {
+          grantAccess(email);
+        } else {
+          firebase.auth().signOut();
+          const errEl = document.getElementById('loginError');
+          if (errEl) {
+            errEl.textContent   = '⛔ Access denied for ' + email + '. Contact kayal.profit@gmail.com to request access.';
+            errEl.style.display = 'block';
+          }
+          const btn = document.getElementById('googleSignInBtn');
+          if (btn) btn.style.display = 'flex';
+          const sp = document.getElementById('loginSpinner');
+          if (sp) sp.style.display = 'none';
+        }
+      }).catch(() => firebase.auth().signOut());
+    } else {
+      document.getElementById('loginScreen').style.display = 'flex';
+      document.getElementById('appShell').style.display    = 'none';
+      const btn = document.getElementById('googleSignInBtn');
+      if (btn) btn.style.display = 'flex';
+      const sp = document.getElementById('loginSpinner');
+      if (sp) sp.style.display = 'none';
+    }
+  });
+})();
 </script>
+</div><!-- end #appShell -->
+
 </body>
 </html>
