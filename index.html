@@ -2,6 +2,14 @@
 ==========================================================
   SKVK TRADING JOURNAL — VERSION HISTORY
 ==========================================================
+  v17.1 | 2026-06-25 | P&L Report-Account wise full revamp: account selector left+highlighted,
+         |            | All Accounts option; Live Performance stats (Total Return, CAGR, Net P&L,
+         |            | Win Rate, Sharpe, Max DD, Profit Factor, Trades, Capital);
+         |            | Daily P&L table with pagination + Cumulative column;
+         |            | Equity Curve, Drawdown, Capital Deployed charts;
+         |            | Monthly Returns grid (year×month, color coded, %, short format);
+         |            | Heatmap at bottom; Weekly tiles retained
+  ──────────────────────────────────────────────────────
   v17.0 | 2026-06-25 | Fix: pnlDate() now correctly applied everywhere — Journal date grouping,
          |            | dayPnl accumulator bug (was reading from wrong key), trYear filter,
          |            | byDate grouping in SysStat/Compare; STBT P&L now lands on correct day
@@ -404,7 +412,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>SKVK Trading Journal v17.0</title>
+<title>SKVK Trading Journal v17.1</title>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -1338,7 +1346,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div class="login-logo">📋</div>
     <div class="login-title">
       SKVK Trading Journal
-      <span class="login-vbadge">v17.0</span>
+      <span class="login-vbadge">v17.1</span>
     </div>
     <div class="login-sub">Sign in with your authorised Google account to access the journal.</div>
     <button class="google-signin-btn" id="googleSignInBtn" onclick="signInWithGoogle()">
@@ -1369,7 +1377,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div class="brand">
       <span class="brand-dot"></span>
       SKVK Trading Journal
-      <span style="font-size:0.78rem;background:#1a73e8;color:#fff;padding:2px 8px;border-radius:8px;font-weight:700;margin-left:4px;">v17.0</span>
+      <span style="font-size:0.78rem;background:#1a73e8;color:#fff;padding:2px 8px;border-radius:8px;font-weight:700;margin-left:4px;">v17.1</span>
     </div>
     <div id="brand-subline">
       <div id="db-status">● connecting…</div>
@@ -1524,50 +1532,118 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
 
 <!-- ══════════ P&L REPORT - ACCOUNT WISE ══════════ -->
 <div id="page-acctreport" class="page">
-  <div class="page-header">
+
+  <!-- ── Header: Title + Account Selector (left, highlighted) ── -->
+  <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:16px;margin-bottom:22px;">
     <div>
       <div class="page-title">P&L Report — Account wise</div>
-      <div class="page-subtitle">Select an account to view date-wise and annual P&L</div>
+      <div class="page-subtitle">Select an account to view performance analytics</div>
     </div>
-    <div style="display:flex;align-items:center;gap:10px;">
-      <label style="font-size:0.82rem;font-weight:600;color:var(--text1);">Account:</label>
+    <div style="display:flex;align-items:center;gap:10px;background:var(--blue);padding:10px 18px;border-radius:12px;box-shadow:0 2px 8px rgba(26,115,232,0.25);">
+      <span style="font-size:0.78rem;font-weight:700;color:rgba(255,255,255,0.85);letter-spacing:0.04em;">ACCOUNT</span>
       <select id="acct-select" onchange="renderAcctReport()"
-        style="padding:7px 14px;border:1.5px solid var(--border);border-radius:8px;font-size:0.85rem;outline:none;background:#fff;min-width:220px;font-family:var(--font);">
-        <option value="">— Select Account —</option>
+        style="padding:6px 12px;border:none;border-radius:8px;font-size:0.88rem;font-weight:700;outline:none;background:#fff;color:var(--blue);min-width:200px;font-family:var(--font);cursor:pointer;">
+        <option value="">— Select —</option>
+        <option value="__ALL__">All Accounts</option>
       </select>
     </div>
   </div>
 
-  <!-- TOP HALF: Weekly tile cards -->
-  <div id="acct-week-section" style="display:none;">
-    <div style="display:flex;align-items:center;gap:16px;margin-bottom:14px;">
-      <button onclick="acctWeekNav(-1)" style="width:32px;height:32px;border-radius:50%;border:1.5px solid var(--border);background:#fff;cursor:pointer;font-size:1rem;display:flex;align-items:center;justify-content:center;">‹</button>
-      <div id="acct-week-label" style="font-size:0.9rem;font-weight:700;color:var(--text0);min-width:160px;text-align:center;"></div>
-      <button onclick="acctWeekNav(1)" style="width:32px;height:32px;border-radius:50%;border:1.5px solid var(--border);background:#fff;cursor:pointer;font-size:1rem;display:flex;align-items:center;justify-content:center;">›</button>
-    </div>
-    <div id="acct-week-tiles" style="display:flex;gap:12px;flex-wrap:nowrap;overflow-x:auto;padding-bottom:8px;"></div>
+  <div id="acct-empty" style="text-align:center;padding:80px 0;color:var(--text3);font-size:0.9rem;">
+    ← Select an account above to view P&L analytics
   </div>
 
-  <!-- divider -->
-  <div style="border-top:2px solid var(--border);margin:28px 0 22px;"></div>
+  <div id="acct-main" style="display:none;">
 
-  <!-- BOTTOM HALF: Full year stats + heatmap -->
-  <div id="acct-year-section" style="display:none;">
-    <div class="stat-grid" id="acct-stat-grid">
-      <div class="stat-card"><div class="stat-card-icon">💰</div><div class="stat-label">Total P&L</div><div class="stat-value neutral" id="acct-s-pnl">—</div><div class="stat-sub">Full year</div><div class="stat-bar" id="acct-s-pnl-bar" style="background:var(--border)"></div></div>
-      <div class="stat-card"><div class="stat-card-icon">📈</div><div class="stat-label">Total Trades</div><div class="stat-value neutral" id="acct-s-trades">—</div><div class="stat-sub">Executed legs</div></div>
-      <div class="stat-card"><div class="stat-card-icon">🎯</div><div class="stat-label">Win Rate</div><div class="stat-value neutral" id="acct-s-wr">—</div><div class="stat-sub">Days with profit</div></div>
-      <div class="stat-card"><div class="stat-card-icon">🚀</div><div class="stat-label">Best Month</div><div class="stat-value positive" id="acct-s-best">—</div><div class="stat-sub" id="acct-s-best-lbl">—</div></div>
-      <div class="stat-card"><div class="stat-card-icon">⚠️</div><div class="stat-label">Worst Month</div><div class="stat-value negative" id="acct-s-worst">—</div><div class="stat-sub" id="acct-s-worst-lbl">—</div></div>
-      <div class="stat-card"><div class="stat-card-icon">📅</div><div class="stat-label">Trading Days</div><div class="stat-value neutral" id="acct-s-days">—</div><div class="stat-sub">Days with trades</div></div>
+    <!-- ── Live Performance ── -->
+    <div style="background:var(--bg);border:1.5px solid var(--border);border-radius:14px;padding:20px 24px;margin-bottom:24px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:1rem;">📈</span>
+          <span style="font-size:1rem;font-weight:800;font-family:var(--display);">Live Performance</span>
+        </div>
+        <span id="acct-date-range" style="font-size:0.75rem;background:#eef2ff;color:#3730a3;padding:4px 12px;border-radius:20px;font-weight:600;"></span>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:16px 24px;">
+        <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Total Return</div><div id="acct-lp-return" style="font-size:1.1rem;font-weight:800;color:var(--green);">—</div></div>
+        <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">CAGR</div><div id="acct-lp-cagr" style="font-size:1.1rem;font-weight:800;color:var(--green);">—</div></div>
+        <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Net P&L</div><div id="acct-lp-pnl" style="font-size:1.1rem;font-weight:800;">—</div></div>
+        <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Win Rate</div><div id="acct-lp-wr" style="font-size:1.1rem;font-weight:800;">—</div></div>
+        <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Sharpe Ratio</div><div id="acct-lp-sharpe" style="font-size:1.1rem;font-weight:800;">—</div></div>
+        <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Max Drawdown</div><div id="acct-lp-dd" style="font-size:1.1rem;font-weight:800;color:var(--red);">—</div></div>
+        <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Profit Factor</div><div id="acct-lp-pf" style="font-size:1.1rem;font-weight:800;">—</div></div>
+        <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Total Trades</div><div id="acct-lp-trades" style="font-size:1.1rem;font-weight:800;">—</div></div>
+        <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Capital Deployed</div><div id="acct-lp-cap" style="font-size:1.1rem;font-weight:800;">—</div></div>
+      </div>
     </div>
 
-    <div style="margin-top:28px;">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:10px;">
-        <div>
-          <div style="font-size:1.1rem;font-weight:800;font-family:var(--display);">Daily P&L Heatmap</div>
-          <div style="font-size:0.75rem;color:var(--text2);margin-top:2px;">Full year · P&L per trading day</div>
+    <!-- ── Weekly Tiles ── -->
+    <div style="margin-bottom:24px;">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
+        <button onclick="acctWeekNav(-1)" style="width:30px;height:30px;border-radius:50%;border:1.5px solid var(--border);background:#fff;cursor:pointer;font-size:0.9rem;display:flex;align-items:center;justify-content:center;flex-shrink:0;">‹</button>
+        <div id="acct-week-label" style="font-size:0.85rem;font-weight:700;color:var(--text0);min-width:180px;text-align:center;"></div>
+        <button onclick="acctWeekNav(1)" style="width:30px;height:30px;border-radius:50%;border:1.5px solid var(--border);background:#fff;cursor:pointer;font-size:0.9rem;display:flex;align-items:center;justify-content:center;flex-shrink:0;">›</button>
+      </div>
+      <div id="acct-week-tiles" style="display:flex;gap:10px;flex-wrap:nowrap;overflow-x:auto;padding-bottom:6px;"></div>
+    </div>
+
+    <!-- ── Two-column: Daily P&L table (left) + Charts (right) ── -->
+    <div style="display:grid;grid-template-columns:420px 1fr;gap:24px;margin-bottom:28px;">
+
+      <!-- LEFT: Daily P&L table -->
+      <div style="background:var(--bg);border:1.5px solid var(--border);border-radius:14px;overflow:hidden;">
+        <div style="padding:14px 18px;border-bottom:1px solid var(--border);font-size:0.95rem;font-weight:800;font-family:var(--display);">Daily P&L</div>
+        <table style="width:100%;border-collapse:collapse;font-size:0.8rem;">
+          <thead>
+            <tr style="background:var(--bg2);">
+              <th style="padding:8px 14px;text-align:left;font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;">DATE</th>
+              <th style="padding:8px 8px;text-align:left;font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;">DAY</th>
+              <th style="padding:8px 8px;text-align:right;font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;">DAILY P&L</th>
+              <th style="padding:8px 8px;text-align:right;font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;">TRADES</th>
+              <th style="padding:8px 14px;text-align:right;font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;">CUMULATIVE</th>
+            </tr>
+          </thead>
+          <tbody id="acct-daily-tbody"></tbody>
+        </table>
+        <div style="padding:10px 14px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
+          <span id="acct-daily-info" style="font-size:0.72rem;color:var(--text2);"></span>
+          <div style="display:flex;gap:6px;">
+            <button onclick="acctDailyPage(-1)" id="acct-pg-prev" style="padding:4px 10px;border:1px solid var(--border);border-radius:6px;font-size:0.72rem;cursor:pointer;background:#fff;">← Prev</button>
+            <button onclick="acctDailyPage(1)"  id="acct-pg-next" style="padding:4px 10px;border:1px solid var(--border);border-radius:6px;font-size:0.72rem;cursor:pointer;background:#fff;">Next →</button>
+          </div>
         </div>
+      </div>
+
+      <!-- RIGHT: Charts stacked -->
+      <div style="display:flex;flex-direction:column;gap:18px;">
+        <!-- Equity Curve -->
+        <div style="background:var(--bg);border:1.5px solid var(--border);border-radius:14px;padding:16px 18px;">
+          <div style="font-size:0.72rem;font-weight:700;color:var(--text1);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:10px;">Equity Curve</div>
+          <canvas id="acct-chart-equity" style="max-height:180px;"></canvas>
+        </div>
+        <!-- Drawdown -->
+        <div style="background:var(--bg);border:1.5px solid var(--border);border-radius:14px;padding:16px 18px;">
+          <div style="font-size:0.72rem;font-weight:700;color:var(--text1);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:10px;">Drawdown</div>
+          <canvas id="acct-chart-drawdown" style="max-height:160px;"></canvas>
+        </div>
+        <!-- Capital Deployed -->
+        <div style="background:var(--bg);border:1.5px solid var(--border);border-radius:14px;padding:16px 18px;">
+          <div style="font-size:0.72rem;font-weight:700;color:var(--text1);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:10px;">Capital Deployed</div>
+          <canvas id="acct-chart-capital" style="max-height:160px;"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Monthly Returns table ── -->
+    <div style="background:var(--bg);border:1.5px solid var(--border);border-radius:14px;padding:20px 24px;margin-bottom:28px;">
+      <div style="font-size:0.95rem;font-weight:800;font-family:var(--display);margin-bottom:16px;">Monthly Returns</div>
+      <div id="acct-monthly-returns" style="overflow-x:auto;"></div>
+    </div>
+
+    <!-- ── Heatmap ── -->
+    <div style="background:var(--bg);border:1.5px solid var(--border);border-radius:14px;padding:20px 24px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px;">
+        <div style="font-size:0.95rem;font-weight:800;font-family:var(--display);">Daily P&L Heatmap</div>
         <div style="display:flex;gap:5px;font-size:0.68rem;align-items:center;">
           <span style="background:#16a34a;color:#fff;padding:2px 8px;border-radius:4px;">Profit</span>
           <span style="background:#dc2626;color:#fff;padding:2px 8px;border-radius:4px;">Loss</span>
@@ -1577,17 +1653,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
       <div id="acct-heatmap"></div>
     </div>
 
-    <div style="margin-top:28px;">
-      <div style="font-size:1.1rem;font-weight:800;font-family:var(--display);margin-bottom:12px;">Monthly P&L</div>
-      <div class="chart-card" style="max-width:900px;">
-        <canvas id="acct-chart-monthly" style="max-height:230px;"></canvas>
-      </div>
-    </div>
-  </div>
-
-  <div id="acct-empty" style="text-align:center;padding:60px 0;color:var(--text3);font-size:0.9rem;">
-    ← Select an account above to view P&L
-  </div>
+  </div><!-- end acct-main -->
 </div>
 
 <!-- ══════════ JOURNAL ══════════ -->
@@ -2578,64 +2644,67 @@ let allTrades = [];
 let algoMeta  = {};
 let uploads   = [];
 let mChart = null, aChart = null;
-let acctChart = null;
-let acctWeekOffset = 0; // 0 = current week, -1 = last week, etc.
+let acctChartEquity = null, acctChartDD = null, acctChartCap = null;
+let acctWeekOffset = 0;
 let currentAcct = '';
+let acctDailyPageNum = 0;
+let acctDailyRows = [];
+const ACCT_PAGE_SIZE = 20;
 
 function initAcctReport() {
-  // Use client_id only (same as journal tabs), skip junk broker defaults
-  const junk = new Set(['tradetron', 'quantleap', 'quantiply', 'zebu', 'upstox', 'iifl', '']);
-  const accounts = [...new Set(allTrades.map(t => t.client_id||'').filter(id => id && !junk.has(id.toLowerCase())))].sort();
+  const junk = new Set(['tradetron','quantleap','quantiply','zebu','upstox','iifl','']);
+  const accounts = [...new Set(allTrades.map(t=>t.client_id||'').filter(id=>id&&!junk.has(id.toLowerCase())))].sort();
   const sel = document.getElementById('acct-select');
   if (!sel) return;
-  sel.innerHTML = '<option value="">— Select Account —</option>' +
-    accounts.map(a => `<option value="${a}">${getClientLabel(a)}</option>`).join('');
-  if (currentAcct && accounts.includes(currentAcct)) { sel.value = currentAcct; renderAcctReport(); }
+  sel.innerHTML = '<option value="">— Select —</option><option value="__ALL__">All Accounts</option>' +
+    accounts.map(a=>`<option value="${a}">${getClientLabel(a)}</option>`).join('');
+  if (currentAcct) { sel.value = currentAcct; renderAcctReport(); }
 }
 
 function renderAcctReport() {
   const sel = document.getElementById('acct-select');
   currentAcct = sel?.value || '';
   document.getElementById('acct-empty').style.display = currentAcct ? 'none' : '';
-  document.getElementById('acct-week-section').style.display = currentAcct ? '' : 'none';
-  document.getElementById('acct-year-section').style.display = currentAcct ? '' : 'none';
+  document.getElementById('acct-main').style.display  = currentAcct ? '' : 'none';
   if (!currentAcct) return;
 
-  const tr = allTrades.filter(t => !t.archived && (t.client_id||'') === currentAcct);
+  const tr = currentAcct === '__ALL__'
+    ? allTrades.filter(t=>!t.archived)
+    : allTrades.filter(t=>!t.archived && (t.client_id||'')===currentAcct);
+
   renderAcctWeekTiles(tr);
-  renderAcctYearStats(tr);
+  renderAcctLivePerf(tr);
+  renderAcctDailyTable(tr);
+  renderAcctCharts(tr);
+  renderAcctMonthlyReturns(tr);
+  document.getElementById('acct-heatmap').innerHTML = buildOneHeatmap(
+    currentAcct === '__ALL__' ? 'All Accounts' : getClientLabel(currentAcct), tr, '#1a73e8');
 }
 
 function acctWeekNav(dir) {
   acctWeekOffset += dir;
-  const sel = document.getElementById('acct-select');
-  currentAcct = sel?.value || '';
-  const tr = allTrades.filter(t => !t.archived && (t.client_id||'') === currentAcct);
+  const tr = currentAcct === '__ALL__'
+    ? allTrades.filter(t=>!t.archived)
+    : allTrades.filter(t=>!t.archived && (t.client_id||'')===currentAcct);
   renderAcctWeekTiles(tr);
 }
 
 function renderAcctWeekTiles(tr) {
-  // Build dayMap for this account
   const dayPnl = {};
-  tr.forEach(t => { const pd=pnlDate(t); if(pd) dayPnl[pd] = (dayPnl[pd]||0) + (t.pnl||0); });
+  tr.forEach(t => { const pd=pnlDate(t); if(pd) dayPnl[pd]=(dayPnl[pd]||0)+(t.pnl||0); });
 
-  // Get Mon of current week + offset
   const today = new Date();
-  const dayOfWeek = today.getDay(); // 0=Sun
-  const diffToMon = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+  const dow = today.getDay();
+  const diffToMon = dow===0 ? -6 : 1-dow;
   const monday = new Date(today);
-  monday.setDate(today.getDate() + diffToMon + acctWeekOffset * 7);
+  monday.setDate(today.getDate() + diffToMon + acctWeekOffset*7);
 
   const days = [];
-  for (let i = 0; i < 5; i++) {
-    const d = new Date(monday);
-    d.setDate(monday.getDate() + i);
-    days.push(d);
-  }
+  for (let i=0;i<5;i++) { const d=new Date(monday); d.setDate(monday.getDate()+i); days.push(d); }
 
-  const weekStart = days[0].toLocaleDateString('en-IN', {day:'numeric', month:'short'});
-  const weekEnd   = days[4].toLocaleDateString('en-IN', {day:'numeric', month:'short', year:'numeric'});
-  document.getElementById('acct-week-label').textContent = `${weekStart} – ${weekEnd}`;
+  const ws = days[0].toLocaleDateString('en-IN',{day:'numeric',month:'short'});
+  const we = days[4].toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'});
+  document.getElementById('acct-week-label').textContent = `${ws} – ${we}`;
 
   const tiles = document.getElementById('acct-week-tiles');
   const todayStr = today.toISOString().slice(0,10);
@@ -2643,77 +2712,307 @@ function renderAcctWeekTiles(tr) {
   tiles.innerHTML = days.map(d => {
     const ds = d.toISOString().slice(0,10);
     const pnl = dayPnl[ds] ?? null;
-    const dayName = d.toLocaleDateString('en-IN', {weekday:'short'});
-    const dateNum = d.toLocaleDateString('en-IN', {day:'numeric', month:'short'});
-    const isToday = ds === todayStr;
-    const hasTrade = pnl !== null;
-
-    let bg = '#f3f4f6', color = '#9ca3af', border = '#e5e7eb';
-    if (hasTrade && pnl > 0)  { bg = '#f0fdf4'; color = '#16a34a'; border = '#86efac'; }
-    if (hasTrade && pnl < 0)  { bg = '#fff5f5'; color = '#dc2626'; border = '#fca5a5'; }
-    if (hasTrade && pnl === 0){ bg = '#f8fafc'; color = '#6b7280'; border = '#e5e7eb'; }
-    if (isToday) border = '#1a73e8';
-
+    const dayName = d.toLocaleDateString('en-IN',{weekday:'short'});
+    const dateNum = d.toLocaleDateString('en-IN',{day:'numeric',month:'short'});
+    const isToday = ds===todayStr;
+    const hasTrade = pnl!==null;
+    let bg='#f3f4f6',color='#9ca3af',border='#e5e7eb';
+    if (hasTrade&&pnl>0)  {bg='#f0fdf4';color='#16a34a';border='#86efac';}
+    if (hasTrade&&pnl<0)  {bg='#fff5f5';color='#dc2626';border='#fca5a5';}
+    if (hasTrade&&pnl===0){bg='#f8fafc';color='#6b7280';border='#e5e7eb';}
+    if (isToday) border='#1a73e8';
     return `<div style="flex:1;min-width:120px;max-width:180px;background:${bg};border:2px solid ${border};
       border-radius:14px;padding:16px 14px;text-align:center;${isToday?'box-shadow:0 0 0 3px #1a73e820;':''}">
       <div style="font-size:0.7rem;font-weight:600;color:#6b7280;letter-spacing:0.04em;">${dayName}</div>
       <div style="font-size:0.88rem;font-weight:700;color:var(--text0);margin:4px 0 10px;">${dateNum}</div>
       <div style="font-size:1.15rem;font-weight:800;color:${color};">
-        ${hasTrade ? fmt(pnl) : '<span style="color:#d1d5db;font-size:0.8rem;">No trades</span>'}
-      </div>
-    </div>`;
+        ${hasTrade?fmt(pnl):'<span style="color:#d1d5db;font-size:0.8rem;">No trades</span>'}
+      </div></div>`;
   }).join('');
 }
 
-function renderAcctYearStats(tr) {
-  const year = new Date().getFullYear().toString();
-  const trYear = tr.filter(t => (pnlDate(t)||t.entry_date||'').startsWith(year));
+function renderAcctLivePerf(tr) {
+  const year = new Date().getFullYear();
+  const yearStart = `${year}-01-01`;
+  const today = new Date().toISOString().slice(0,10);
 
-  // Day-wise P&L
+  // Date range badge
+  document.getElementById('acct-date-range').textContent =
+    `01 Jan ${year} – ${new Date().toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'})}`;
+
+  // Build daily P&L series
   const dayPnl = {};
-  trYear.forEach(t => { const pd=pnlDate(t); if(pd) dayPnl[pd] = (dayPnl[pd]||0) + (t.pnl||0); });
+  tr.forEach(t => { const pd=pnlDate(t); if(pd&&pd>=yearStart) dayPnl[pd]=(dayPnl[pd]||0)+(t.pnl||0); });
+  const sortedDays = Object.keys(dayPnl).sort();
+  const totalPnl = sortedDays.reduce((s,d)=>s+dayPnl[d], 0);
+  const winDays  = sortedDays.filter(d=>dayPnl[d]>0).length;
+  const totalDays= sortedDays.length;
 
-  const total = Object.values(dayPnl).reduce((s,v)=>s+v, 0);
-  const winDays = Object.values(dayPnl).filter(v=>v>0).length;
-  const totalDays = Object.keys(dayPnl).length;
+  // Capital (sum for ALL or per account)
+  const allMonths = [...new Set(Object.keys(capitalData))].sort();
+  let totalCap = 0;
+  if (currentAcct === '__ALL__') {
+    // Sum all capital entries
+    totalCap = Object.values(capitalData).reduce((s,v)=>s+(v||0),0);
+  } else {
+    // Use latest month's capital
+    const latestM = allMonths.filter(m=>capitalData[m]>0).pop();
+    totalCap = latestM ? capitalData[latestM] : 0;
+  }
+
+  // Days since year start
+  const daysSinceStart = Math.max(1, Math.round((new Date(today)-new Date(yearStart))/(1000*86400)));
+  const totalReturn = totalCap > 0 ? (totalPnl/totalCap*100).toFixed(1) : 0;
+  const cagr = totalCap > 0 ? ((Math.pow(1+(totalPnl/totalCap), 365/daysSinceStart)-1)*100).toFixed(1) : 0;
+
+  // Sharpe: daily returns stddev
+  const dailyRets = sortedDays.map(d=>totalCap>0?dayPnl[d]/totalCap:0);
+  const avgRet = dailyRets.length ? dailyRets.reduce((s,v)=>s+v,0)/dailyRets.length : 0;
+  const stdDev = dailyRets.length>1 ? Math.sqrt(dailyRets.reduce((s,v)=>s+Math.pow(v-avgRet,2),0)/dailyRets.length) : 0;
+  const sharpe = stdDev>0 ? (avgRet/stdDev*Math.sqrt(252)).toFixed(2) : '—';
+
+  // Max drawdown
+  let peak=0, maxDD=0, cum=0;
+  sortedDays.forEach(d=>{ cum+=dayPnl[d]; if(cum>peak)peak=cum; const dd=cum-peak; if(dd<maxDD)maxDD=dd; });
+
+  // Profit factor
+  const profits = sortedDays.filter(d=>dayPnl[d]>0).reduce((s,d)=>s+dayPnl[d],0);
+  const losses  = Math.abs(sortedDays.filter(d=>dayPnl[d]<0).reduce((s,d)=>s+dayPnl[d],0));
+  const pf = losses>0 ? (profits/losses).toFixed(2) : profits>0 ? '∞' : '—';
+
   const wr = totalDays ? Math.round(winDays/totalDays*100) : 0;
+  const pnlColor = totalPnl>=0 ? 'var(--green)' : 'var(--red)';
 
-  // Monthly
-  const mMap = {};
-  trYear.forEach(t => { const ym=(pnlDate(t)||'').slice(0,7); if(ym) mMap[ym]=(mMap[ym]||0)+(t.pnl||0); });
-  const months = Object.keys(mMap).sort();
-  const bestM  = months.length ? months.reduce((b,m)=>(mMap[m]||0)>(mMap[b]||0)?m:b, months[0]) : null;
-  const worstM = months.length ? months.reduce((b,m)=>(mMap[m]||0)<(mMap[b]||0)?m:b, months[0]) : null;
+  document.getElementById('acct-lp-return').textContent = (totalReturn>=0?'+':'')+totalReturn+'%';
+  document.getElementById('acct-lp-return').style.color = totalReturn>=0 ? 'var(--green)' : 'var(--red)';
+  document.getElementById('acct-lp-cagr').textContent   = (cagr>=0?'+':'')+cagr+'% / yr';
+  document.getElementById('acct-lp-cagr').style.color   = cagr>=0 ? 'var(--green)' : 'var(--red)';
+  document.getElementById('acct-lp-pnl').textContent    = fmt(totalPnl);
+  document.getElementById('acct-lp-pnl').style.color    = pnlColor;
+  document.getElementById('acct-lp-wr').textContent     = wr+'%';
+  document.getElementById('acct-lp-sharpe').textContent = sharpe;
+  document.getElementById('acct-lp-dd').textContent     = fmt(maxDD);
+  document.getElementById('acct-lp-pf').textContent     = pf;
+  document.getElementById('acct-lp-trades').textContent = tr.filter(t=>{const pd=pnlDate(t);return pd&&pd>=yearStart;}).length;
+  document.getElementById('acct-lp-cap').textContent    = fmt(totalCap);
+}
 
-  document.getElementById('acct-s-pnl').textContent = fmt(total);
-  document.getElementById('acct-s-pnl').className = 'stat-value '+(total>=0?'positive':'negative');
-  document.getElementById('acct-s-trades').textContent = trYear.length;
-  document.getElementById('acct-s-wr').textContent = wr+'%';
-  document.getElementById('acct-s-days').textContent = totalDays;
-  document.getElementById('acct-s-best').textContent  = bestM  ? fmt(mMap[bestM])  : '—';
-  document.getElementById('acct-s-best-lbl').textContent  = bestM  ? fmtMonth(bestM)  : '—';
-  document.getElementById('acct-s-worst').textContent = worstM ? fmt(mMap[worstM]) : '—';
-  document.getElementById('acct-s-worst-lbl').textContent = worstM ? fmtMonth(worstM) : '—';
-
-  // Heatmap
-  document.getElementById('acct-heatmap').innerHTML = buildOneHeatmap(currentAcct, trYear, '#1a73e8');
-
-  // Monthly chart
-  const keys = months;
-  const vals = keys.map(k => mMap[k]);
-  const ctx = document.getElementById('acct-chart-monthly').getContext('2d');
-  if (acctChart) acctChart.destroy();
-  acctChart = new Chart(ctx, {
-    type: 'bar',
-    data: { labels: keys.map(fmtMonth), datasets: [{ data: vals,
-      backgroundColor: vals.map(v=>v>=0?'rgba(26,158,92,0.75)':'rgba(217,48,37,0.75)'),
-      borderRadius: 5, borderSkipped: false }] },
-    options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { display: false } },
-      scales: {
-        x: { grid: { color: 'rgba(0,0,0,0.04)' }, ticks: { color: '#6b7280', font: { size: 11 } } },
-        y: { grid: { color: 'rgba(0,0,0,0.04)' }, ticks: { color: '#6b7280', font: { size: 11 }, callback: v=>fmt(v) } }
-      }}
+function renderAcctDailyTable(tr) {
+  const year = new Date().getFullYear();
+  const yearStart = `${year}-01-01`;
+  const dayPnl = {}, dayCnt = {};
+  tr.forEach(t => {
+    const pd=pnlDate(t); if(!pd||pd<yearStart) return;
+    dayPnl[pd]=(dayPnl[pd]||0)+(t.pnl||0);
+    dayCnt[pd]=(dayCnt[pd]||0)+1;
   });
+  const sortedDays = Object.keys(dayPnl).sort().reverse();
+
+  // Build rows with cumulative (ascending order then reverse)
+  let cum = 0;
+  const cumMap = {};
+  [...sortedDays].reverse().forEach(d=>{ cum+=dayPnl[d]; cumMap[d]=cum; });
+
+  acctDailyRows = sortedDays.map(d => ({
+    date: d,
+    day: new Date(d).toLocaleDateString('en-IN',{weekday:'short'}).toUpperCase(),
+    pnl: dayPnl[d],
+    trades: dayCnt[d],
+    cum: cumMap[d]
+  }));
+  acctDailyPageNum = 0;
+  renderAcctDailyPage();
+}
+
+function renderAcctDailyPage() {
+  const start = acctDailyPageNum * ACCT_PAGE_SIZE;
+  const page  = acctDailyRows.slice(start, start + ACCT_PAGE_SIZE);
+  const tbody = document.getElementById('acct-daily-tbody');
+  if (!tbody) return;
+
+  tbody.innerHTML = page.map(r => `
+    <tr style="border-top:1px solid var(--border);">
+      <td style="padding:8px 14px;font-size:0.78rem;color:var(--text1);">${r.date}</td>
+      <td style="padding:8px 8px;font-size:0.72rem;color:var(--text2);">${r.day}</td>
+      <td style="padding:8px 8px;text-align:right;font-weight:700;color:${r.pnl>=0?'var(--green)':'var(--red)'};">
+        ${r.pnl>=0?'+':''}${fmt(r.pnl)}</td>
+      <td style="padding:8px 8px;text-align:right;font-size:0.78rem;color:var(--text2);">${r.trades}</td>
+      <td style="padding:8px 14px;text-align:right;font-size:0.78rem;font-weight:600;color:${r.cum>=0?'var(--green)':'var(--red)'};">
+        ${r.cum>=0?'+':''}${fmt(r.cum)}</td>
+    </tr>`).join('');
+
+  const total = acctDailyRows.length;
+  const totalPages = Math.ceil(total/ACCT_PAGE_SIZE);
+  document.getElementById('acct-daily-info').textContent =
+    `Showing ${start+1}–${Math.min(start+ACCT_PAGE_SIZE,total)} of ${total} trading days`;
+  document.getElementById('acct-pg-prev').disabled = acctDailyPageNum===0;
+  document.getElementById('acct-pg-next').disabled = acctDailyPageNum>=totalPages-1;
+}
+
+function acctDailyPage(dir) {
+  const totalPages = Math.ceil(acctDailyRows.length/ACCT_PAGE_SIZE);
+  acctDailyPageNum = Math.max(0, Math.min(totalPages-1, acctDailyPageNum+dir));
+  renderAcctDailyPage();
+}
+
+function renderAcctCharts(tr) {
+  const year = new Date().getFullYear();
+  const yearStart = `${year}-01-01`;
+  const dayPnl = {};
+  tr.forEach(t => { const pd=pnlDate(t); if(pd&&pd>=yearStart) dayPnl[pd]=(dayPnl[pd]||0)+(t.pnl||0); });
+  const sortedDays = Object.keys(dayPnl).sort();
+
+  // Cumulative equity
+  let cum = 0;
+  const equityLabels = [], equityData = [], ddData = [];
+  let peak = 0;
+  sortedDays.forEach(d => {
+    cum += dayPnl[d];
+    if (cum > peak) peak = cum;
+    const dd = cum - peak;
+    equityLabels.push(d.slice(5)); // MM-DD
+    equityData.push(cum);
+    ddData.push(dd);
+  });
+
+  // Capital deployed step chart
+  const capLabels = [], capData = [];
+  if (sortedDays.length) {
+    const allMonths = [...new Set(Object.keys(capitalData))].sort();
+    sortedDays.forEach(d => {
+      const ym = d.slice(0,7);
+      const cap = capitalData[ym] || 0;
+      capLabels.push(d.slice(5));
+      capData.push(cap);
+    });
+  }
+
+  const chartDefaults = {
+    responsive: true, maintainAspectRatio: true,
+    plugins: { legend:{display:false} },
+    elements: { point:{radius:0} },
+    scales: {
+      x: { grid:{color:'rgba(0,0,0,0.04)'}, ticks:{color:'#9ca3af',font:{size:9},maxTicksLimit:8} },
+      y: { grid:{color:'rgba(0,0,0,0.04)',borderDash:[3,3]}, ticks:{color:'#9ca3af',font:{size:9},callback:v=>fmtHeat(v)} }
+    }
+  };
+
+  // Equity curve
+  if (acctChartEquity) acctChartEquity.destroy();
+  const ctxEq = document.getElementById('acct-chart-equity')?.getContext('2d');
+  if (ctxEq && equityData.length) {
+    acctChartEquity = new Chart(ctxEq, {
+      type:'line',
+      data:{ labels:equityLabels, datasets:[{
+        data:equityData, borderColor:'#1a73e8', borderWidth:2,
+        fill:true, backgroundColor:'rgba(26,115,232,0.08)',
+        tension:0.3
+      }]},
+      options:{...chartDefaults,
+        plugins:{...chartDefaults.plugins,
+          annotation:{annotations:{zero:{type:'line',yMin:0,yMax:0,borderColor:'rgba(0,0,0,0.2)',borderWidth:1,borderDash:[4,4]}}}
+        }
+      }
+    });
+  }
+
+  // Drawdown
+  if (acctChartDD) acctChartDD.destroy();
+  const ctxDD = document.getElementById('acct-chart-drawdown')?.getContext('2d');
+  if (ctxDD && ddData.length) {
+    acctChartDD = new Chart(ctxDD, {
+      type:'line',
+      data:{ labels:equityLabels, datasets:[{
+        data:ddData, borderColor:'#dc2626', borderWidth:2,
+        fill:true, backgroundColor:'rgba(220,38,38,0.08)',
+        tension:0.3
+      }]},
+      options:chartDefaults
+    });
+  }
+
+  // Capital deployed
+  if (acctChartCap) acctChartCap.destroy();
+  const ctxCap = document.getElementById('acct-chart-capital')?.getContext('2d');
+  if (ctxCap && capData.length) {
+    acctChartCap = new Chart(ctxCap, {
+      type:'line',
+      data:{ labels:capLabels, datasets:[{
+        data:capData, borderColor:'#6366f1', borderWidth:2,
+        fill:false, stepped:true, tension:0
+      }]},
+      options:chartDefaults
+    });
+  }
+}
+
+function renderAcctMonthlyReturns(tr) {
+  const years = [...new Set(tr.map(t=>(pnlDate(t)||t.entry_date||'').slice(0,4)).filter(Boolean))].sort();
+  if (!years.length) { document.getElementById('acct-monthly-returns').innerHTML='<div style="color:var(--text3);font-size:0.82rem;">No data</div>'; return; }
+
+  const MONTHS = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+
+  // Build year→month→pnl map
+  const yMap = {};
+  tr.forEach(t => {
+    const pd = pnlDate(t)||t.entry_date||'';
+    if (!pd) return;
+    const y=pd.slice(0,4), m=pd.slice(5,7);
+    if (!yMap[y]) yMap[y]={};
+    yMap[y][m] = (yMap[y][m]||0) + (t.pnl||0);
+  });
+
+  function fmtShort(v) {
+    if (v===null||v===undefined) return '—';
+    const abs=Math.abs(v);
+    const sign=v>=0?'+':'-';
+    if (abs>=100000) return sign+(abs/100000).toFixed(1)+'L';
+    if (abs>=1000)   return sign+(abs/1000).toFixed(0)+'K';
+    return sign+abs.toFixed(0);
+  }
+
+  let html = `<table style="width:100%;border-collapse:collapse;font-size:0.78rem;">
+    <thead><tr style="border-bottom:2px solid var(--border);">
+      <th style="padding:8px 12px;text-align:left;color:var(--text2);font-size:0.65rem;letter-spacing:0.06em;">YEAR</th>`;
+  MONTHS.forEach(m=>{ html+=`<th style="padding:8px 6px;text-align:center;color:var(--text2);font-size:0.65rem;letter-spacing:0.06em;">${m}</th>`; });
+  html+=`<th style="padding:8px 12px;text-align:center;color:var(--text2);font-size:0.65rem;letter-spacing:0.06em;">TOTAL</th></tr></thead><tbody>`;
+
+  years.forEach(y => {
+    const mData = yMap[y]||{};
+    const yearTotal = Object.values(mData).reduce((s,v)=>s+v,0);
+    const cap = Object.values(capitalData).find(v=>v>0)||0;
+
+    html += `<tr style="border-bottom:1px solid var(--border);">
+      <td style="padding:10px 12px;font-weight:800;color:var(--text0);">${y}</td>`;
+
+    for (let mi=1;mi<=12;mi++) {
+      const mk = String(mi).padStart(2,'0');
+      const pnl = mData[mk]??null;
+      const mCap = capitalData[`${y}-${mk}`]||cap||0;
+      const pct  = pnl!==null&&mCap>0 ? (pnl/mCap*100).toFixed(1)+'%' : '';
+      const bg   = pnl===null?'transparent':pnl>=0?'#dcfce7':'#fee2e2';
+      const col  = pnl===null?'var(--text3)':pnl>=0?'#15803d':'#dc2626';
+      html += `<td style="padding:6px;text-align:center;">
+        ${pnl===null?`<span style="color:var(--text3);">—</span>`:`
+        <div style="background:${bg};border-radius:6px;padding:5px 4px;display:inline-block;min-width:52px;">
+          <div style="font-weight:700;color:${col};">${fmtShort(pnl)}</div>
+          ${pct?`<div style="font-size:0.62rem;color:${col};opacity:0.8;">${pct}</div>`:''}
+        </div>`}
+      </td>`;
+    }
+
+    const totalBg  = yearTotal>=0?'#dcfce7':'#fee2e2';
+    const totalCol = yearTotal>=0?'#15803d':'#dc2626';
+    const yearPct  = cap>0 ? (yearTotal/cap*100).toFixed(1)+'%' : '';
+    html += `<td style="padding:6px 12px;text-align:center;">
+      <div style="background:${totalBg};border-radius:6px;padding:5px 8px;display:inline-block;min-width:60px;">
+        <div style="font-weight:800;color:${totalCol};">${fmtShort(yearTotal)}</div>
+        ${yearPct?`<div style="font-size:0.62rem;color:${totalCol};opacity:0.8;">${yearPct}</div>`:''}
+      </div></td></tr>`;
+  });
+
+  html += '</tbody></table>';
+  document.getElementById('acct-monthly-returns').innerHTML = html;
 }
 let currentYear = String(new Date().getFullYear());
 let selectedAlgos = new Set(); // empty = all selected
