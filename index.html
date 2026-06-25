@@ -2,6 +2,12 @@
 ==========================================================
   SKVK TRADING JOURNAL — VERSION HISTORY
 ==========================================================
+  v16.0 | 2026-06-25 | Topbar redesign: brand + last-updated moved to two-line
+         |            | left block freeing full width for nav tabs; sign-out
+         |            | replaced with Windows-style SVG power button (red on hover)
+  ──────────────────────────────────────────────────────
+  v15.10| 2026-06-25 | Fix: Sign-out button reduced to icon-only to restore App Settings tab
+  ──────────────────────────────────────────────────────
   v15.9 | 2026-06-25 | Fix: Corrected API key — capital O vs zero typo (cb0eBI → cbOeBI)
   ──────────────────────────────────────────────────────
   v15.8 | 2026-06-25 | Security: Google Auth login gate;
@@ -359,7 +365,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>SKVK Trading Journal v15.9</title>
+<title>SKVK Trading Journal v16.0</title>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -426,30 +432,53 @@ body {
   background: #fff;
   border-bottom: 1px solid var(--border);
   box-shadow: var(--shadow-sm);
-  display: flex; align-items: center; flex-wrap: wrap;
-  min-height: 68px;
-  padding: 6px 24px;
+  display: flex; align-items: center;
+  height: 56px;
+  padding: 0 16px 0 20px;
   gap: 0;
+}
+.brand-block {
+  display: flex; flex-direction: column; justify-content: center;
+  flex-shrink: 0; margin-right: 16px; line-height: 1;
 }
 .brand {
   font-family: var(--display);
   font-weight: 800;
-  font-size: 1.15rem;
+  font-size: 1.05rem;
   letter-spacing: -0.03em;
   color: var(--text0);
-  margin-right: 12px;
   display: flex; align-items: center; gap: 6px;
-  flex-shrink: 0;
+  white-space: nowrap;
 }
 .brand-dot {
-  width: 10px; height: 10px;
+  width: 9px; height: 9px;
   background: var(--green);
   border-radius: 50%;
   animation: pulse 2.5s infinite;
+  flex-shrink: 0;
 }
 @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(0.85)} }
 
-.nav-tabs { display: flex; align-items: stretch; height: 56px; gap: 1px; flex-wrap: nowrap; overflow-x: auto; flex: 1; scrollbar-width: thin; scrollbar-color: var(--blue) var(--bg2); }
+#brand-subline {
+  display: flex; align-items: center; gap: 8px; margin-top: 2px;
+}
+#last-updated-tag {
+  font-size: 0.65rem; color: var(--text2);
+  white-space: nowrap; max-width: 240px;
+  overflow: hidden; text-overflow: ellipsis;
+}
+#db-status {
+  font-size: 0.65rem; color: var(--text3);
+  display: flex; align-items: center; gap: 4px;
+  white-space: nowrap; flex-shrink: 0;
+}
+#db-status.connected { color: var(--green); }
+
+.nav-tabs {
+  display: flex; align-items: stretch; height: 56px; gap: 1px;
+  flex-wrap: nowrap; overflow-x: auto; flex: 1;
+  scrollbar-width: thin; scrollbar-color: var(--blue) var(--bg2);
+}
 .nav-tabs::-webkit-scrollbar { height: 3px; }
 .nav-tabs::-webkit-scrollbar-thumb { background: var(--blue); border-radius: 2px; }
 .nav-tabs::-webkit-scrollbar-track { background: var(--bg2); }
@@ -459,10 +488,8 @@ body {
   font-size: 0.82rem; font-weight: 500;
   color: var(--text2);
   background: none; border: none; cursor: pointer;
-  position: relative;
-  transition: color 0.15s;
-  white-space: nowrap;
-  flex-shrink: 0;
+  position: relative; transition: color 0.15s;
+  white-space: nowrap; flex-shrink: 0;
   letter-spacing: 0.01em;
 }
 .nav-tab:hover { color: var(--text0); background: var(--bg2); border-radius: 6px; }
@@ -470,20 +497,14 @@ body {
 .nav-tab.active::after {
   content: '';
   position: absolute; bottom: 0; left: 0; right: 0; height: 3px;
-  background: var(--blue);
-  border-radius: 2px 2px 0 0;
+  background: var(--blue); border-radius: 2px 2px 0 0;
 }
 
 .topbar-right {
-  display: flex; align-items: center; gap: 10px;
-  flex-shrink: 0; margin-left: 12px;
-  padding: 4px 0;
+  display: flex; align-items: center;
+  flex-shrink: 0; margin-left: 10px;
 }
-#last-updated-tag { font-size:0.68rem; color:var(--text2); white-space:nowrap; max-width:220px; overflow:hidden; text-overflow:ellipsis; }
-#db-status { font-size: 0.72rem; color: var(--text3); display: flex; align-items: center; gap: 5px; white-space:nowrap; flex-shrink:0; }
-#db-status.connected { color: var(--green); }
-
-/* ── LOGIN SCREEN ── */
+/* ── SIGN-OUT POWER BUTTON ── */
 #loginScreen {
   display: none; position: fixed; inset: 0; z-index: 9999;
   background: #0d1b2e;
@@ -534,16 +555,19 @@ body {
 @keyframes lspin { to { transform: rotate(360deg); } }
 .login-note { font-size: 11px; color: #9ca3af; margin-top: 20px; }
 
-/* ── SIGN-OUT BUTTON in topbar ── */
+/* ── SIGN-OUT POWER BUTTON ── */
 .signout-btn {
-  height: 28px; padding: 0 12px; border-radius: 20px;
-  border: 1px solid rgba(255,255,255,0.2); background: transparent;
-  color: rgba(255,255,255,0.75); font-size: 11px; font-family: var(--font);
-  cursor: pointer; display: flex; align-items: center; gap: 5px;
-  font-weight: 600; transition: all 0.15s; white-space: nowrap;
-  max-width: 180px; overflow: hidden; text-overflow: ellipsis;
+  width: 32px; height: 32px; border-radius: 8px;
+  border: 1.5px solid var(--border2);
+  background: var(--bg2); color: var(--text2);
+  cursor: pointer; display: flex; align-items: center;
+  justify-content: center; transition: all 0.15s; flex-shrink: 0;
+  padding: 0;
 }
-.signout-btn:hover { background: rgba(255,255,255,0.12); color: #fff; }
+.signout-btn:hover {
+  background: #fce8e6; border-color: var(--red); color: var(--red);
+}
+.signout-btn svg { width: 16px; height: 16px; }
 
 /* ── ACCESS CONTROL section in App Settings ── */
 .access-card {
@@ -1279,7 +1303,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div class="login-logo">📋</div>
     <div class="login-title">
       SKVK Trading Journal
-      <span class="login-vbadge">v15.9</span>
+      <span class="login-vbadge">v16.0</span>
     </div>
     <div class="login-sub">Sign in with your authorised Google account to access the journal.</div>
     <button class="google-signin-btn" id="googleSignInBtn" onclick="signInWithGoogle()">
@@ -1305,10 +1329,20 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
 
 <!-- TOP BAR -->
 <div id="topbar">
-  <div class="brand">
-    <span class="brand-dot"></span>
-    SKVK Trading Journal <span style="font-size:0.85rem;background:#1a73e8;color:#fff;padding:3px 10px;border-radius:10px;font-weight:700;margin-left:6px;vertical-align:middle;">v15.9</span>
+  <!-- Brand + subline (last updated + db status) -->
+  <div class="brand-block">
+    <div class="brand">
+      <span class="brand-dot"></span>
+      SKVK Trading Journal
+      <span style="font-size:0.78rem;background:#1a73e8;color:#fff;padding:2px 8px;border-radius:8px;font-weight:700;margin-left:4px;">v16.0</span>
+    </div>
+    <div id="brand-subline">
+      <div id="db-status">● connecting…</div>
+      <div id="last-updated-tag"></div>
+    </div>
   </div>
+
+  <!-- Nav tabs -->
   <nav class="nav-tabs">
     <button class="nav-tab active" onclick="showPage('journal')"    data-page="journal">📋 <span class="tl">Journal</span></button>
     <button class="nav-tab" onclick="showPage('dashboard')"  data-page="dashboard">📊 <span class="tl">P&L Report</span></button>
@@ -1319,11 +1353,14 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <button class="nav-tab" onclick="showPage('stockmock')"  data-page="stockmock">🔬 <span class="tl">StockMock<br>Compare</span></button>
     <button class="nav-tab" onclick="showPage('appsettings')" data-page="appsettings">🛠️ <span class="tl">App<br>Settings</span></button>
   </nav>
+
+  <!-- Power button sign-out -->
   <div class="topbar-right">
-    <div id="last-updated-tag" style="font-size:0.72rem;color:var(--text2);margin-right:10px;white-space:nowrap;"></div>
-    <div id="db-status">● connecting…</div>
     <button class="signout-btn" id="signoutBtn" onclick="signOut()" title="Sign out">
-      🔓 <span id="topUserEmail"></span>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M18.36 6.64A9 9 0 1 1 5.64 6.64"/>
+        <line x1="12" y1="2" x2="12" y2="12"/>
+      </svg>
     </button>
   </div>
 </div>
@@ -6255,8 +6292,8 @@ function grantAccess(email) {
   currentUserEmail = email;
   document.getElementById('loginScreen').style.display  = 'none';
   document.getElementById('appShell').style.display     = 'block';
-  const emailEl = document.getElementById('topUserEmail');
-  if (emailEl) emailEl.textContent = email;
+  const emailEl = document.getElementById('signoutBtn');
+  if (emailEl) emailEl.title = 'Signed in as ' + email + ' — click to sign out';
   // Now start Firebase DB and app
   try {
     db = firebase.database();
