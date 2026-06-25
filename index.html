@@ -2,6 +2,19 @@
 ==========================================================
   SKVK TRADING JOURNAL — VERSION HISTORY
 ==========================================================
+  v17.6 | 2026-06-25 | Account wise: auto-detects Tradetron vs Quantleap accounts;
+         |            | Tradetron → Counter P&L table (CntrN, date range, OPEN/CLOSED, legs, P&L);
+         |            | Quantleap → Daily P&L table (unchanged); isTradetronAcct() helper
+  ──────────────────────────────────────────────────────
+  v17.5 | 2026-06-25 | Fix: parseTradetron — used-exit tracking prevents same regular exit being
+         |            | consumed by multiple re-entry legs (fixes Cntr3); open leg P&L now
+         |            | correctly stays ₹0 when exitPrice=0 (was computing ep×qty incorrectly);
+         |            | restructured to process per run_counter with usedRegExits Set
+  ──────────────────────────────────────────────────────
+  v17.4 | 2026-06-25 | Fix: parseTradetron Universal Exit now uses entry qty per leg (not combined
+         |            | univ exit qty); separates regular exits from universal exits; all 7 closed
+         |            | counters now match Tradetron exactly (Cntr1-7 ✅, Cntr8 open/live)
+  ──────────────────────────────────────────────────────
   v17.3 | 2026-06-25 | Fix: renderAcctMonthlyReturns missing function declaration (syntax error)
   ──────────────────────────────────────────────────────
   v17.2 | 2026-06-25 | Fix: parseTradetron scopes exit matching strictly to same run_counter;
@@ -421,7 +434,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>SKVK Trading Journal v17.3</title>
+<title>SKVK Trading Journal v17.6</title>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -1355,7 +1368,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div class="login-logo">📋</div>
     <div class="login-title">
       SKVK Trading Journal
-      <span class="login-vbadge">v17.3</span>
+      <span class="login-vbadge">v17.6</span>
     </div>
     <div class="login-sub">Sign in with your authorised Google account to access the journal.</div>
     <button class="google-signin-btn" id="googleSignInBtn" onclick="signInWithGoogle()">
@@ -1386,7 +1399,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div class="brand">
       <span class="brand-dot"></span>
       SKVK Trading Journal
-      <span style="font-size:0.78rem;background:#1a73e8;color:#fff;padding:2px 8px;border-radius:8px;font-weight:700;margin-left:4px;">v17.3</span>
+      <span style="font-size:0.78rem;background:#1a73e8;color:#fff;padding:2px 8px;border-radius:8px;font-weight:700;margin-left:4px;">v17.6</span>
     </div>
     <div id="brand-subline">
       <div id="db-status">● connecting…</div>
@@ -1605,11 +1618,11 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <!-- ── Two-column: Daily P&L table (left) + Charts (right) ── -->
     <div style="display:grid;grid-template-columns:420px 1fr;gap:24px;margin-bottom:28px;">
 
-      <!-- LEFT: Daily P&L table -->
+      <!-- LEFT: Daily P&L / Counter P&L table -->
       <div style="background:var(--bg);border:1.5px solid var(--border);border-radius:14px;overflow:hidden;">
-        <div style="padding:14px 18px;border-bottom:1px solid var(--border);font-size:0.95rem;font-weight:800;font-family:var(--display);">Daily P&L</div>
+        <div id="acct-table-title" style="padding:14px 18px;border-bottom:1px solid var(--border);font-size:0.95rem;font-weight:800;font-family:var(--display);">Daily P&L</div>
         <table style="width:100%;border-collapse:collapse;font-size:0.8rem;">
-          <thead>
+          <thead id="acct-table-thead">
             <tr style="background:var(--bg2);">
               <th style="padding:8px 14px;text-align:left;font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;">DATE</th>
               <th style="padding:8px 8px;text-align:left;font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;">DAY</th>
@@ -2826,7 +2839,75 @@ function renderAcctLivePerf(tr) {
   document.getElementById('acct-lp-cap').textContent    = fmt(totalCap);
 }
 
+function isTradetronAcct(tr) {
+  // Account is Tradetron if majority of trades have source='tradetron'
+  const ttCount = tr.filter(t => t.source === 'tradetron').length;
+  return ttCount > 0 && ttCount >= tr.length * 0.5;
+}
+
 function renderAcctDailyTable(tr) {
+  if (isTradetronAcct(tr)) {
+    renderAcctCounterTable(tr);
+  } else {
+    renderAcctDateTable(tr);
+  }
+}
+
+function renderAcctCounterTable(tr) {
+  // Update headers for counter view
+  document.getElementById('acct-table-title').textContent = 'Counter P&L';
+  document.getElementById('acct-table-thead').innerHTML = `
+    <tr style="background:var(--bg2);">
+      <th style="padding:8px 14px;text-align:left;font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;">COUNTER</th>
+      <th style="padding:8px 8px;text-align:left;font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;">DATE RANGE</th>
+      <th style="padding:8px 8px;text-align:center;font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;">STATUS</th>
+      <th style="padding:8px 8px;text-align:right;font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;">LEGS</th>
+      <th style="padding:8px 14px;text-align:right;font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;">P&L</th>
+    </tr>`;
+
+  // Group by run_counter
+  const counterMap = {};
+  tr.forEach(t => {
+    const rc = t.run_counter || 1;
+    if (!counterMap[rc]) counterMap[rc] = [];
+    counterMap[rc].push(t);
+  });
+
+  // Build counter rows sorted by counter number descending (latest first)
+  let cum = 0;
+  const counters = Object.keys(counterMap).map(rc => {
+    const legs    = counterMap[rc];
+    const pnl     = legs.reduce((s,t) => s+(t.pnl||0), 0);
+    const entryDates = [...new Set(legs.map(t=>t.entry_date).filter(Boolean))].sort();
+    const exitDates  = [...new Set(legs.map(t=>t.exit_date).filter(Boolean))].sort();
+    const hasOpen = legs.some(t => !t.exit_price || t.exit_price === 0);
+    const status  = hasOpen ? 'OPEN' : 'CLOSED';
+    const entryD  = entryDates[0] || '';
+    const exitD   = exitDates[exitDates.length-1] || '';
+    return { rc: parseInt(rc), pnl, entryD, exitD, status, legs: legs.length };
+  }).sort((a,b) => b.rc - a.rc);
+
+  // Cumulative (ascending order)
+  const cumMap = {};
+  [...counters].reverse().forEach(c => { cum += c.pnl; cumMap[c.rc] = cum; });
+
+  acctDailyRows = counters.map(c => ({ ...c, cum: cumMap[c.rc] }));
+  acctDailyPageNum = 0;
+  renderAcctDailyPage();
+}
+
+function renderAcctDateTable(tr) {
+  // Update headers for date view
+  document.getElementById('acct-table-title').textContent = 'Daily P&L';
+  document.getElementById('acct-table-thead').innerHTML = `
+    <tr style="background:var(--bg2);">
+      <th style="padding:8px 14px;text-align:left;font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;">DATE</th>
+      <th style="padding:8px 8px;text-align:left;font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;">DAY</th>
+      <th style="padding:8px 8px;text-align:right;font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;">DAILY P&L</th>
+      <th style="padding:8px 8px;text-align:right;font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;">TRADES</th>
+      <th style="padding:8px 14px;text-align:right;font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;">CUMULATIVE</th>
+    </tr>`;
+
   const year = new Date().getFullYear();
   const yearStart = `${year}-01-01`;
   const dayPnl = {}, dayCnt = {};
@@ -2837,7 +2918,6 @@ function renderAcctDailyTable(tr) {
   });
   const sortedDays = Object.keys(dayPnl).sort().reverse();
 
-  // Build rows with cumulative (ascending order then reverse)
   let cum = 0;
   const cumMap = {};
   [...sortedDays].reverse().forEach(d=>{ cum+=dayPnl[d]; cumMap[d]=cum; });
@@ -2847,7 +2927,8 @@ function renderAcctDailyTable(tr) {
     day: new Date(d).toLocaleDateString('en-IN',{weekday:'short'}).toUpperCase(),
     pnl: dayPnl[d],
     trades: dayCnt[d],
-    cum: cumMap[d]
+    cum: cumMap[d],
+    isDate: true
   }));
   acctDailyPageNum = 0;
   renderAcctDailyPage();
@@ -2859,21 +2940,46 @@ function renderAcctDailyPage() {
   const tbody = document.getElementById('acct-daily-tbody');
   if (!tbody) return;
 
-  tbody.innerHTML = page.map(r => `
-    <tr style="border-top:1px solid var(--border);">
-      <td style="padding:8px 14px;font-size:0.78rem;color:var(--text1);">${r.date}</td>
-      <td style="padding:8px 8px;font-size:0.72rem;color:var(--text2);">${r.day}</td>
-      <td style="padding:8px 8px;text-align:right;font-weight:700;color:${r.pnl>=0?'var(--green)':'var(--red)'};">
-        ${r.pnl>=0?'+':''}${fmt(r.pnl)}</td>
-      <td style="padding:8px 8px;text-align:right;font-size:0.78rem;color:var(--text2);">${r.trades}</td>
-      <td style="padding:8px 14px;text-align:right;font-size:0.78rem;font-weight:600;color:${r.cum>=0?'var(--green)':'var(--red)'};">
-        ${r.cum>=0?'+':''}${fmt(r.cum)}</td>
-    </tr>`).join('');
+  tbody.innerHTML = page.map(r => {
+    if (r.isDate) {
+      // Date-based row (Quantleap)
+      return `<tr style="border-top:1px solid var(--border);">
+        <td style="padding:8px 14px;font-size:0.78rem;color:var(--text1);">${r.date}</td>
+        <td style="padding:8px 8px;font-size:0.72rem;color:var(--text2);">${r.day}</td>
+        <td style="padding:8px 8px;text-align:right;font-weight:700;color:${r.pnl>=0?'var(--green)':'var(--red)'};">
+          ${r.pnl>=0?'+':''}${fmt(r.pnl)}</td>
+        <td style="padding:8px 8px;text-align:right;font-size:0.78rem;color:var(--text2);">${r.trades}</td>
+        <td style="padding:8px 14px;text-align:right;font-size:0.78rem;font-weight:600;color:${r.cum>=0?'var(--green)':'var(--red)'};">
+          ${r.cum>=0?'+':''}${fmt(r.cum)}</td>
+      </tr>`;
+    } else {
+      // Counter-based row (Tradetron)
+      const dateRange = r.entryD && r.exitD && r.entryD !== r.exitD
+        ? `${r.entryD.slice(5)} → ${r.exitD.slice(5)}`
+        : r.entryD ? r.entryD.slice(5) : '—';
+      const statusBg  = r.status==='OPEN' ? '#fef3c7' : '#f0fdf4';
+      const statusCol = r.status==='OPEN' ? '#d97706' : '#16a34a';
+      const pnlColor  = r.status==='OPEN' ? 'var(--text2)' : r.pnl>=0 ? 'var(--green)' : 'var(--red)';
+      const pnlText   = r.status==='OPEN' ? '—' : `${r.pnl>=0?'+':''}${fmt(r.pnl)}`;
+      return `<tr style="border-top:1px solid var(--border);">
+        <td style="padding:8px 14px;">
+          <span style="background:#EEEDFE;color:#3C3489;font-size:0.72rem;font-weight:700;padding:3px 9px;border-radius:20px;">Cntr${r.rc}</span>
+        </td>
+        <td style="padding:8px 8px;font-size:0.72rem;color:var(--text2);">${dateRange}</td>
+        <td style="padding:8px 8px;text-align:center;">
+          <span style="background:${statusBg};color:${statusCol};font-size:0.65rem;font-weight:700;padding:2px 7px;border-radius:10px;">${r.status}</span>
+        </td>
+        <td style="padding:8px 8px;text-align:right;font-size:0.78rem;color:var(--text2);">${r.legs}</td>
+        <td style="padding:8px 14px;text-align:right;font-weight:700;color:${pnlColor};">${pnlText}</td>
+      </tr>`;
+    }
+  }).join('');
 
   const total = acctDailyRows.length;
   const totalPages = Math.ceil(total/ACCT_PAGE_SIZE);
+  const label = acctDailyRows[0]?.isDate ? 'trading days' : 'counters';
   document.getElementById('acct-daily-info').textContent =
-    `Showing ${start+1}–${Math.min(start+ACCT_PAGE_SIZE,total)} of ${total} trading days`;
+    `Showing ${start+1}–${Math.min(start+ACCT_PAGE_SIZE,total)} of ${total} ${label}`;
   document.getElementById('acct-pg-prev').disabled = acctDailyPageNum===0;
   document.getElementById('acct-pg-next').disabled = acctDailyPageNum>=totalPages-1;
 }
@@ -3555,82 +3661,94 @@ function parseTradetron(csv, algoName) {
     byCounter[rc].push(r);
   });
 
-  entries.forEach(entry => {
-    const inst       = parseInstrument(entry.Instrument);
-    const entryTxn   = (entry.txn_type||'').toUpperCase();   // B or S
-    const exitTxn    = entryTxn === 'S' ? 'B' : 'S';         // reversed
-    const condId     = entry.condition_id || entry.condition_parent_id || '';
-    const runCounter = parseInt(entry.run_counter||'1') || 1;
-    const qty        = Math.abs(parseFloat((entry.quantity||'0').toString().replace(/,/g,''))||0);
-    const entryPrice = parseFloat((entry.price||'0').toString().replace(/,/g,''))||0;
-    const entryDate  = normTTDate(entry.entry_date||'');
-    const action     = entryTxn === 'B' ? 'BUY' : 'SELL';
+  // Process each run_counter separately with used-exit tracking
+  Object.keys(byCounter).forEach(rc => {
+    const rcRows     = byCounter[rc];
+    const rcEntries  = rcRows.filter(r => (r.condition_type||'').toLowerCase() === 'entry');
+    const rcRegExits = rcRows.filter(r => (r.condition_type||'').toLowerCase() === 'exit');
+    const rcUnivExits= rcRows.filter(r => (r.condition_type||'').toLowerCase() === 'universal exit');
 
-    // Scope exits STRICTLY to same run_counter
-    const rcExits = (byCounter[entry.run_counter||'1']||[]).filter(r => {
-      const ct = (r.condition_type||'').toLowerCase();
-      return ct === 'exit' || ct === 'universal exit';
-    });
+    // Track which regular exits have been consumed
+    const usedRegExits = new Set();
 
-    // Try to find matching exit within same run_counter
-    let matchExit = rcExits.find(ex =>
-      ex.Instrument === entry.Instrument &&
-      (ex.txn_type||'').toUpperCase() === exitTxn &&
-      String(ex.condition_parent_id) === String(condId)
-    );
+    rcEntries.forEach(entry => {
+      const inst       = parseInstrument(entry.Instrument);
+      const entryTxn   = (entry.txn_type||'').toUpperCase();
+      const exitTxn    = entryTxn === 'S' ? 'B' : 'S';
+      const condId     = String(entry.condition_id || '');
+      const runCounter = parseInt(entry.run_counter||'1') || 1;
+      const qty        = Math.abs(parseFloat((entry.quantity||'0').toString().replace(/,/g,''))||0);
+      const entryPrice = parseFloat((entry.price||'0').toString().replace(/,/g,''))||0;
+      const entryDate  = normTTDate(entry.entry_date||'');
+      const action     = entryTxn === 'B' ? 'BUY' : 'SELL';
 
-    // If no regular exit, try Universal Exit within same run_counter
-    if (!matchExit) {
-      matchExit = rcExits.find(ex =>
-        ex.Instrument === entry.Instrument &&
-        (ex.txn_type||'').toUpperCase() === exitTxn &&
-        (ex.condition_type||'').toLowerCase() === 'universal exit'
-      );
-    }
+      // 1. Regular exit: condition_parent_id matches condId, not yet used
+      let matchExit = null;
+      for (let i = 0; i < rcRegExits.length; i++) {
+        const ex = rcRegExits[i];
+        if (usedRegExits.has(i)) continue;
+        if (ex.Instrument === entry.Instrument &&
+            (ex.txn_type||'').toUpperCase() === exitTxn &&
+            String(ex.condition_parent_id) === condId) {
+          matchExit = ex;
+          usedRegExits.add(i);
+          break;
+        }
+      }
 
-    const exitPrice = matchExit ? (parseFloat((matchExit.price||'0').toString().replace(/,/g,''))||0) : 0;
-    const exitDate  = matchExit ? normTTDate(matchExit.entry_date||'') : '';
-    const exitTime  = matchExit ? normTTTime(matchExit.entry_time||'') : '';
-    const exitReason= matchExit
-      ? ((matchExit.condition_type||'').toLowerCase()==='universal exit' ? 'EOD' : 'TARGET')
-      : 'OPEN';
+      // 2. Universal exit: same instrument + reversed txn (not consumed — shared across re-entries)
+      if (!matchExit) {
+        matchExit = rcUnivExits.find(ex =>
+          ex.Instrument === entry.Instrument &&
+          (ex.txn_type||'').toUpperCase() === exitTxn
+        );
+      }
 
-    // Compute real P&L: SELL entry profits when exit < entry
-    let pnl = 0;
-    if (exitPrice) {
-      pnl = action === 'SELL'
-        ? (entryPrice - exitPrice) * qty
-        : (exitPrice - entryPrice) * qty;
-      pnl = Math.round(pnl * 100) / 100;
-    }
+      const exitPrice  = matchExit ? (parseFloat((matchExit.price||'0').toString().replace(/,/g,''))||0) : 0;
+      const exitDate   = matchExit ? normTTDate(matchExit.entry_date||'') : '';
+      const exitTime   = matchExit ? normTTTime(matchExit.entry_time||'') : '';
+      const exitReason = matchExit
+        ? ((matchExit.condition_type||'').toLowerCase()==='universal exit' ? 'EOD' : 'TARGET')
+        : 'OPEN';
 
-    paired.push({
-      source:       'tradetron',
-      broker:       (entry.broker || 'tradetron').toLowerCase(),
-      client_id:    entry.broker || '',
-      algo_name:    algoName,
-      underlying:   inst.underlying,
-      symbol:       inst.symbol,
-      option_type:  inst.optionType,
-      strike:       inst.strike,
-      expiry_date:  normTTDate(entry.expiry||''),
-      action:       action,
-      quantity:     qty,
-      entry_date:   entryDate,
-      entry_time:   normTTTime(entry.entry_time||''),
-      entry_price:  entryPrice,
-      exit_date:    exitDate,
-      exit_time:    exitTime,
-      exit_price:   exitPrice,
-      exit_reason:  exitReason,
-      pnl:          pnl,
-      condition_type: 'entry',
-      trade_type:   exitDate && exitDate !== entryDate ? 'OVERNIGHT' : 'INTRADAY',
-      run_counter:  runCounter,
-      leg_id:       entry.leg_id || '',
-      is_re_entry:  false,
-      status:       exitPrice ? 'ACTIVE' : 'OPEN',
-      created_at:   new Date().toISOString()
+      // P&L using entry qty (correct for both regular and universal exits)
+      // Only compute P&L when exit price is known (>0) — open legs stay at 0
+      let pnl = 0;
+      if (exitPrice > 0) {
+        pnl = action === 'SELL'
+          ? (entryPrice - exitPrice) * qty
+          : (exitPrice - entryPrice) * qty;
+        pnl = Math.round(pnl * 100) / 100;
+      }
+
+      paired.push({
+        source:       'tradetron',
+        broker:       (entry.broker || 'tradetron').toLowerCase(),
+        client_id:    entry.broker || '',
+        algo_name:    algoName,
+        underlying:   inst.underlying,
+        symbol:       inst.symbol,
+        option_type:  inst.optionType,
+        strike:       inst.strike,
+        expiry_date:  normTTDate(entry.expiry||''),
+        action:       action,
+        quantity:     qty,
+        entry_date:   entryDate,
+        entry_time:   normTTTime(entry.entry_time||''),
+        entry_price:  entryPrice,
+        exit_date:    exitDate,
+        exit_time:    exitTime,
+        exit_price:   exitPrice,
+        exit_reason:  exitReason,
+        pnl:          pnl,
+        condition_type: 'entry',
+        trade_type:   exitDate && exitDate !== entryDate ? 'OVERNIGHT' : 'INTRADAY',
+        run_counter:  runCounter,
+        leg_id:       entry.leg_id || '',
+        is_re_entry:  false,
+        status:       exitPrice ? 'ACTIVE' : 'OPEN',
+        created_at:   new Date().toISOString()
+      });
     });
   });
 
