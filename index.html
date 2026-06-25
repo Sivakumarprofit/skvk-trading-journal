@@ -2,6 +2,10 @@
 ==========================================================
   SKVK TRADING JOURNAL — VERSION HISTORY
 ==========================================================
+  v17.0 | 2026-06-25 | Fix: pnlDate() now correctly applied everywhere — Journal date grouping,
+         |            | dayPnl accumulator bug (was reading from wrong key), trYear filter,
+         |            | byDate grouping in SysStat/Compare; STBT P&L now lands on correct day
+  ──────────────────────────────────────────────────────
   v16.9 | 2026-06-25 | P&L attribution uses pnlDate() = exit_date if available, else entry_date;
          |            | fixes STBT/BTST P&L showing on wrong day in all reports (heatmap, monthly,
          |            | account wise tiles, system wise); Clear Data also uses pnlDate for range match
@@ -400,7 +404,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>SKVK Trading Journal v16.9</title>
+<title>SKVK Trading Journal v17.0</title>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -1334,7 +1338,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div class="login-logo">📋</div>
     <div class="login-title">
       SKVK Trading Journal
-      <span class="login-vbadge">v16.9</span>
+      <span class="login-vbadge">v17.0</span>
     </div>
     <div class="login-sub">Sign in with your authorised Google account to access the journal.</div>
     <button class="google-signin-btn" id="googleSignInBtn" onclick="signInWithGoogle()">
@@ -1365,7 +1369,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div class="brand">
       <span class="brand-dot"></span>
       SKVK Trading Journal
-      <span style="font-size:0.78rem;background:#1a73e8;color:#fff;padding:2px 8px;border-radius:8px;font-weight:700;margin-left:4px;">v16.9</span>
+      <span style="font-size:0.78rem;background:#1a73e8;color:#fff;padding:2px 8px;border-radius:8px;font-weight:700;margin-left:4px;">v17.0</span>
     </div>
     <div id="brand-subline">
       <div id="db-status">● connecting…</div>
@@ -2613,7 +2617,7 @@ function acctWeekNav(dir) {
 function renderAcctWeekTiles(tr) {
   // Build dayMap for this account
   const dayPnl = {};
-  tr.forEach(t => { const pd=pnlDate(t); if(pd) dayPnl[pd] = (dayPnl[t.entry_date]||0) + (t.pnl||0); });
+  tr.forEach(t => { const pd=pnlDate(t); if(pd) dayPnl[pd] = (dayPnl[pd]||0) + (t.pnl||0); });
 
   // Get Mon of current week + offset
   const today = new Date();
@@ -2663,11 +2667,11 @@ function renderAcctWeekTiles(tr) {
 
 function renderAcctYearStats(tr) {
   const year = new Date().getFullYear().toString();
-  const trYear = tr.filter(t => (t.entry_date||'').startsWith(year));
+  const trYear = tr.filter(t => (pnlDate(t)||t.entry_date||'').startsWith(year));
 
   // Day-wise P&L
   const dayPnl = {};
-  trYear.forEach(t => { const pd=pnlDate(t); if(pd) dayPnl[pd] = (dayPnl[t.entry_date]||0) + (t.pnl||0); });
+  trYear.forEach(t => { const pd=pnlDate(t); if(pd) dayPnl[pd] = (dayPnl[pd]||0) + (t.pnl||0); });
 
   const total = Object.values(dayPnl).reduce((s,v)=>s+v, 0);
   const winDays = Object.values(dayPnl).filter(v=>v>0).length;
@@ -3262,7 +3266,7 @@ let ci=0; function nextColor(){return COLORS[ci++%COLORS.length];}
 //  DASHBOARD
 // ════════════════════════════════════════════════════
 function renderDashboard() {
-  const tr = allTrades.filter(t=>!t.archived && (t.entry_date||'').startsWith(currentYear));
+  const tr = allTrades.filter(t=>!t.archived && (pnlDate(t)||t.entry_date||'').startsWith(currentYear));
   const total = tr.filter(t=>!t.archived).reduce((s,t)=>s+(t.pnl||0),0);
   const wr = tr.length ? Math.round(tr.filter(t=>(t.pnl||0)>0).length/tr.length*100) : 0;
 
@@ -3658,7 +3662,7 @@ function renderJournal() {
   // Group: date → algo+broker+clientid
   const byDate = {};
   tr.forEach(t => {
-    const d   = t.entry_date||'Unknown';
+    const d   = pnlDate(t)||t.entry_date||'Unknown';
     const key = `${t.algo_name}|||${t.broker}|||${t.client_id||''}`;
     if(!byDate[d]) byDate[d]={};
     if(!byDate[d][key]) byDate[d][key]=[];
@@ -5799,7 +5803,7 @@ function renderMCXJournal() {
   }
 
   const byDate = {};
-  trades.forEach(t => { const d=t.entry_date||'Unknown'; if(!byDate[d])byDate[d]=[]; byDate[d].push(t); });
+  trades.forEach(t => { const d=pnlDate(t)||t.entry_date||'Unknown'; if(!byDate[d])byDate[d]=[]; byDate[d].push(t); });
 
   let html = '';
   Object.keys(byDate).sort().reverse().forEach(date => {
