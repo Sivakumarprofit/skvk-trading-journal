@@ -2,6 +2,8 @@
 ==========================================================
   SKVK TRADING JOURNAL — VERSION HISTORY
 ==========================================================
+  v17.3 | 2026-06-25 | Fix: renderAcctMonthlyReturns missing function declaration (syntax error)
+  ──────────────────────────────────────────────────────
   v17.2 | 2026-06-25 | Fix: parseTradetron scopes exit matching strictly to same run_counter;
          |            | Capital per-account: Firebase journal/capital_v2/{clientId}/{YYYY-MM};
          |            | getCapital()/getGlobalCapital() helpers replace raw capitalData[] lookups;
@@ -419,7 +421,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>SKVK Trading Journal v17.2</title>
+<title>SKVK Trading Journal v17.3</title>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -1353,7 +1355,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div class="login-logo">📋</div>
     <div class="login-title">
       SKVK Trading Journal
-      <span class="login-vbadge">v17.2</span>
+      <span class="login-vbadge">v17.3</span>
     </div>
     <div class="login-sub">Sign in with your authorised Google account to access the journal.</div>
     <button class="google-signin-btn" id="googleSignInBtn" onclick="signInWithGoogle()">
@@ -1384,7 +1386,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div class="brand">
       <span class="brand-dot"></span>
       SKVK Trading Journal
-      <span style="font-size:0.78rem;background:#1a73e8;color:#fff;padding:2px 8px;border-radius:8px;font-weight:700;margin-left:4px;">v17.2</span>
+      <span style="font-size:0.78rem;background:#1a73e8;color:#fff;padding:2px 8px;border-radius:8px;font-weight:700;margin-left:4px;">v17.3</span>
     </div>
     <div id="brand-subline">
       <div id="db-status">● connecting…</div>
@@ -3061,6 +3063,8 @@ async function saveAcctCapital() {
   toast('✓ Capital saved for '+getClientLabel(currentAcct), 'success');
   renderAcctReport(); // refresh charts with new capital
 }
+
+function renderAcctMonthlyReturns(tr) {
   const years = [...new Set(tr.map(t=>(pnlDate(t)||t.entry_date||'').slice(0,4)).filter(Boolean))].sort();
   if (!years.length) { document.getElementById('acct-monthly-returns').innerHTML='<div style="color:var(--text3);font-size:0.82rem;">No data</div>'; return; }
 
