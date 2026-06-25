@@ -2,6 +2,13 @@
 ==========================================================
   SKVK TRADING JOURNAL — VERSION HISTORY
 ==========================================================
+  v17.2 | 2026-06-25 | Fix: parseTradetron scopes exit matching strictly to same run_counter;
+         |            | Capital per-account: Firebase journal/capital_v2/{clientId}/{YYYY-MM};
+         |            | getCapital()/getGlobalCapital() helpers replace raw capitalData[] lookups;
+         |            | App Settings capital table: account selector added;
+         |            | Account wise: monthly P&L chart below selector; inline capital edit;
+         |            | All Accounts capital = sum of all accounts (read-only)
+  ──────────────────────────────────────────────────────
   v17.1 | 2026-06-25 | P&L Report-Account wise full revamp: account selector left+highlighted,
          |            | All Accounts option; Live Performance stats (Total Return, CAGR, Net P&L,
          |            | Win Rate, Sharpe, Max DD, Profit Factor, Trades, Capital);
@@ -412,7 +419,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>SKVK Trading Journal v17.1</title>
+<title>SKVK Trading Journal v17.2</title>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -1346,7 +1353,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div class="login-logo">📋</div>
     <div class="login-title">
       SKVK Trading Journal
-      <span class="login-vbadge">v17.1</span>
+      <span class="login-vbadge">v17.2</span>
     </div>
     <div class="login-sub">Sign in with your authorised Google account to access the journal.</div>
     <button class="google-signin-btn" id="googleSignInBtn" onclick="signInWithGoogle()">
@@ -1377,7 +1384,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div class="brand">
       <span class="brand-dot"></span>
       SKVK Trading Journal
-      <span style="font-size:0.78rem;background:#1a73e8;color:#fff;padding:2px 8px;border-radius:8px;font-weight:700;margin-left:4px;">v17.1</span>
+      <span style="font-size:0.78rem;background:#1a73e8;color:#fff;padding:2px 8px;border-radius:8px;font-weight:700;margin-left:4px;">v17.2</span>
     </div>
     <div id="brand-subline">
       <div id="db-status">● connecting…</div>
@@ -1549,6 +1556,12 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     </div>
   </div>
 
+  <!-- Monthly P&L chart just below selector -->
+  <div id="acct-monthly-chart-wrap" style="display:none;background:var(--bg);border:1.5px solid var(--border);border-radius:14px;padding:16px 20px;margin-bottom:20px;">
+    <div style="font-size:0.78rem;font-weight:700;color:var(--text1);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:10px;">Monthly P&L</div>
+    <canvas id="acct-chart-monthly-top" style="max-height:160px;"></canvas>
+  </div>
+
   <div id="acct-empty" style="text-align:center;padding:80px 0;color:var(--text3);font-size:0.9rem;">
     ← Select an account above to view P&L analytics
   </div>
@@ -1638,6 +1651,17 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div style="background:var(--bg);border:1.5px solid var(--border);border-radius:14px;padding:20px 24px;margin-bottom:28px;">
       <div style="font-size:0.95rem;font-weight:800;font-family:var(--display);margin-bottom:16px;">Monthly Returns</div>
       <div id="acct-monthly-returns" style="overflow-x:auto;"></div>
+    </div>
+
+    <!-- ── Capital Deployed (inline edit) ── -->
+    <div id="acct-capital-section" style="background:var(--bg);border:1.5px solid var(--border);border-radius:14px;padding:20px 24px;margin-bottom:28px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+        <div style="font-size:0.95rem;font-weight:800;font-family:var(--display);">💰 Capital Deployed</div>
+        <div id="acct-cap-edit-btn" style="display:none;">
+          <button onclick="saveAcctCapital()" class="btn btn-primary btn-sm">💾 Save Capital</button>
+        </div>
+      </div>
+      <div id="acct-capital-grid"></div>
     </div>
 
     <!-- ── Heatmap ── -->
@@ -2674,8 +2698,10 @@ function renderAcctReport() {
 
   renderAcctWeekTiles(tr);
   renderAcctLivePerf(tr);
+  renderAcctMonthlyTopChart(tr);
   renderAcctDailyTable(tr);
   renderAcctCharts(tr);
+  renderAcctCapitalGrid();
   renderAcctMonthlyReturns(tr);
   document.getElementById('acct-heatmap').innerHTML = buildOneHeatmap(
     currentAcct === '__ALL__' ? 'All Accounts' : getClientLabel(currentAcct), tr, '#1a73e8');
@@ -2753,11 +2779,12 @@ function renderAcctLivePerf(tr) {
   let totalCap = 0;
   if (currentAcct === '__ALL__') {
     // Sum all capital entries
-    totalCap = Object.values(capitalData).reduce((s,v)=>s+(v||0),0);
+    totalCap = Object.keys(capitalDataAll).reduce((s,cid)=>s+Object.values(capitalDataAll[cid]||{}).reduce((a,v)=>a+(v||0),0),0);
   } else {
-    // Use latest month's capital
-    const latestM = allMonths.filter(m=>capitalData[m]>0).pop();
-    totalCap = latestM ? capitalData[latestM] : 0;
+    // Use latest month's capital for this account
+    const acctCap = capitalDataAll[currentAcct]||{};
+    const latestM = Object.keys(acctCap).filter(m=>acctCap[m]>0).sort().pop();
+    totalCap = latestM ? acctCap[latestM] : 0;
   }
 
   // Days since year start
@@ -2881,7 +2908,7 @@ function renderAcctCharts(tr) {
     const allMonths = [...new Set(Object.keys(capitalData))].sort();
     sortedDays.forEach(d => {
       const ym = d.slice(0,7);
-      const cap = capitalData[ym] || 0;
+      const cap = getCapital(currentAcct, ym);
       capLabels.push(d.slice(5));
       capData.push(cap);
     });
@@ -2946,7 +2973,94 @@ function renderAcctCharts(tr) {
   }
 }
 
-function renderAcctMonthlyReturns(tr) {
+function renderAcctMonthlyTopChart(tr) {
+  const year = new Date().getFullYear();
+  const yearStart = `${year}-01-01`;
+  const mMap = {};
+  tr.forEach(t => { const ym=(pnlDate(t)||'').slice(0,7); if(ym&&ym>=yearStart.slice(0,7)) mMap[ym]=(mMap[ym]||0)+(t.pnl||0); });
+  const keys = Object.keys(mMap).sort();
+  const vals = keys.map(k=>mMap[k]);
+
+  document.getElementById('acct-monthly-chart-wrap').style.display = keys.length ? '' : 'none';
+  if (!keys.length) return;
+
+  const ctx = document.getElementById('acct-chart-monthly-top')?.getContext('2d');
+  if (!ctx) return;
+  if (window._acctMonthlyTopChart) window._acctMonthlyTopChart.destroy();
+  window._acctMonthlyTopChart = new Chart(ctx, {
+    type:'bar',
+    data:{ labels:keys.map(fmtMonth), datasets:[{
+      data:vals,
+      backgroundColor:vals.map(v=>v>=0?'rgba(26,158,92,0.75)':'rgba(217,48,37,0.75)'),
+      borderRadius:5, borderSkipped:false
+    }]},
+    options:{ responsive:true, maintainAspectRatio:true,
+      plugins:{legend:{display:false}},
+      scales:{
+        x:{grid:{color:'rgba(0,0,0,0.04)'},ticks:{color:'#6b7280',font:{size:11}}},
+        y:{grid:{color:'rgba(0,0,0,0.04)'},ticks:{color:'#6b7280',font:{size:11},callback:v=>fmtHeat(v)}}
+      }}
+  });
+}
+
+function renderAcctCapitalGrid() {
+  const grid = document.getElementById('acct-capital-grid');
+  if (!grid) return;
+  const isAll = currentAcct === '__ALL__';
+  const editBtn = document.getElementById('acct-cap-edit-btn');
+  if (editBtn) editBtn.style.display = isAll ? 'none' : '';
+
+  const year = new Date().getFullYear();
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+  if (isAll) {
+    // Read-only: show sum per month for current year
+    let html = `<div style="display:flex;gap:10px;flex-wrap:wrap;">`;
+    months.forEach((m,i) => {
+      const ym = `${year}-${String(i+1).padStart(2,'0')}`;
+      const total = getCapital('__ALL__', ym);
+      html += `<div style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;min-width:80px;text-align:center;">
+        <div style="font-size:0.65rem;font-weight:700;color:var(--text2);">${m} ${year}</div>
+        <div style="font-size:0.82rem;font-weight:700;color:var(--text0);margin-top:3px;">${total>0?fmt(total):'—'}</div>
+      </div>`;
+    });
+    html += '</div>';
+    grid.innerHTML = html;
+  } else {
+    // Editable: show input per month for current year
+    const acctCap = capitalDataAll[currentAcct]||{};
+    let html = `<div style="display:flex;gap:10px;flex-wrap:wrap;">`;
+    months.forEach((m,i) => {
+      const ym = `${year}-${String(i+1).padStart(2,'0')}`;
+      const val = acctCap[ym]||'';
+      html += `<div style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:8px 10px;min-width:90px;text-align:center;">
+        <div style="font-size:0.65rem;font-weight:700;color:var(--text2);margin-bottom:4px;">${m} ${year}</div>
+        <input type="number" id="acct-cap-${ym}" value="${val}" placeholder="—"
+          style="width:100%;padding:3px 5px;border:1px solid var(--border);border-radius:5px;font-size:0.78rem;text-align:right;outline:none;background:#fff;"
+          onfocus="this.style.borderColor='var(--blue)'"
+          onblur="this.style.borderColor='var(--border)'">
+      </div>`;
+    });
+    html += '</div>';
+    grid.innerHTML = html;
+  }
+}
+
+async function saveAcctCapital() {
+  if (!currentAcct || currentAcct==='__ALL__') return;
+  const year = new Date().getFullYear();
+  const newData = {};
+  for (let m=1;m<=12;m++) {
+    const ym = `${year}-${String(m).padStart(2,'0')}`;
+    const inp = document.getElementById('acct-cap-'+ym);
+    if (inp && inp.value) newData[ym] = parseFloat(inp.value)||0;
+  }
+  if (!capitalDataAll[currentAcct]) capitalDataAll[currentAcct]={};
+  Object.assign(capitalDataAll[currentAcct], newData);
+  if (db) await db.ref('journal/capital_v2/'+currentAcct).update(newData);
+  toast('✓ Capital saved for '+getClientLabel(currentAcct), 'success');
+  renderAcctReport(); // refresh charts with new capital
+}
   const years = [...new Set(tr.map(t=>(pnlDate(t)||t.entry_date||'').slice(0,4)).filter(Boolean))].sort();
   if (!years.length) { document.getElementById('acct-monthly-returns').innerHTML='<div style="color:var(--text3);font-size:0.82rem;">No data</div>'; return; }
 
@@ -2988,7 +3102,7 @@ function renderAcctMonthlyReturns(tr) {
     for (let mi=1;mi<=12;mi++) {
       const mk = String(mi).padStart(2,'0');
       const pnl = mData[mk]??null;
-      const mCap = capitalData[`${y}-${mk}`]||cap||0;
+      const mCap = getCapital(currentAcct, `${y}-${mk}`)||cap||0;
       const pct  = pnl!==null&&mCap>0 ? (pnl/mCap*100).toFixed(1)+'%' : '';
       const bg   = pnl===null?'transparent':pnl>=0?'#dcfce7':'#fee2e2';
       const col  = pnl===null?'var(--text3)':pnl>=0?'#15803d':'#dc2626';
@@ -3429,6 +3543,14 @@ function parseTradetron(csv, algoName) {
 
   const paired = [];
 
+  // Group by run_counter for strict scoping
+  const byCounter = {};
+  rows.forEach(r => {
+    const rc = r.run_counter || '1';
+    if (!byCounter[rc]) byCounter[rc] = [];
+    byCounter[rc].push(r);
+  });
+
   entries.forEach(entry => {
     const inst       = parseInstrument(entry.Instrument);
     const entryTxn   = (entry.txn_type||'').toUpperCase();   // B or S
@@ -3440,16 +3562,22 @@ function parseTradetron(csv, algoName) {
     const entryDate  = normTTDate(entry.entry_date||'');
     const action     = entryTxn === 'B' ? 'BUY' : 'SELL';
 
-    // Try to find matching exit: same Instrument + reversed txn_type, condition_parent_id === condId
-    let matchExit = exits.find(ex =>
+    // Scope exits STRICTLY to same run_counter
+    const rcExits = (byCounter[entry.run_counter||'1']||[]).filter(r => {
+      const ct = (r.condition_type||'').toLowerCase();
+      return ct === 'exit' || ct === 'universal exit';
+    });
+
+    // Try to find matching exit within same run_counter
+    let matchExit = rcExits.find(ex =>
       ex.Instrument === entry.Instrument &&
       (ex.txn_type||'').toUpperCase() === exitTxn &&
       String(ex.condition_parent_id) === String(condId)
     );
 
-    // If no regular exit, try Universal Exit (condition_parent_id=0, matches by instrument+txn)
+    // If no regular exit, try Universal Exit within same run_counter
     if (!matchExit) {
-      matchExit = exits.find(ex =>
+      matchExit = rcExits.find(ex =>
         ex.Instrument === entry.Instrument &&
         (ex.txn_type||'').toUpperCase() === exitTxn &&
         (ex.condition_type||'').toLowerCase() === 'universal exit'
@@ -3748,7 +3876,7 @@ function renderDashTable(tr, mMap) {
   // ── Grand Total with avg capital % ──
   const grandTotal = Object.values(mMap).reduce((s,v)=>s+v,0);
   // Average capital for the year
-  const yearCaps = months.map(m=>capitalData[m]).filter(v=>v>0);
+  const yearCaps = months.map(m=>getGlobalCapital(m)).filter(v=>v>0);
   const avgCap = yearCaps.length ? yearCaps.reduce((s,v)=>s+v,0)/yearCaps.length : 0;
   const grandPct = avgCap > 0 ? ` <span style="font-size:0.72rem;color:var(--text2);font-weight:400;">(${(grandTotal/avgCap*100).toFixed(1)}%)</span>` : '';
 
@@ -3810,7 +3938,7 @@ function renderHeatmapDrilldown(){
     container.innerHTML=str.length?buildOneHeatmap(sName,str,null):'<div style="padding:12px;color:var(--text3);">No trades for this strategy</div>';
   }
 }
-function buildOneHeatmap(title,trades,color){const dayMap={};trades.forEach(t=>{const pd=pnlDate(t);if(pd)dayMap[pd]=(dayMap[pd]||0)+(t.pnl||0);});const maxAbs=Math.max(...Object.values(dayMap).map(v=>Math.abs(v)),1);const months=[];for(let m=1;m<=12;m++)months.push(currentYear+'-'+String(m).padStart(2,'0'));let html='<div style="margin-bottom:24px;"><div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">'+(color?'<span style="width:10px;height:10px;border-radius:50%;background:'+color+';display:inline-block;flex-shrink:0;"></span>':'')+'<span style="font-size:0.85rem;font-weight:700;color:var(--text0);">'+title+'</span></div><div style="overflow-x:auto;"><div style="display:flex;gap:8px;">';months.forEach(mk=>{const yr=parseInt(currentYear),mo=parseInt(mk.slice(5,7));const dim=new Date(yr,mo,0).getDate();const mLabel=new Date(mk+'-01').toLocaleDateString('en-IN',{month:'short',year:'2-digit'});const mTotal=Object.entries(dayMap).filter(([d])=>d.startsWith(mk)).reduce((s,[,v])=>s+v,0);const cap=capitalData[mk]||0;const mPct=(mTotal&&cap)?(mTotal/cap*100).toFixed(1)+'%':'';html+='<div style="flex-shrink:0;"><div style="font-size:.7rem;font-weight:700;color:var(--text1);text-align:center;margin-bottom:3px;white-space:nowrap;">'+mLabel+(mTotal?'<span style="color:'+(mTotal>=0?'#0d9488':'#4b5563')+';margin-left:3px;">'+fmtHeat(mTotal)+(mPct?' ('+mPct+')':'')+'</span>':'')+'</div><table class="heatmap-table"><tbody>';for(let d=1;d<=dim;d++){const ds=mk+'-'+String(d).padStart(2,'0');const pnl=dayMap[ds]??null;const dow=new Date(ds).toLocaleDateString('en-IN',{weekday:'short'});const isW=['Sat','Sun'].includes(dow);const cls=pnl===null?(isW?'heatmap-empty':'heatmap-zero'):getHeatClass(pnl,maxAbs);const pct=(pnl!==null&&cap)?(pnl/cap*100).toFixed(1)+'%':'';html+='<tr><td class="heatmap-cell '+cls+'" title="'+ds+(pnl!==null?' '+fmt(pnl)+(pct?' ('+pct+')':''):'')+'"><div class="hm-day">'+d+' '+dow+'</div><div class="hm-val">'+(pnl!==null?fmtHeat(pnl):(isW?'-':'-'))+'</div>'+(pct?'<div class="hm-pct">'+pct+'</div>':'')+'</td></tr>';}html+='</tbody></table></div>';});html+='</div></div></div>';return html;}
+function buildOneHeatmap(title,trades,color){const dayMap={};trades.forEach(t=>{const pd=pnlDate(t);if(pd)dayMap[pd]=(dayMap[pd]||0)+(t.pnl||0);});const maxAbs=Math.max(...Object.values(dayMap).map(v=>Math.abs(v)),1);const months=[];for(let m=1;m<=12;m++)months.push(currentYear+'-'+String(m).padStart(2,'0'));let html='<div style="margin-bottom:24px;"><div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">'+(color?'<span style="width:10px;height:10px;border-radius:50%;background:'+color+';display:inline-block;flex-shrink:0;"></span>':'')+'<span style="font-size:0.85rem;font-weight:700;color:var(--text0);">'+title+'</span></div><div style="overflow-x:auto;"><div style="display:flex;gap:8px;">';months.forEach(mk=>{const yr=parseInt(currentYear),mo=parseInt(mk.slice(5,7));const dim=new Date(yr,mo,0).getDate();const mLabel=new Date(mk+'-01').toLocaleDateString('en-IN',{month:'short',year:'2-digit'});const mTotal=Object.entries(dayMap).filter(([d])=>d.startsWith(mk)).reduce((s,[,v])=>s+v,0);const cap=getGlobalCapital(mk);const mPct=(mTotal&&cap)?(mTotal/cap*100).toFixed(1)+'%':'';html+='<div style="flex-shrink:0;"><div style="font-size:.7rem;font-weight:700;color:var(--text1);text-align:center;margin-bottom:3px;white-space:nowrap;">'+mLabel+(mTotal?'<span style="color:'+(mTotal>=0?'#0d9488':'#4b5563')+';margin-left:3px;">'+fmtHeat(mTotal)+(mPct?' ('+mPct+')':'')+'</span>':'')+'</div><table class="heatmap-table"><tbody>';for(let d=1;d<=dim;d++){const ds=mk+'-'+String(d).padStart(2,'0');const pnl=dayMap[ds]??null;const dow=new Date(ds).toLocaleDateString('en-IN',{weekday:'short'});const isW=['Sat','Sun'].includes(dow);const cls=pnl===null?(isW?'heatmap-empty':'heatmap-zero'):getHeatClass(pnl,maxAbs);const pct=(pnl!==null&&cap)?(pnl/cap*100).toFixed(1)+'%':'';html+='<tr><td class="heatmap-cell '+cls+'" title="'+ds+(pnl!==null?' '+fmt(pnl)+(pct?' ('+pct+')':''):'')+'"><div class="hm-day">'+d+' '+dow+'</div><div class="hm-val">'+(pnl!==null?fmtHeat(pnl):(isW?'-':'-'))+'</div>'+(pct?'<div class="hm-pct">'+pct+'</div>':'')+'</td></tr>';}html+='</tbody></table></div>';});html+='</div></div></div>';return html;}
 
 function renderBrokerTable(tr, months) {
   if (!months || !months.length) { el('broker-table').innerHTML=''; return; }
@@ -4132,7 +4260,23 @@ async function loadDailyQuote() {
 // ════════════════════════════════════════════════════
 //  TOTAL CAPITAL TABLE
 // ════════════════════════════════════════════════════
-let capitalData = {}; // { 'YYYY-MM': amount }
+let capitalData = {}; // legacy global (kept for system-wise reports)
+let capitalDataAll = {}; // per-account: { clientId: { 'YYYY-MM': amount } }
+// Get capital for a specific account+month. For ALL, sum across accounts.
+function getCapital(clientId, ym) {
+  if (!ym) return 0;
+  if (!clientId || clientId === '__ALL__') {
+    return Object.values(capitalDataAll).reduce((s, d) => s + (d[ym]||0), 0);
+  }
+  return (capitalDataAll[clientId]||{})[ym] || 0;
+}
+// Global capital for system-wise reports (sum all accounts per month)
+function getGlobalCapital(ym) {
+  if (!ym) return 0;
+  const fromAll = Object.values(capitalDataAll).reduce((s,d)=>s+(d[ym]||0),0);
+  if (fromAll > 0) return fromAll;
+  return capitalData[ym] || 0; // legacy fallback
+}
 
 function generateCapitalMonths() {
   const months = [];
@@ -4360,7 +4504,20 @@ function buildCapitalTable() {
   const years = [];
   for (let y = 2026; y <= 2036; y++) years.push(y);
 
-  let html = `<table style="border-collapse:collapse;font-size:0.78rem;width:100%;">
+  // Account selector for capital table
+  const junk = new Set(['tradetron','quantleap','quantiply','zebu','upstox','iifl','']);
+  const accounts = [...new Set(allTrades.map(t=>t.client_id||'').filter(id=>id&&!junk.has(id.toLowerCase())))].sort();
+  const curAcct = document.getElementById('cap-acct-select')?.value || accounts[0] || '';
+  const acctData = curAcct ? (capitalDataAll[curAcct]||{}) : capitalData;
+
+  let acctSel = `<div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+    <label style="font-size:0.78rem;font-weight:600;color:var(--text1);">Account:</label>
+    <select id="cap-acct-select" onchange="buildCapitalTable()" style="padding:5px 10px;border:1.5px solid var(--border);border-radius:7px;font-size:0.82rem;outline:none;min-width:180px;">
+      ${accounts.map(a=>`<option value="${a}"${a===curAcct?' selected':''}>${getClientLabel(a)}</option>`).join('')}
+    </select>
+  </div>`;
+
+  let html = acctSel + `<table style="border-collapse:collapse;font-size:0.78rem;width:100%;">
     <thead>
       <tr style="background:var(--bg2);">
         <th style="padding:6px 10px;text-align:left;font-weight:700;color:var(--text1);border:1px solid var(--border);min-width:52px;">Year</th>
@@ -4373,7 +4530,7 @@ function buildCapitalTable() {
         <td style="padding:5px 10px;font-weight:700;color:var(--text0);background:var(--bg2);border:1px solid var(--border);">${y}</td>
         ${months.map((m,i)=>{
           const key = `${y}-${String(i+1).padStart(2,'0')}`;
-          const val = capitalData[key] || '';
+          const val = acctData[key] || '';
           return `<td style="padding:3px 4px;border:1px solid var(--border);">
             <input type="number" id="cap-${key}" value="${val}" placeholder="—"
               style="width:100%;padding:3px 5px;border:1px solid transparent;border-radius:4px;font-size:0.75rem;text-align:right;outline:none;background:transparent;"
@@ -4388,6 +4545,7 @@ function buildCapitalTable() {
 }
 
 async function saveCapitalTable() {
+  const acctId = document.getElementById('cap-acct-select')?.value || '';
   const newData = {};
   for (let y = 2026; y <= 2036; y++) {
     for (let m = 1; m <= 12; m++) {
@@ -4396,8 +4554,14 @@ async function saveCapitalTable() {
       if (inp && inp.value) newData[key] = parseFloat(inp.value) || 0;
     }
   }
-  capitalData = newData;
-  if (db) await db.ref('journal/capital').set(newData);
+  if (acctId) {
+    if (!capitalDataAll[acctId]) capitalDataAll[acctId] = {};
+    capitalDataAll[acctId] = { ...capitalDataAll[acctId], ...newData };
+    if (db) await db.ref('journal/capital_v2/' + acctId).update(newData);
+  } else {
+    capitalData = newData;
+    if (db) await db.ref('journal/capital').set(newData);
+  }
   toast('✓ Capital saved', 'success');
 }
 
@@ -4405,6 +4569,10 @@ function loadCapitalTable() {
   if (db) {
     db.ref('journal/capital').on('value', snap => {
       capitalData = snap.val() || {};
+      buildCapitalTable();
+    });
+    db.ref('journal/capital_v2').on('value', snap => {
+      capitalDataAll = snap.val() || {};
       buildCapitalTable();
     });
   } else {
@@ -5435,8 +5603,9 @@ function fmtRpt(v, month, forceColor) {
   const style = forceColor ? `color:${forceColor};` : '';
   const amt = (n<0?'-₹':'₹') + Math.abs(n).toLocaleString('en-IN', {maximumFractionDigits:0});
   let pct = '';
-  if (month && capitalData[month] && capitalData[month] > 0) {
-    const p = (n / capitalData[month] * 100).toFixed(1);
+  const _cap = getGlobalCapital(month);
+  if (month && _cap > 0) {
+    const p = (n / _cap * 100).toFixed(1);
     const pctColor = forceColor ? `color:${forceColor};opacity:0.75;` : '';
     pct = `<span class="rpt-pct" style="${pctColor}">(${p}%)</span>`;
   }
@@ -6495,7 +6664,7 @@ function renderSysStatBelow() {
   rangeTrades.forEach(t=>{const ym=(pnlDate(t)||'').slice(0,7);if(ym)mPnl[ym]=(mPnl[ym]||0)+(t.pnl||0);});
   const mVals=Object.values(mPnl);
   const avgMonthlyPnl=mVals.length?mVals.reduce((s,v)=>s+v,0)/mVals.length:0;
-  const avgMonthCap=Object.keys(mPnl).length?Object.keys(mPnl).reduce((s,ym)=>s+(capitalData[ym]||0),0)/Object.keys(mPnl).length||1:1;
+  const avgMonthCap=Object.keys(mPnl).length?Object.keys(mPnl).reduce((s,ym)=>s+getGlobalCapital(ym),0)/Object.keys(mPnl).length||1:1;
   const totalROI=avgMonthCap?totalPnl/avgMonthCap*100:0;
   const avgMonthROI=avgMonthCap?avgMonthlyPnl/avgMonthCap*100:0;
 
@@ -6613,7 +6782,7 @@ function renderSysStatBelow() {
       <tbody>
         ${Object.keys(mwPnl).sort().map(ym=>{
           const row=mwPnl[ym];
-          const cap=capitalData[ym]||avgMonthCap||1;
+          const cap=getGlobalCapital(ym)||avgMonthCap||1;
           const pct=(row.pnl/cap*100).toFixed(2);
           const mo=new Date(ym+'-01').toLocaleDateString('en-IN',{month:'short',year:'2-digit'});
           return `<tr class="trade-row">
