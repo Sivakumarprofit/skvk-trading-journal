@@ -2,6 +2,11 @@
 ==========================================================
   SKVK TRADING JOURNAL — VERSION HISTORY
 ==========================================================
+  v17.7 | 2026-06-25 | Fix: Tradetron re-upload now force-overwrites existing trades (no more skips);
+         |            | Journal: Tradetron accounts show Counter view (CntrN header, date range,
+         |            | OPEN/CLOSED badge, LIVE for open counters); subtitle updates dynamically;
+         |            | Quantleap accounts unchanged (date-based view)
+  ──────────────────────────────────────────────────────
   v17.6 | 2026-06-25 | Account wise: auto-detects Tradetron vs Quantleap accounts;
          |            | Tradetron → Counter P&L table (CntrN, date range, OPEN/CLOSED, legs, P&L);
          |            | Quantleap → Daily P&L table (unchanged); isTradetronAcct() helper
@@ -434,7 +439,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>SKVK Trading Journal v17.6</title>
+<title>SKVK Trading Journal v17.7</title>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -1368,7 +1373,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div class="login-logo">📋</div>
     <div class="login-title">
       SKVK Trading Journal
-      <span class="login-vbadge">v17.6</span>
+      <span class="login-vbadge">v17.7</span>
     </div>
     <div class="login-sub">Sign in with your authorised Google account to access the journal.</div>
     <button class="google-signin-btn" id="googleSignInBtn" onclick="signInWithGoogle()">
@@ -1399,7 +1404,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div class="brand">
       <span class="brand-dot"></span>
       SKVK Trading Journal
-      <span style="font-size:0.78rem;background:#1a73e8;color:#fff;padding:2px 8px;border-radius:8px;font-weight:700;margin-left:4px;">v17.6</span>
+      <span style="font-size:0.78rem;background:#1a73e8;color:#fff;padding:2px 8px;border-radius:8px;font-weight:700;margin-left:4px;">v17.7</span>
     </div>
     <div id="brand-subline">
       <div id="db-status">● connecting…</div>
@@ -1700,7 +1705,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
   <div class="page-header">
     <div>
       <div class="page-title">Journal</div>
-      <div class="page-subtitle">Grouped by Date → Algo → Broker · Latest on top</div>
+      <div class="page-subtitle" id="journal-subtitle">Grouped by Date → Algo → Broker · Latest on top</div>
       <div id="daily-quote" style="margin-top:8px;font-size:0.78rem;color:var(--text2);font-style:italic;max-width:700px;line-height:1.5;">
         <span style="color:var(--text3);">Loading quote…</span>
       </div>
@@ -3456,7 +3461,12 @@ async function processFile(file) {
         const snap = await db.ref('journal/trades/'+tk).get();
         if (snap.exists()) {
           const existing = snap.val();
-          if (isOpenTrade(existing) && hasExitData(t)) {
+          // Tradetron: always overwrite (parser logic may have improved)
+          // Quantleap: only update if existing is open and new has exit data
+          if (t.source === 'tradetron') {
+            await db.ref('journal/trades/'+tk).set({ ...t, created_at: existing.created_at || t.created_at });
+            updated++;
+          } else if (isOpenTrade(existing) && hasExitData(t)) {
             await db.ref('journal/trades/'+tk).update({
               exit_price:  t.exit_price,
               exit_date:   t.exit_date,
@@ -3477,7 +3487,10 @@ async function processFile(file) {
         const existingIdx = allTrades.findIndex(x => x.hash === tk);
         if (existingIdx >= 0) {
           const existing = allTrades[existingIdx];
-          if (isOpenTrade(existing) && hasExitData(t)) {
+          if (t.source === 'tradetron') {
+            allTrades[existingIdx] = { ...t, created_at: existing.created_at || t.created_at };
+            updated++;
+          } else if (isOpenTrade(existing) && hasExitData(t)) {
             allTrades[existingIdx] = { ...existing, exit_price: t.exit_price, exit_date: t.exit_date, exit_time: t.exit_time, exit_reason: t.exit_reason, pnl: t.pnl, updated_at: new Date().toISOString() };
             updated++;
           } else {
@@ -4208,6 +4221,20 @@ function renderJournal() {
     return;
   }
 
+  // Detect if selected account is Tradetron
+  const isTradetron = selectedClientId
+    ? tr.filter(t=>t.source==='tradetron').length >= tr.length * 0.5
+    : false;
+
+  if (isTradetron) {
+    renderJournalTradetron(tr);
+    return;
+  }
+
+  // Reset subtitle for date-based view
+  const sub = document.getElementById('journal-subtitle');
+  if (sub) sub.textContent = 'Grouped by Date → Algo → Broker · Latest on top';
+
   // Group: date → algo+broker+clientid
   const byDate = {};
   tr.forEach(t => {
@@ -4330,8 +4357,104 @@ function renderJournal() {
 }
 
 // ════════════════════════════════════════════════════
-//  DAILY QUOTE
+//  JOURNAL — TRADETRON COUNTER VIEW
 // ════════════════════════════════════════════════════
+function renderJournalTradetron(tr) {
+  const sub = document.getElementById('journal-subtitle');
+  if (sub) sub.textContent = 'Grouped by Counter (Tradetron) · Latest on top';
+  // Group by run_counter
+  const byCounter = {};
+  tr.forEach(t => {
+    const rc = t.run_counter || 1;
+    if (!byCounter[rc]) byCounter[rc] = [];
+    byCounter[rc].push(t);
+  });
+
+  const counters = Object.keys(byCounter).map(rc => parseInt(rc)).sort((a,b) => b-a);
+  let html = '';
+
+  counters.forEach(rc => {
+    const legs    = byCounter[rc];
+    const cPnl    = legs.filter(t=>!t.archived).reduce((s,t)=>s+(t.pnl||0),0);
+    const hasOpen = legs.some(t => !t.exit_price || t.exit_price === 0);
+    const status  = hasOpen ? 'OPEN' : 'CLOSED';
+    const entryDates = [...new Set(legs.map(t=>t.entry_date).filter(Boolean))].sort();
+    const exitDates  = [...new Set(legs.map(t=>t.exit_date).filter(Boolean))].sort();
+    const dateRange  = entryDates.length
+      ? (exitDates.length && exitDates[exitDates.length-1] !== entryDates[0]
+          ? `${fmtDate(entryDates[0])} → ${fmtDate(exitDates[exitDates.length-1])}`
+          : fmtDate(entryDates[0]))
+      : '—';
+
+    const cId = `cntr${rc}`;
+    const statusBg  = status==='OPEN' ? '#fef3c7' : '#f0fdf4';
+    const statusCol = status==='OPEN' ? '#d97706' : '#16a34a';
+
+    html += `<div class="table-wrap" style="margin-bottom:18px;">
+    <table><thead>
+      <tr class="date-group-header" onclick="tgl('${cId}')">
+        <td colspan="12">
+          <div style="display:flex;align-items:center;gap:12px;">
+            <span id="arr-${cId}">▶</span>
+            <span style="background:#EEEDFE;color:#3C3489;font-size:0.82rem;font-weight:800;padding:3px 12px;border-radius:20px;">Cntr${rc}</span>
+            <span style="font-size:0.82rem;font-weight:600;color:var(--text0);">${dateRange}</span>
+            <span style="font-size:0.72rem;color:var(--text2);">${legs.length} legs</span>
+            <span style="background:${statusBg};color:${statusCol};font-size:0.65rem;font-weight:700;padding:2px 8px;border-radius:10px;">${status}</span>
+            <span class="${cPnl>=0?'pnl-pos':'pnl-neg'}" style="margin-left:auto;font-size:0.92rem;">${status==='OPEN'?'<em style="color:var(--text3);font-size:0.78rem;">LIVE</em>':fmt(cPnl)}</span>
+          </div>
+        </td>
+      </tr>
+      <tr id="${cId}-hdr" style="display:none">
+        <th style="width:60px">Cntr</th><th>Algo</th><th>Broker</th>
+        <th>Symbol</th><th>Type</th><th>Action</th><th>Qty</th>
+        <th>Entry ₹</th><th>Exit ₹</th><th>Exit Reason</th><th>P&L ₹</th><th>Time</th><th style="width:36px;"></th>
+      </tr>
+    </thead><tbody id="${cId}">`;
+
+    legs.forEach(t => {
+      const h = t.hash||'';
+      html+=`<tr class="trade-row ${t.action==='BUY'?'buy-row':'sell-row'}${t.archived?' archived-row':''}" data-group="${cId}" style="display:none;">
+          <td><span style="background:#EEEDFE;color:#3C3489;font-size:0.65rem;font-weight:700;padding:1px 6px;border-radius:10px;">Cntr${rc}</span></td>
+          <td style="color:var(--text2);font-size:0.72rem;max-width:180px;overflow:hidden;text-overflow:ellipsis;" title="${t.algo_name}">${t.algo_name.length>22?t.algo_name.slice(0,20)+'…':t.algo_name}</td>
+          <td><span class="badge b-gray">${t.broker}</span></td>
+          <td style="color:var(--blue);font-size:0.73rem;" title="${t.symbol}">${t.symbol.length>22?t.symbol.slice(0,20)+'…':t.symbol}</td>
+          <td><span class="badge ${t.option_type==='CE'?'b-blue':t.option_type==='PE'?'b-red':'b-amber'}">${t.option_type}</span></td>
+          <td><span class="badge ${t.action==='SELL'?'b-red':'b-green'}">${t.action}</span></td>
+          <td><span class="editable" onclick="editCell(this,'${h}','quantity','number')">${t.quantity||'—'}</span></td>
+          <td>
+            <span class="confirm-wrap">
+              <span class="editable${t.entry_price_confirmed?' price-confirmed':''}" onclick="editCell(this,'${h}','entry_price','number')">${t.entry_price||'—'}</span>
+              ${t.entry_price ? `<button class="confirm-toggle${t.entry_price_confirmed?' confirmed':''}" onclick="toggleConfirm(this,'${h}','entry_price')" title="Manual Check Done"></button>` : ''}
+            </span>
+          </td>
+          <td>
+            <span class="confirm-wrap">
+              <span class="editable${t.exit_price_confirmed?' price-confirmed':''}" onclick="editCell(this,'${h}','exit_price','number')">${t.exit_price ? t.exit_price : '<em style=\'color:var(--text3);font-size:0.68rem\'>+ add</em>'}</span>
+              ${t.exit_price ? `<button class="confirm-toggle${t.exit_price_confirmed?' confirmed':''}" onclick="toggleConfirm(this,'${h}','exit_price')" title="Manual Check Done"></button>` : ''}
+            </span>
+          </td>
+          <td><span class="editable" onclick="editCell(this,'${h}','exit_reason','select')">${exitBadge(t.exit_reason)}</span></td>
+          <td class="${(t.pnl||0)>=0?'pnl-pos':'pnl-neg'}"><span class="editable" onclick="editCell(this,'${h}','pnl','number')">${fmt(t.pnl||0)}</span></td>
+          <td style="color:var(--text3);font-size:0.7rem;">
+            <span class="editable" onclick="editCell(this,'${h}','exit_date','date')">${t.exit_date||'—'}</span>
+            &nbsp;${t.entry_time||''}
+          </td>
+          <td style="text-align:center;white-space:nowrap;">
+            <button onclick="archiveTrade('${h}',${t.archived?'true':'false'})" title="${t.archived?'Unarchive':'Archive'}"
+              style="background:none;border:none;cursor:pointer;color:${t.archived?'#c2410c':'#d1d5db'};font-size:0.85rem;padding:2px 3px;border-radius:4px;"
+              onmouseover="this.style.color='#c2410c'" onmouseout="this.style.color='${t.archived?'#c2410c':'#d1d5db'}'">📦</button>
+            <button onclick="deleteTrade('${h}')" title="Delete trade"
+              style="background:none;border:none;cursor:pointer;color:#d1d5db;font-size:0.85rem;padding:2px 3px;border-radius:4px;"
+              onmouseover="this.style.color='var(--red)'" onmouseout="this.style.color='#d1d5db'">🗑</button>
+          </td>
+        </tr>`;
+    });
+
+    html += `</tbody></table></div>`;
+  });
+
+  el('journal-content').innerHTML = html;
+}
 async function loadDailyQuote() {
   const el2 = document.getElementById('daily-quote');
   if (!el2) return;
