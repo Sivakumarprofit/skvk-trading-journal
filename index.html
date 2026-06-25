@@ -2,6 +2,9 @@
 ==========================================================
   SKVK TRADING JOURNAL — VERSION HISTORY
 ==========================================================
+  v16.4 | 2026-06-25 | Fix: Journal trades visible — removed display:none from tbody (was hiding
+         |            | all rows regardless of individual row state); removed CntrN counter logic
+  ──────────────────────────────────────────────────────
   v16.3 | 2026-06-25 | Fix: Journal trade rows now start hidden (collapsed view working correctly);
          |            | Nav tabs: taller topbar (64px), solid blue pill active state, bigger font,
          |            | text wrapping enabled, darker inactive color;
@@ -376,7 +379,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>SKVK Trading Journal v16.3</title>
+<title>SKVK Trading Journal v16.4</title>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -1310,7 +1313,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div class="login-logo">📋</div>
     <div class="login-title">
       SKVK Trading Journal
-      <span class="login-vbadge">v16.3</span>
+      <span class="login-vbadge">v16.4</span>
     </div>
     <div class="login-sub">Sign in with your authorised Google account to access the journal.</div>
     <button class="google-signin-btn" id="googleSignInBtn" onclick="signInWithGoogle()">
@@ -1341,7 +1344,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div class="brand">
       <span class="brand-dot"></span>
       SKVK Trading Journal
-      <span style="font-size:0.78rem;background:#1a73e8;color:#fff;padding:2px 8px;border-radius:8px;font-weight:700;margin-left:4px;">v16.3</span>
+      <span style="font-size:0.78rem;background:#1a73e8;color:#fff;padding:2px 8px;border-radius:8px;font-weight:700;margin-left:4px;">v16.4</span>
     </div>
     <div id="brand-subline">
       <div id="db-status">● connecting…</div>
@@ -3408,7 +3411,7 @@ function renderJournal() {
         <th>Symbol</th><th>Type</th><th>Action</th><th>Qty</th>
         <th>Entry ₹</th><th>Exit ₹</th><th>Exit Reason</th><th>P&L ₹</th><th>Time</th><th style="width:36px;"></th>
       </tr>
-    </thead><tbody id="${dId}" style="display:none">`;
+    </thead><tbody id="${dId}">`;
 
     Object.keys(dKeys).sort((a,b) => {
       const [algoA] = a.split('|||');
