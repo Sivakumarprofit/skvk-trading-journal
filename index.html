@@ -2,6 +2,12 @@
 ==========================================================
   SKVK TRADING JOURNAL — VERSION HISTORY
 ==========================================================
+  v16.2 | 2026-06-25 | Daily Journal: default collapsed view; CntrN badge on algo-group headers;
+         |            | Nav reorder + renames: Daily Journal, System Statistics moved to 2nd,
+         |            | Upload Trade Reports, Compare Broker Execution, Manual Entry
+  ──────────────────────────────────────────────────────
+  v16.1 | 2026-06-25 | App Settings: moved Access Control card to bottom of page
+  ──────────────────────────────────────────────────────
   v16.0 | 2026-06-25 | Topbar redesign: brand + last-updated moved to two-line
          |            | left block freeing full width for nav tabs; sign-out
          |            | replaced with Windows-style SVG power button (red on hover)
@@ -365,7 +371,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>SKVK Trading Journal v16.0</title>
+<title>SKVK Trading Journal v16.2</title>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -1303,7 +1309,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div class="login-logo">📋</div>
     <div class="login-title">
       SKVK Trading Journal
-      <span class="login-vbadge">v16.0</span>
+      <span class="login-vbadge">v16.2</span>
     </div>
     <div class="login-sub">Sign in with your authorised Google account to access the journal.</div>
     <button class="google-signin-btn" id="googleSignInBtn" onclick="signInWithGoogle()">
@@ -1334,7 +1340,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div class="brand">
       <span class="brand-dot"></span>
       SKVK Trading Journal
-      <span style="font-size:0.78rem;background:#1a73e8;color:#fff;padding:2px 8px;border-radius:8px;font-weight:700;margin-left:4px;">v16.0</span>
+      <span style="font-size:0.78rem;background:#1a73e8;color:#fff;padding:2px 8px;border-radius:8px;font-weight:700;margin-left:4px;">v16.2</span>
     </div>
     <div id="brand-subline">
       <div id="db-status">● connecting…</div>
@@ -1344,14 +1350,14 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
 
   <!-- Nav tabs -->
   <nav class="nav-tabs">
-    <button class="nav-tab active" onclick="showPage('journal')"    data-page="journal">📋 <span class="tl">Journal</span></button>
-    <button class="nav-tab" onclick="showPage('dashboard')"  data-page="dashboard">📊 <span class="tl">P&L Report</span></button>
-    <button class="nav-tab" onclick="showPage('sysstat')"   data-page="sysstat">📈 <span class="tl">System<br>Statistics</span></button>
-    <button class="nav-tab" onclick="showPage('compare')"    data-page="compare">⚖️ <span class="tl">Compare</span></button>
-    <button class="nav-tab" onclick="showPage('manual')"     data-page="manual">✏️ <span class="tl">Manual</span></button>
-    <button class="nav-tab" onclick="showPage('upload')"     data-page="upload">⬆ <span class="tl">Upload Results</span></button>
-    <button class="nav-tab" onclick="showPage('stockmock')"  data-page="stockmock">🔬 <span class="tl">StockMock<br>Compare</span></button>
-    <button class="nav-tab" onclick="showPage('appsettings')" data-page="appsettings">🛠️ <span class="tl">App<br>Settings</span></button>
+    <button class="nav-tab active" onclick="showPage('journal')"     data-page="journal">📋 <span class="tl">Daily<br>Journal</span></button>
+    <button class="nav-tab" onclick="showPage('sysstat')"            data-page="sysstat">📈 <span class="tl">System<br>Statistics</span></button>
+    <button class="nav-tab" onclick="showPage('dashboard')"          data-page="dashboard">📊 <span class="tl">P&L Report</span></button>
+    <button class="nav-tab" onclick="showPage('upload')"             data-page="upload">⬆ <span class="tl">Upload Trade<br>Reports</span></button>
+    <button class="nav-tab" onclick="showPage('stockmock')"          data-page="stockmock">🔬 <span class="tl">StockMock<br>Compare</span></button>
+    <button class="nav-tab" onclick="showPage('compare')"            data-page="compare">⚖️ <span class="tl">Compare Broker<br>Execution</span></button>
+    <button class="nav-tab" onclick="showPage('manual')"             data-page="manual">✏️ <span class="tl">Manual<br>Entry</span></button>
+    <button class="nav-tab" onclick="showPage('appsettings')"        data-page="appsettings">🛠️ <span class="tl">App<br>Settings</span></button>
   </nav>
 
   <!-- Power button sign-out -->
@@ -1616,23 +1622,6 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
   </div>
 
   <div style="display:grid;gap:24px;max-width:960px;">
-
-    <!-- ── Access Control (admin only) ── -->
-    <div class="access-card" id="accessControlCard" style="display:none">
-      <h4>🔐 Access Control</h4>
-      <p style="font-size:0.8rem;color:var(--text2);margin-bottom:16px">
-        Manage which Google accounts can access this app. Only permanent admins can add or remove users.
-      </p>
-      <div id="acEmailList" style="margin-bottom:14px"></div>
-      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-        <input type="email" id="acNewEmail" placeholder="new.user@gmail.com"
-          style="flex:1;min-width:220px;padding:8px 11px;border:1.5px solid var(--border);
-                 border-radius:7px;font-size:0.84rem;outline:none;font-family:var(--font)">
-        <button class="btn btn-primary" onclick="acAddEmail()">
-          ➕ Add Email
-        </button>
-      </div>
-    </div>
 
     <!-- ── Add System Name ── -->
     <div style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:22px;box-shadow:var(--shadow-sm);">
@@ -1937,6 +1926,23 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
         ✓ Confirm Reset
       </button>
       <span id="reset-status" style="font-size:0.8rem;margin-left:12px;"></span>
+    </div>
+
+    <!-- ── Access Control (admin only) ── -->
+    <div class="access-card" id="accessControlCard" style="display:none">
+      <h4>🔐 Access Control</h4>
+      <p style="font-size:0.8rem;color:var(--text2);margin-bottom:16px">
+        Manage which Google accounts can access this app. Only permanent admins can add or remove users.
+      </p>
+      <div id="acEmailList" style="margin-bottom:14px"></div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <input type="email" id="acNewEmail" placeholder="new.user@gmail.com"
+          style="flex:1;min-width:220px;padding:8px 11px;border:1.5px solid var(--border);
+                 border-radius:7px;font-size:0.84rem;outline:none;font-family:var(--font)">
+        <button class="btn btn-primary" onclick="acAddEmail()">
+          ➕ Add Email
+        </button>
+      </div>
     </div>
 
   </div>
@@ -3389,19 +3395,19 @@ function renderJournal() {
       <tr class="date-group-header" onclick="tgl('${dId}')">
         <td colspan="12">
           <div style="display:flex;align-items:center;gap:14px;">
-            <span id="arr-${dId}">▼</span>
+            <span id="arr-${dId}">▶</span>
             <span style="font-family:var(--display);font-size:0.92rem;">${fmtDate(date)}</span>
             <span style="font-size:0.72rem;color:var(--text2);">${totalGroups} algo(s) · ${totalLegs} legs</span>
             <span class="${dPnl>=0?'pnl-pos':'pnl-neg'}" style="margin-left:auto;font-size:0.92rem;">${fmt(dPnl)}</span>
           </div>
         </td>
       </tr>
-      <tr id="${dId}-hdr">
+      <tr id="${dId}-hdr" style="display:none">
         <th style="width:80px">Day</th><th>Algo</th><th>Broker</th>
         <th>Symbol</th><th>Type</th><th>Action</th><th>Qty</th>
         <th>Entry ₹</th><th>Exit ₹</th><th>Exit Reason</th><th>P&L ₹</th><th>Time</th><th style="width:36px;"></th>
       </tr>
-    </thead><tbody id="${dId}">`;
+    </thead><tbody id="${dId}" style="display:none">`;
 
     Object.keys(dKeys).sort((a,b) => {
       const [algoA] = a.split('|||');
@@ -3415,15 +3421,16 @@ function renderJournal() {
       const aId=dId+'_'+safeKey(key);
       const clientLabel = clientId ? `<span class="badge b-gray" style="font-size:0.65rem;">${clientId}</span>` : '';
 
-      html+=`<tr class="algo-group-header ${aPnl>=0?'pnl-pos-row':'pnl-neg-row'}" data-group="${dId}" onclick="tgl('${aId}')">
+      html+=`<tr class="algo-group-header ${aPnl>=0?'pnl-pos-row':'pnl-neg-row'}" data-group="${dId}" style="display:none" onclick="tgl('${aId}')">
         <td><span class="day-badge">Day ${dayN}</span></td>
         <td colspan="9">
           <div style="display:flex;align-items:center;gap:8px;">
-            <span id="arr-${aId}">▼</span>
+            <span id="arr-${aId}">▶</span>
             <span style="font-weight:600;">${algoName}</span>
             <span class="badge b-gray" style="font-size:0.65rem;">${broker}</span>
             ${clientLabel}
             <span class="badge b-gray">${legs.length} legs</span>
+            <span style="background:#EEEDFE;color:#3C3489;font-size:0.68rem;font-weight:700;padding:2px 8px;border-radius:20px;">Cntr${dayN}</span>
           </div>
         </td>
         <td class="${aPnl>=0?'pnl-pos':'pnl-neg'}" style="font-weight:700;">${fmt(aPnl)}</td>
