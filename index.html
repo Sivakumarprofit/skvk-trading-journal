@@ -2,6 +2,13 @@
 ==========================================================
   SKVK TRADING JOURNAL — VERSION HISTORY
 ==========================================================
+  v16.5 | 2026-06-25 | Tradetron parser: proper Entry/Exit pairing by condition_id→condition_parent_id
+         |            | + Instrument match; real P&L from price diff × qty; OPEN legs flagged;
+         |            | Journal: CntrN uses run_counter for Tradetron, computed for Quantleap;
+         |            | Day N badge removed — CntrN pill only; Day column → Cntr;
+         |            | Nav: P&L Report → P&L Report-System wise; new P&L Report-Account wise tab;
+         |            | Account wise page: weekly tile cards (← → nav) + full year heatmap & stats
+  ──────────────────────────────────────────────────────
   v16.4 | 2026-06-25 | Fix: Journal trades visible — removed display:none from tbody (was hiding
          |            | all rows regardless of individual row state); removed CntrN counter logic
   ──────────────────────────────────────────────────────
@@ -379,7 +386,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>SKVK Trading Journal v16.4</title>
+<title>SKVK Trading Journal v16.5</title>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -1313,7 +1320,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div class="login-logo">📋</div>
     <div class="login-title">
       SKVK Trading Journal
-      <span class="login-vbadge">v16.4</span>
+      <span class="login-vbadge">v16.5</span>
     </div>
     <div class="login-sub">Sign in with your authorised Google account to access the journal.</div>
     <button class="google-signin-btn" id="googleSignInBtn" onclick="signInWithGoogle()">
@@ -1344,7 +1351,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div class="brand">
       <span class="brand-dot"></span>
       SKVK Trading Journal
-      <span style="font-size:0.78rem;background:#1a73e8;color:#fff;padding:2px 8px;border-radius:8px;font-weight:700;margin-left:4px;">v16.4</span>
+      <span style="font-size:0.78rem;background:#1a73e8;color:#fff;padding:2px 8px;border-radius:8px;font-weight:700;margin-left:4px;">v16.5</span>
     </div>
     <div id="brand-subline">
       <div id="db-status">● connecting…</div>
@@ -1356,7 +1363,8 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
   <nav class="nav-tabs">
     <button class="nav-tab active" onclick="showPage('journal')"     data-page="journal">📋 <span class="tl">Daily<br>Journal</span></button>
     <button class="nav-tab" onclick="showPage('sysstat')"            data-page="sysstat">📈 <span class="tl">System<br>Statistics</span></button>
-    <button class="nav-tab" onclick="showPage('dashboard')"          data-page="dashboard">📊 <span class="tl">P&L Report</span></button>
+    <button class="nav-tab" onclick="showPage('dashboard')"          data-page="dashboard">📊 <span class="tl">P&L Report-<br>System wise</span></button>
+    <button class="nav-tab" onclick="showPage('acctreport')"         data-page="acctreport">👤 <span class="tl">P&L Report-<br>Account wise</span></button>
     <button class="nav-tab" onclick="showPage('upload')"             data-page="upload">⬆ <span class="tl">Upload Trade<br>Reports</span></button>
     <button class="nav-tab" onclick="showPage('stockmock')"          data-page="stockmock">🔬 <span class="tl">StockMock<br>Compare</span></button>
     <button class="nav-tab" onclick="showPage('compare')"            data-page="compare">⚖️ <span class="tl">Compare Broker<br>Execution</span></button>
@@ -1493,6 +1501,74 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
       </select>
     </div>
     <div id="heatmap-drilldown" style="margin-top:12px;"></div>
+  </div>
+</div>
+
+<!-- ══════════ P&L REPORT - ACCOUNT WISE ══════════ -->
+<div id="page-acctreport" class="page">
+  <div class="page-header">
+    <div>
+      <div class="page-title">P&L Report — Account wise</div>
+      <div class="page-subtitle">Select an account to view date-wise and annual P&L</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;">
+      <label style="font-size:0.82rem;font-weight:600;color:var(--text1);">Account:</label>
+      <select id="acct-select" onchange="renderAcctReport()"
+        style="padding:7px 14px;border:1.5px solid var(--border);border-radius:8px;font-size:0.85rem;outline:none;background:#fff;min-width:220px;font-family:var(--font);">
+        <option value="">— Select Account —</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- TOP HALF: Weekly tile cards -->
+  <div id="acct-week-section" style="display:none;">
+    <div style="display:flex;align-items:center;gap:16px;margin-bottom:14px;">
+      <button onclick="acctWeekNav(-1)" style="width:32px;height:32px;border-radius:50%;border:1.5px solid var(--border);background:#fff;cursor:pointer;font-size:1rem;display:flex;align-items:center;justify-content:center;">‹</button>
+      <div id="acct-week-label" style="font-size:0.9rem;font-weight:700;color:var(--text0);min-width:160px;text-align:center;"></div>
+      <button onclick="acctWeekNav(1)" style="width:32px;height:32px;border-radius:50%;border:1.5px solid var(--border);background:#fff;cursor:pointer;font-size:1rem;display:flex;align-items:center;justify-content:center;">›</button>
+    </div>
+    <div id="acct-week-tiles" style="display:flex;gap:12px;flex-wrap:nowrap;overflow-x:auto;padding-bottom:8px;"></div>
+  </div>
+
+  <!-- divider -->
+  <div style="border-top:2px solid var(--border);margin:28px 0 22px;"></div>
+
+  <!-- BOTTOM HALF: Full year stats + heatmap -->
+  <div id="acct-year-section" style="display:none;">
+    <div class="stat-grid" id="acct-stat-grid">
+      <div class="stat-card"><div class="stat-card-icon">💰</div><div class="stat-label">Total P&L</div><div class="stat-value neutral" id="acct-s-pnl">—</div><div class="stat-sub">Full year</div><div class="stat-bar" id="acct-s-pnl-bar" style="background:var(--border)"></div></div>
+      <div class="stat-card"><div class="stat-card-icon">📈</div><div class="stat-label">Total Trades</div><div class="stat-value neutral" id="acct-s-trades">—</div><div class="stat-sub">Executed legs</div></div>
+      <div class="stat-card"><div class="stat-card-icon">🎯</div><div class="stat-label">Win Rate</div><div class="stat-value neutral" id="acct-s-wr">—</div><div class="stat-sub">Days with profit</div></div>
+      <div class="stat-card"><div class="stat-card-icon">🚀</div><div class="stat-label">Best Month</div><div class="stat-value positive" id="acct-s-best">—</div><div class="stat-sub" id="acct-s-best-lbl">—</div></div>
+      <div class="stat-card"><div class="stat-card-icon">⚠️</div><div class="stat-label">Worst Month</div><div class="stat-value negative" id="acct-s-worst">—</div><div class="stat-sub" id="acct-s-worst-lbl">—</div></div>
+      <div class="stat-card"><div class="stat-card-icon">📅</div><div class="stat-label">Trading Days</div><div class="stat-value neutral" id="acct-s-days">—</div><div class="stat-sub">Days with trades</div></div>
+    </div>
+
+    <div style="margin-top:28px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:10px;">
+        <div>
+          <div style="font-size:1.1rem;font-weight:800;font-family:var(--display);">Daily P&L Heatmap</div>
+          <div style="font-size:0.75rem;color:var(--text2);margin-top:2px;">Full year · P&L per trading day</div>
+        </div>
+        <div style="display:flex;gap:5px;font-size:0.68rem;align-items:center;">
+          <span style="background:#16a34a;color:#fff;padding:2px 8px;border-radius:4px;">Profit</span>
+          <span style="background:#dc2626;color:#fff;padding:2px 8px;border-radius:4px;">Loss</span>
+          <span style="background:#f3f4f6;color:#9ca3af;padding:2px 8px;border-radius:4px;border:1px solid #e5e7eb;">No trade</span>
+        </div>
+      </div>
+      <div id="acct-heatmap"></div>
+    </div>
+
+    <div style="margin-top:28px;">
+      <div style="font-size:1.1rem;font-weight:800;font-family:var(--display);margin-bottom:12px;">Monthly P&L</div>
+      <div class="chart-card" style="max-width:900px;">
+        <canvas id="acct-chart-monthly" style="max-height:230px;"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div id="acct-empty" style="text-align:center;padding:60px 0;color:var(--text3);font-size:0.9rem;">
+    ← Select an account above to view P&L
   </div>
 </div>
 
@@ -2484,6 +2560,142 @@ let allTrades = [];
 let algoMeta  = {};
 let uploads   = [];
 let mChart = null, aChart = null;
+let acctChart = null;
+let acctWeekOffset = 0; // 0 = current week, -1 = last week, etc.
+let currentAcct = '';
+
+function initAcctReport() {
+  // Populate account dropdown from all trades
+  const accounts = [...new Set(allTrades.map(t => t.client_id||t.broker||'').filter(Boolean))].sort();
+  const sel = document.getElementById('acct-select');
+  if (!sel) return;
+  sel.innerHTML = '<option value="">— Select Account —</option>' +
+    accounts.map(a => `<option value="${a}">${a}</option>`).join('');
+  if (currentAcct) { sel.value = currentAcct; renderAcctReport(); }
+}
+
+function renderAcctReport() {
+  const sel = document.getElementById('acct-select');
+  currentAcct = sel?.value || '';
+  document.getElementById('acct-empty').style.display = currentAcct ? 'none' : '';
+  document.getElementById('acct-week-section').style.display = currentAcct ? '' : 'none';
+  document.getElementById('acct-year-section').style.display = currentAcct ? '' : 'none';
+  if (!currentAcct) return;
+
+  const tr = allTrades.filter(t => !t.archived && (t.client_id||t.broker||'') === currentAcct);
+  renderAcctWeekTiles(tr);
+  renderAcctYearStats(tr);
+}
+
+function acctWeekNav(dir) {
+  acctWeekOffset += dir;
+  const sel = document.getElementById('acct-select');
+  currentAcct = sel?.value || '';
+  const tr = allTrades.filter(t => !t.archived && (t.client_id||t.broker||'') === currentAcct);
+  renderAcctWeekTiles(tr);
+}
+
+function renderAcctWeekTiles(tr) {
+  // Build dayMap for this account
+  const dayPnl = {};
+  tr.forEach(t => { if(t.entry_date) dayPnl[t.entry_date] = (dayPnl[t.entry_date]||0) + (t.pnl||0); });
+
+  // Get Mon of current week + offset
+  const today = new Date();
+  const dayOfWeek = today.getDay(); // 0=Sun
+  const diffToMon = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+  const monday = new Date(today);
+  monday.setDate(today.getDate() + diffToMon + acctWeekOffset * 7);
+
+  const days = [];
+  for (let i = 0; i < 5; i++) {
+    const d = new Date(monday);
+    d.setDate(monday.getDate() + i);
+    days.push(d);
+  }
+
+  const weekStart = days[0].toLocaleDateString('en-IN', {day:'numeric', month:'short'});
+  const weekEnd   = days[4].toLocaleDateString('en-IN', {day:'numeric', month:'short', year:'numeric'});
+  document.getElementById('acct-week-label').textContent = `${weekStart} – ${weekEnd}`;
+
+  const tiles = document.getElementById('acct-week-tiles');
+  const todayStr = today.toISOString().slice(0,10);
+
+  tiles.innerHTML = days.map(d => {
+    const ds = d.toISOString().slice(0,10);
+    const pnl = dayPnl[ds] ?? null;
+    const dayName = d.toLocaleDateString('en-IN', {weekday:'short'});
+    const dateNum = d.toLocaleDateString('en-IN', {day:'numeric', month:'short'});
+    const isToday = ds === todayStr;
+    const hasTrade = pnl !== null;
+
+    let bg = '#f3f4f6', color = '#9ca3af', border = '#e5e7eb';
+    if (hasTrade && pnl > 0)  { bg = '#f0fdf4'; color = '#16a34a'; border = '#86efac'; }
+    if (hasTrade && pnl < 0)  { bg = '#fff5f5'; color = '#dc2626'; border = '#fca5a5'; }
+    if (hasTrade && pnl === 0){ bg = '#f8fafc'; color = '#6b7280'; border = '#e5e7eb'; }
+    if (isToday) border = '#1a73e8';
+
+    return `<div style="flex:1;min-width:120px;max-width:180px;background:${bg};border:2px solid ${border};
+      border-radius:14px;padding:16px 14px;text-align:center;${isToday?'box-shadow:0 0 0 3px #1a73e820;':''}">
+      <div style="font-size:0.7rem;font-weight:600;color:#6b7280;letter-spacing:0.04em;">${dayName}</div>
+      <div style="font-size:0.88rem;font-weight:700;color:var(--text0);margin:4px 0 10px;">${dateNum}</div>
+      <div style="font-size:1.15rem;font-weight:800;color:${color};">
+        ${hasTrade ? fmt(pnl) : '<span style="color:#d1d5db;font-size:0.8rem;">No trades</span>'}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderAcctYearStats(tr) {
+  const year = new Date().getFullYear().toString();
+  const trYear = tr.filter(t => (t.entry_date||'').startsWith(year));
+
+  // Day-wise P&L
+  const dayPnl = {};
+  trYear.forEach(t => { if(t.entry_date) dayPnl[t.entry_date] = (dayPnl[t.entry_date]||0) + (t.pnl||0); });
+
+  const total = Object.values(dayPnl).reduce((s,v)=>s+v, 0);
+  const winDays = Object.values(dayPnl).filter(v=>v>0).length;
+  const totalDays = Object.keys(dayPnl).length;
+  const wr = totalDays ? Math.round(winDays/totalDays*100) : 0;
+
+  // Monthly
+  const mMap = {};
+  trYear.forEach(t => { const ym=(t.entry_date||'').slice(0,7); if(ym) mMap[ym]=(mMap[ym]||0)+(t.pnl||0); });
+  const months = Object.keys(mMap).sort();
+  const bestM  = months.length ? months.reduce((b,m)=>(mMap[m]||0)>(mMap[b]||0)?m:b, months[0]) : null;
+  const worstM = months.length ? months.reduce((b,m)=>(mMap[m]||0)<(mMap[b]||0)?m:b, months[0]) : null;
+
+  document.getElementById('acct-s-pnl').textContent = fmt(total);
+  document.getElementById('acct-s-pnl').className = 'stat-value '+(total>=0?'positive':'negative');
+  document.getElementById('acct-s-trades').textContent = trYear.length;
+  document.getElementById('acct-s-wr').textContent = wr+'%';
+  document.getElementById('acct-s-days').textContent = totalDays;
+  document.getElementById('acct-s-best').textContent  = bestM  ? fmt(mMap[bestM])  : '—';
+  document.getElementById('acct-s-best-lbl').textContent  = bestM  ? fmtMonth(bestM)  : '—';
+  document.getElementById('acct-s-worst').textContent = worstM ? fmt(mMap[worstM]) : '—';
+  document.getElementById('acct-s-worst-lbl').textContent = worstM ? fmtMonth(worstM) : '—';
+
+  // Heatmap
+  document.getElementById('acct-heatmap').innerHTML = buildOneHeatmap(currentAcct, trYear, '#1a73e8');
+
+  // Monthly chart
+  const keys = months;
+  const vals = keys.map(k => mMap[k]);
+  const ctx = document.getElementById('acct-chart-monthly').getContext('2d');
+  if (acctChart) acctChart.destroy();
+  acctChart = new Chart(ctx, {
+    type: 'bar',
+    data: { labels: keys.map(fmtMonth), datasets: [{ data: vals,
+      backgroundColor: vals.map(v=>v>=0?'rgba(26,158,92,0.75)':'rgba(217,48,37,0.75)'),
+      borderRadius: 5, borderSkipped: false }] },
+    options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { color: 'rgba(0,0,0,0.04)' }, ticks: { color: '#6b7280', font: { size: 11 } } },
+        y: { grid: { color: 'rgba(0,0,0,0.04)' }, ticks: { color: '#6b7280', font: { size: 11 }, callback: v=>fmt(v) } }
+      }}
+  });
+}
 let currentYear = String(new Date().getFullYear());
 let selectedAlgos = new Set(); // empty = all selected
 let selectedUnderlying = '';   // empty = all
@@ -2584,6 +2796,7 @@ function showPage(name) {
   if (name === 'algos') { renderGroupList(); renderAlgoPage(); }
   if (name === 'compare') { populateCompareSelects(); }
   if (name === 'sysstat') { updateSysStatDropdown(); renderSysStat(); }
+  if (name === 'acctreport') { acctWeekOffset = 0; initAcctReport(); }
 }
 
 // ════════════════════════════════════════════════════
@@ -2842,78 +3055,103 @@ function parseZebu(csv) {
 function parseTradetron(csv, algoName) {
   const { data } = Papa.parse(csv, { header: true, skipEmptyLines: true, trimHeaders: true });
 
-  return data.filter(r => r.Instrument && r.entry_date && r.price).map(r => {
-    // Parse instrument: OPTIDX_NIFTY_23JUN2026_CE_24100
-    const parts = (r.Instrument || '').split('_');
-    // underlying = parts[1] (NIFTY), expiry = parts[2] (23JUN2026), type = parts[3] (CE/PE), strike = parts[4]
-    const underlying = parts[1] || r.underlying || 'NIFTY';
-    const expiry     = parts[2] || '';
-    const optionType = r.option_type || parts[3] || 'CE';
-    const strike     = r.strike || parts[4] || '';
+  // Helper: parse instrument parts
+  function parseInstrument(instr) {
+    const parts = (instr || '').split('_');
+    return {
+      underlying: parts[1] || 'NIFTY',
+      expiry:     parts[2] || '',
+      optionType: parts[3] || 'CE',
+      strike:     parts[4] || '',
+      symbol:     `${parts[1]||''}${parts[2]||''}${parts[3]||''}${parts[4]||''}`
+    };
+  }
 
-    // Normalise dates  (format in file: "16-Jun-26")
-    const entryDate = normTTDate(r.entry_date || '');
-    const exitDate  = normTTDate(r.entry_date || ''); // For Tradetron each row is standalone; exit tracked by condition_type
+  const rows = data.filter(r => r.Instrument && r.entry_date && r.price);
 
-    // Determine if this row is an Entry or Exit leg
-    const condType = (r.condition_type || '').toLowerCase(); // entry / exit / universal exit
-    const isEntry  = condType === 'entry';
-    const isExit   = condType === 'exit' || condType === 'universal exit';
+  // Separate entries and exits
+  const entries = rows.filter(r => (r.condition_type||'').toLowerCase() === 'entry');
+  const exits   = rows.filter(r => {
+    const ct = (r.condition_type||'').toLowerCase();
+    return ct === 'exit' || ct === 'universal exit';
+  });
 
-    // txn_type: S=Sell, B=Buy
-    const txn = (r.txn_type || '').toUpperCase();
-    const action = txn === 'B' ? 'BUY' : 'SELL';
+  const paired = [];
 
-    // STBT: Sell on entry day, Buy back next day → short overnight
-    // BTST: Buy on entry day, Sell next day → long overnight
-    // Within Tradetron export each row is one execution leg.
-    // We detect the pattern from action + condition_type:
-    // STBT row: action=SELL + Entry, or action=BUY + Exit(next day)
-    // BTST row: action=BUY + Entry, or action=SELL + Exit(next day)
-    let tradeType = 'INTRADAY';
-    if (isEntry && txn === 'S') tradeType = 'STBT';
-    else if (isEntry && txn === 'B') tradeType = 'BTST';
-    else if (isExit) {
-      // For exit legs, check if entry_date differs from "created_at" or just label as EXIT
-      tradeType = txn === 'B' ? 'STBT_EXIT' : 'BTST_EXIT';
+  entries.forEach(entry => {
+    const inst       = parseInstrument(entry.Instrument);
+    const entryTxn   = (entry.txn_type||'').toUpperCase();   // B or S
+    const exitTxn    = entryTxn === 'S' ? 'B' : 'S';         // reversed
+    const condId     = entry.condition_id || entry.condition_parent_id || '';
+    const runCounter = parseInt(entry.run_counter||'1') || 1;
+    const qty        = Math.abs(parseFloat((entry.quantity||'0').toString().replace(/,/g,''))||0);
+    const entryPrice = parseFloat((entry.price||'0').toString().replace(/,/g,''))||0;
+    const entryDate  = normTTDate(entry.entry_date||'');
+    const action     = entryTxn === 'B' ? 'BUY' : 'SELL';
+
+    // Try to find matching exit: same Instrument + reversed txn_type, condition_parent_id === condId
+    let matchExit = exits.find(ex =>
+      ex.Instrument === entry.Instrument &&
+      (ex.txn_type||'').toUpperCase() === exitTxn &&
+      String(ex.condition_parent_id) === String(condId)
+    );
+
+    // If no regular exit, try Universal Exit (condition_parent_id=0, matches by instrument+txn)
+    if (!matchExit) {
+      matchExit = exits.find(ex =>
+        ex.Instrument === entry.Instrument &&
+        (ex.txn_type||'').toUpperCase() === exitTxn &&
+        (ex.condition_type||'').toLowerCase() === 'universal exit'
+      );
     }
 
-    const qty  = Math.abs(parseFloat((r.quantity || '0').toString().replace(/,/g,'')) || 0);
-    const price = parseFloat((r.price || '0').toString().replace(/,/g,'')) || 0;
-    const runCounter = parseInt(r.run_counter || '1') || 1;
+    const exitPrice = matchExit ? (parseFloat((matchExit.price||'0').toString().replace(/,/g,''))||0) : 0;
+    const exitDate  = matchExit ? normTTDate(matchExit.entry_date||'') : '';
+    const exitTime  = matchExit ? normTTTime(matchExit.entry_time||'') : '';
+    const exitReason= matchExit
+      ? ((matchExit.condition_type||'').toLowerCase()==='universal exit' ? 'EOD' : 'TARGET')
+      : 'OPEN';
 
-    // Symbol reconstruction for display
-    const symbol = `${underlying}${expiry}${optionType}${strike}`;
+    // Compute real P&L: SELL entry profits when exit < entry
+    let pnl = 0;
+    if (exitPrice) {
+      pnl = action === 'SELL'
+        ? (entryPrice - exitPrice) * qty
+        : (exitPrice - entryPrice) * qty;
+      pnl = Math.round(pnl * 100) / 100;
+    }
 
-    return {
+    paired.push({
       source:       'tradetron',
-      broker:       (r.broker || 'tradetron').toLowerCase() || 'tradetron',
-      client_id:    r.broker || '',
+      broker:       (entry.broker || 'tradetron').toLowerCase(),
+      client_id:    entry.broker || '',
       algo_name:    algoName,
-      underlying:   underlying,
-      symbol:       symbol,
-      option_type:  optionType,
-      strike:       strike,
-      expiry_date:  normTTDate(r.expiry || ''),
+      underlying:   inst.underlying,
+      symbol:       inst.symbol,
+      option_type:  inst.optionType,
+      strike:       inst.strike,
+      expiry_date:  normTTDate(entry.expiry||''),
       action:       action,
       quantity:     qty,
       entry_date:   entryDate,
-      entry_time:   normTTTime(r.entry_time || ''),
-      entry_price:  price,
-      exit_date:    '',
-      exit_time:    '',
-      exit_price:   0,
-      exit_reason:  isExit ? 'EOD' : '',
-      pnl:          parseFloat((r.amount || '0').toString().replace(/,/g,'')) || 0,
-      condition_type: condType,
-      trade_type:   tradeType,
+      entry_time:   normTTTime(entry.entry_time||''),
+      entry_price:  entryPrice,
+      exit_date:    exitDate,
+      exit_time:    exitTime,
+      exit_price:   exitPrice,
+      exit_reason:  exitReason,
+      pnl:          pnl,
+      condition_type: 'entry',
+      trade_type:   exitDate && exitDate !== entryDate ? 'OVERNIGHT' : 'INTRADAY',
       run_counter:  runCounter,
-      leg_id:       r.leg_id || '',
+      leg_id:       entry.leg_id || '',
       is_re_entry:  false,
-      status:       'ACTIVE',
+      status:       exitPrice ? 'ACTIVE' : 'OPEN',
       created_at:   new Date().toISOString()
-    };
-  }).filter(t => t.entry_date);
+    });
+  });
+
+  return paired.filter(t => t.entry_date);
 }
 
 // Parse Tradetron date: "16-Jun-26" → "2026-06-16"
@@ -3407,7 +3645,7 @@ function renderJournal() {
         </td>
       </tr>
       <tr id="${dId}-hdr" style="display:none">
-        <th style="width:80px">Day</th><th>Algo</th><th>Broker</th>
+        <th style="width:60px">Cntr</th><th>Algo</th><th>Broker</th>
         <th>Symbol</th><th>Type</th><th>Action</th><th>Qty</th>
         <th>Entry ₹</th><th>Exit ₹</th><th>Exit Reason</th><th>P&L ₹</th><th>Time</th><th style="width:36px;"></th>
       </tr>
@@ -3421,12 +3659,14 @@ function renderJournal() {
       const legs=dKeys[key];
       const [algoName, broker, clientId] = key.split('|||');
       const aPnl=legs.filter(t=>!t.archived).reduce((s,t)=>s+(t.pnl||0),0);
-      const dayN=dayMap[key]?.[date]||1;
+      const dayN = legs[0]?.source === 'tradetron'
+        ? (legs[0]?.run_counter || 1)
+        : (dayMap[key]?.[date] || 1);
       const aId=dId+'_'+safeKey(key);
       const clientLabel = clientId ? `<span class="badge b-gray" style="font-size:0.65rem;">${clientId}</span>` : '';
 
       html+=`<tr class="algo-group-header ${aPnl>=0?'pnl-pos-row':'pnl-neg-row'}" data-group="${dId}" style="display:none" onclick="tgl('${aId}')">
-        <td><span class="day-badge">Day ${dayN}</span></td>
+        <td></td>
         <td colspan="9">
           <div style="display:flex;align-items:center;gap:8px;">
             <span id="arr-${aId}">▶</span>
