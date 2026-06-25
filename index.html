@@ -2,6 +2,13 @@
 ==========================================================
   SKVK TRADING JOURNAL — VERSION HISTORY
 ==========================================================
+  v16.9 | 2026-06-25 | P&L attribution uses pnlDate() = exit_date if available, else entry_date;
+         |            | fixes STBT/BTST P&L showing on wrong day in all reports (heatmap, monthly,
+         |            | account wise tiles, system wise); Clear Data also uses pnlDate for range match
+  ──────────────────────────────────────────────────────
+  v16.8 | 2026-06-25 | Fix: Clear Data broker dropdown now shows individual accounts (client_id)
+         |            | instead of generic broker names; filter and delete by client_id correctly
+  ──────────────────────────────────────────────────────
   v16.7 | 2026-06-25 | Fix: parseQuantiply handles both old format (algo_name, profit_loss,
          |            | entry_price, exit_price) and new Quantleap format (strategy_name, pnl,
          |            | average_entry_price, exit_average_price, execution_date, closed_date)
@@ -393,7 +400,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>SKVK Trading Journal v16.7</title>
+<title>SKVK Trading Journal v16.9</title>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -1327,7 +1334,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div class="login-logo">📋</div>
     <div class="login-title">
       SKVK Trading Journal
-      <span class="login-vbadge">v16.7</span>
+      <span class="login-vbadge">v16.9</span>
     </div>
     <div class="login-sub">Sign in with your authorised Google account to access the journal.</div>
     <button class="google-signin-btn" id="googleSignInBtn" onclick="signInWithGoogle()">
@@ -1358,7 +1365,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div class="brand">
       <span class="brand-dot"></span>
       SKVK Trading Journal
-      <span style="font-size:0.78rem;background:#1a73e8;color:#fff;padding:2px 8px;border-radius:8px;font-weight:700;margin-left:4px;">v16.7</span>
+      <span style="font-size:0.78rem;background:#1a73e8;color:#fff;padding:2px 8px;border-radius:8px;font-weight:700;margin-left:4px;">v16.9</span>
     </div>
     <div id="brand-subline">
       <div id="db-status">● connecting…</div>
@@ -2606,7 +2613,7 @@ function acctWeekNav(dir) {
 function renderAcctWeekTiles(tr) {
   // Build dayMap for this account
   const dayPnl = {};
-  tr.forEach(t => { if(t.entry_date) dayPnl[t.entry_date] = (dayPnl[t.entry_date]||0) + (t.pnl||0); });
+  tr.forEach(t => { const pd=pnlDate(t); if(pd) dayPnl[pd] = (dayPnl[t.entry_date]||0) + (t.pnl||0); });
 
   // Get Mon of current week + offset
   const today = new Date();
@@ -2660,7 +2667,7 @@ function renderAcctYearStats(tr) {
 
   // Day-wise P&L
   const dayPnl = {};
-  trYear.forEach(t => { if(t.entry_date) dayPnl[t.entry_date] = (dayPnl[t.entry_date]||0) + (t.pnl||0); });
+  trYear.forEach(t => { const pd=pnlDate(t); if(pd) dayPnl[pd] = (dayPnl[t.entry_date]||0) + (t.pnl||0); });
 
   const total = Object.values(dayPnl).reduce((s,v)=>s+v, 0);
   const winDays = Object.values(dayPnl).filter(v=>v>0).length;
@@ -2669,7 +2676,7 @@ function renderAcctYearStats(tr) {
 
   // Monthly
   const mMap = {};
-  trYear.forEach(t => { const ym=(t.entry_date||'').slice(0,7); if(ym) mMap[ym]=(mMap[ym]||0)+(t.pnl||0); });
+  trYear.forEach(t => { const ym=(pnlDate(t)||'').slice(0,7); if(ym) mMap[ym]=(mMap[ym]||0)+(t.pnl||0); });
   const months = Object.keys(mMap).sort();
   const bestM  = months.length ? months.reduce((b,m)=>(mMap[m]||0)>(mMap[b]||0)?m:b, months[0]) : null;
   const worstM = months.length ? months.reduce((b,m)=>(mMap[m]||0)<(mMap[b]||0)?m:b, months[0]) : null;
@@ -3232,6 +3239,8 @@ function normDate(d) {
   if (/^\d{2}-\d{2}-\d{4}$/.test(d)) { const [dd,mm,yy]=d.split('-'); return `${yy}-${mm}-${dd}`; }
   return d.slice(0,10);
 }
+// P&L attribution date: use exit_date if available (handles STBT/BTST), else entry_date
+function pnlDate(t) { return (t.exit_date && t.exit_date >= t.entry_date) ? t.exit_date : t.entry_date; }
 function isoTime(s) { const m=(s||'').match(/T(\d{2}:\d{2})/); return m?m[1]:''; }
 function optType(s) { s=s.toUpperCase(); return s.endsWith('CE')?'CE':s.endsWith('PE')?'PE':s.includes('FUT')?'FUT':'OPT'; }
 function normExit(r) {
@@ -3259,7 +3268,7 @@ function renderDashboard() {
 
   // Monthly
   const mMap={};
-  tr.forEach(t=>{ const ym=(t.entry_date||'').slice(0,7); if(ym) mMap[ym]=(mMap[ym]||0)+(t.pnl||0); });
+  tr.forEach(t=>{ const ym=(pnlDate(t)||'').slice(0,7); if(ym) mMap[ym]=(mMap[ym]||0)+(t.pnl||0); });
   const months=Object.keys(mMap).sort();
   const bestM = months.reduce((b,m)=>(mMap[m]||0)>(mMap[b]||0)?m:b, months[0]);
   const worstM= months.reduce((b,m)=>(mMap[m]||0)<(mMap[b]||0)?m:b, months[0]);
@@ -3329,7 +3338,7 @@ function renderDashTable(tr, mMap) {
   if(!months.length){ el('dash-table').innerHTML='<div class="empty-state"><span class="eicon">📊</span><h3>No data for this period</h3></div>'; return; }
 
   const algoM={};
-  tr.forEach(t=>{ const ym=(t.entry_date||'').slice(0,7); if(!ym) return; if(!algoM[t.algo_name])algoM[t.algo_name]={}; algoM[t.algo_name][ym]=(algoM[t.algo_name][ym]||0)+(t.pnl||0); });
+  tr.forEach(t=>{ const ym=(pnlDate(t)||'').slice(0,7); if(!ym) return; if(!algoM[t.algo_name])algoM[t.algo_name]={}; algoM[t.algo_name][ym]=(algoM[t.algo_name][ym]||0)+(t.pnl||0); });
 
   // Column widths: first col wide, rest equal
   const colStyle = `padding:8px 14px;text-align:right;`;
@@ -3498,7 +3507,7 @@ function renderHeatmapDrilldown(){
     container.innerHTML=str.length?buildOneHeatmap(sName,str,null):'<div style="padding:12px;color:var(--text3);">No trades for this strategy</div>';
   }
 }
-function buildOneHeatmap(title,trades,color){const dayMap={};trades.forEach(t=>{if(t.entry_date)dayMap[t.entry_date]=(dayMap[t.entry_date]||0)+(t.pnl||0);});const maxAbs=Math.max(...Object.values(dayMap).map(v=>Math.abs(v)),1);const months=[];for(let m=1;m<=12;m++)months.push(currentYear+'-'+String(m).padStart(2,'0'));let html='<div style="margin-bottom:24px;"><div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">'+(color?'<span style="width:10px;height:10px;border-radius:50%;background:'+color+';display:inline-block;flex-shrink:0;"></span>':'')+'<span style="font-size:0.85rem;font-weight:700;color:var(--text0);">'+title+'</span></div><div style="overflow-x:auto;"><div style="display:flex;gap:8px;">';months.forEach(mk=>{const yr=parseInt(currentYear),mo=parseInt(mk.slice(5,7));const dim=new Date(yr,mo,0).getDate();const mLabel=new Date(mk+'-01').toLocaleDateString('en-IN',{month:'short',year:'2-digit'});const mTotal=Object.entries(dayMap).filter(([d])=>d.startsWith(mk)).reduce((s,[,v])=>s+v,0);const cap=capitalData[mk]||0;const mPct=(mTotal&&cap)?(mTotal/cap*100).toFixed(1)+'%':'';html+='<div style="flex-shrink:0;"><div style="font-size:.7rem;font-weight:700;color:var(--text1);text-align:center;margin-bottom:3px;white-space:nowrap;">'+mLabel+(mTotal?'<span style="color:'+(mTotal>=0?'#0d9488':'#4b5563')+';margin-left:3px;">'+fmtHeat(mTotal)+(mPct?' ('+mPct+')':'')+'</span>':'')+'</div><table class="heatmap-table"><tbody>';for(let d=1;d<=dim;d++){const ds=mk+'-'+String(d).padStart(2,'0');const pnl=dayMap[ds]??null;const dow=new Date(ds).toLocaleDateString('en-IN',{weekday:'short'});const isW=['Sat','Sun'].includes(dow);const cls=pnl===null?(isW?'heatmap-empty':'heatmap-zero'):getHeatClass(pnl,maxAbs);const pct=(pnl!==null&&cap)?(pnl/cap*100).toFixed(1)+'%':'';html+='<tr><td class="heatmap-cell '+cls+'" title="'+ds+(pnl!==null?' '+fmt(pnl)+(pct?' ('+pct+')':''):'')+'"><div class="hm-day">'+d+' '+dow+'</div><div class="hm-val">'+(pnl!==null?fmtHeat(pnl):(isW?'-':'-'))+'</div>'+(pct?'<div class="hm-pct">'+pct+'</div>':'')+'</td></tr>';}html+='</tbody></table></div>';});html+='</div></div></div>';return html;}
+function buildOneHeatmap(title,trades,color){const dayMap={};trades.forEach(t=>{const pd=pnlDate(t);if(pd)dayMap[pd]=(dayMap[pd]||0)+(t.pnl||0);});const maxAbs=Math.max(...Object.values(dayMap).map(v=>Math.abs(v)),1);const months=[];for(let m=1;m<=12;m++)months.push(currentYear+'-'+String(m).padStart(2,'0'));let html='<div style="margin-bottom:24px;"><div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">'+(color?'<span style="width:10px;height:10px;border-radius:50%;background:'+color+';display:inline-block;flex-shrink:0;"></span>':'')+'<span style="font-size:0.85rem;font-weight:700;color:var(--text0);">'+title+'</span></div><div style="overflow-x:auto;"><div style="display:flex;gap:8px;">';months.forEach(mk=>{const yr=parseInt(currentYear),mo=parseInt(mk.slice(5,7));const dim=new Date(yr,mo,0).getDate();const mLabel=new Date(mk+'-01').toLocaleDateString('en-IN',{month:'short',year:'2-digit'});const mTotal=Object.entries(dayMap).filter(([d])=>d.startsWith(mk)).reduce((s,[,v])=>s+v,0);const cap=capitalData[mk]||0;const mPct=(mTotal&&cap)?(mTotal/cap*100).toFixed(1)+'%':'';html+='<div style="flex-shrink:0;"><div style="font-size:.7rem;font-weight:700;color:var(--text1);text-align:center;margin-bottom:3px;white-space:nowrap;">'+mLabel+(mTotal?'<span style="color:'+(mTotal>=0?'#0d9488':'#4b5563')+';margin-left:3px;">'+fmtHeat(mTotal)+(mPct?' ('+mPct+')':'')+'</span>':'')+'</div><table class="heatmap-table"><tbody>';for(let d=1;d<=dim;d++){const ds=mk+'-'+String(d).padStart(2,'0');const pnl=dayMap[ds]??null;const dow=new Date(ds).toLocaleDateString('en-IN',{weekday:'short'});const isW=['Sat','Sun'].includes(dow);const cls=pnl===null?(isW?'heatmap-empty':'heatmap-zero'):getHeatClass(pnl,maxAbs);const pct=(pnl!==null&&cap)?(pnl/cap*100).toFixed(1)+'%':'';html+='<tr><td class="heatmap-cell '+cls+'" title="'+ds+(pnl!==null?' '+fmt(pnl)+(pct?' ('+pct+')':''):'')+'"><div class="hm-day">'+d+' '+dow+'</div><div class="hm-val">'+(pnl!==null?fmtHeat(pnl):(isW?'-':'-'))+'</div>'+(pct?'<div class="hm-pct">'+pct+'</div>':'')+'</td></tr>';}html+='</tbody></table></div>';});html+='</div></div></div>';return html;}
 
 function renderBrokerTable(tr, months) {
   if (!months || !months.length) { el('broker-table').innerHTML=''; return; }
@@ -3989,26 +3998,29 @@ async function executeSMClear() {
 function populateBrokerClearDropdown() {
   const sel = document.getElementById('brk-clear-broker');
   if (!sel) return;
-  const brokers = [...new Set(allTrades.map(t=>t.broker).filter(Boolean))].sort();
+  const junk = new Set(['tradetron','quantleap','quantiply','']);
+  // Get unique client_ids, filter junk broker defaults
+  const clients = [...new Set(allTrades.map(t => t.client_id||'').filter(id => id && !junk.has(id.toLowerCase())))].sort();
   const cur = sel.value;
-  sel.innerHTML = '<option value="">All Brokers</option>' +
-    brokers.map(b=>`<option value="${b}">${b.toUpperCase()}</option>`).join('');
+  sel.innerHTML = '<option value="">All Accounts</option>' +
+    clients.map(c => `<option value="${c}">${getClientLabel(c)}</option>`).join('');
   if (cur) sel.value = cur;
 }
 
 function brokerClearMatches() {
-  const brk  = document.getElementById('brk-clear-broker')?.value || '';
+  const clientId = document.getElementById('brk-clear-broker')?.value || '';
   const from = document.getElementById('brk-clear-from')?.value;
   const to   = document.getElementById('brk-clear-to')?.value;
   if (!from || !to) return { error: 'Please select both From and To dates' };
-  if (from > to) return { error: 'From date must be before To date' };
+  if (from > to)   return { error: 'From date must be before To date' };
   const matches = allTrades.filter(t => {
-    const d = t.entry_date || '';
-    if (d < from || d > to) return false;
-    if (brk && t.broker !== brk) return false;
+    // Use pnlDate (exit_date for STBT/BTST, entry_date for intraday)
+    const d = pnlDate(t);
+    if (!d || d < from || d > to) return false;
+    if (clientId && (t.client_id||'') !== clientId) return false;
     return true;
   });
-  return { matches, brk };
+  return { matches, clientId };
 }
 
 function previewBrokerClear() {
@@ -4017,8 +4029,9 @@ function previewBrokerClear() {
   const res = brokerClearMatches();
   if (res.error) { preview.innerHTML=`<span style="color:var(--red);">${res.error}</span>`; btn.style.display='none'; return; }
   if (!res.matches.length) { preview.innerHTML='<span style="color:var(--text2);">No broker trades found for this selection</span>'; btn.style.display='none'; return; }
-  const brokers = [...new Set(res.matches.map(t=>t.broker))];
-  preview.innerHTML=`<span style="color:var(--orange);">⚠ Found <strong>${res.matches.length}</strong> broker trades across <strong>${brokers.length}</strong> broker(s). This cannot be undone.</span>`;
+  const accounts = [...new Set(res.matches.map(t=>t.client_id||t.broker))];
+  const acctLabel = res.clientId ? getClientLabel(res.clientId) : 'All Accounts';
+  preview.innerHTML=`<span style="color:var(--orange);">⚠ Found <strong>${res.matches.length}</strong> trades for <strong>${acctLabel}</strong> across <strong>${accounts.length}</strong> account(s). This cannot be undone.</span>`;
   btn.style.display='inline-block';
 }
 
@@ -4033,8 +4046,8 @@ async function executeBrokerClear() {
   for (const t of res.matches) {
     if (db && t.hash) { await db.ref('journal/trades/'+t.hash).remove(); deleted++; }
   }
-  preview.innerHTML=`<span style="color:var(--green);">✓ Deleted ${deleted} broker trades</span>`;
-  toast(`✓ Deleted ${deleted} broker trades`, 'success');
+  preview.innerHTML=`<span style="color:var(--green);">✓ Deleted ${deleted} trades</span>`;
+  toast(`✓ Deleted ${deleted} trades`, 'success');
 }
 
 function buildCapitalTable() {
@@ -6161,7 +6174,7 @@ function renderSysStatBelow() {
   if (toVal)   rangeTrades = rangeTrades.filter(t=>(t.entry_date||'')<=toVal);
 
   const dayPnl={};
-  rangeTrades.forEach(t=>{if(t.entry_date)dayPnl[t.entry_date]=(dayPnl[t.entry_date]||0)+(t.pnl||0);});
+  rangeTrades.forEach(t=>{const pd=pnlDate(t);if(pd)dayPnl[pd]=(dayPnl[pd]||0)+(t.pnl||0);});
   const dayVals=Object.values(dayPnl);
   const tradingDays=dayVals.length;
   const winDays=dayVals.filter(v=>v>0).length;
@@ -6176,7 +6189,7 @@ function renderSysStatBelow() {
   sortedDates.forEach(d=>{const v=dayPnl[d];if(v>0){cw++;cl=0;maxWS=Math.max(maxWS,cw);}else if(v<0){cl++;cw=0;maxLS=Math.max(maxLS,cl);}else{cw=0;cl=0;}});
 
   const mPnl={};
-  rangeTrades.forEach(t=>{const ym=(t.entry_date||'').slice(0,7);if(ym)mPnl[ym]=(mPnl[ym]||0)+(t.pnl||0);});
+  rangeTrades.forEach(t=>{const ym=(pnlDate(t)||'').slice(0,7);if(ym)mPnl[ym]=(mPnl[ym]||0)+(t.pnl||0);});
   const mVals=Object.values(mPnl);
   const avgMonthlyPnl=mVals.length?mVals.reduce((s,v)=>s+v,0)/mVals.length:0;
   const avgMonthCap=Object.keys(mPnl).length?Object.keys(mPnl).reduce((s,ym)=>s+(capitalData[ym]||0),0)/Object.keys(mPnl).length||1:1;
@@ -6207,7 +6220,7 @@ function renderSysStatBelow() {
   sortedDates.forEach(d=>{const dow=new Date(d).toLocaleDateString('en-IN',{weekday:'short'});if(dowMap[dow]){const v=dayPnl[d];dowMap[dow].c++;dowMap[dow].ret+=avgMonthCap?v/avgMonthCap*100:0;if(v>0)dowMap[dow].profit=Math.max(dowMap[dow].profit,v);if(v<0)dowMap[dow].loss=Math.min(dowMap[dow].loss,v);}});
 
   const mwPnl={};
-  rangeTrades.forEach(t=>{const ym=(t.entry_date||'').slice(0,7);if(!ym)return;if(!mwPnl[ym])mwPnl[ym]={trades:0,pnl:0};mwPnl[ym].trades++;mwPnl[ym].pnl+=(t.pnl||0);});
+  rangeTrades.forEach(t=>{const ym=(pnlDate(t)||'').slice(0,7);if(!ym)return;if(!mwPnl[ym])mwPnl[ym]={trades:0,pnl:0};mwPnl[ym].trades++;mwPnl[ym].pnl+=(t.pnl||0);});
 
   const fmtStat=v=>`₹ ${v>=0?'':'-'}${Math.abs(v).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2})}`;
   const clr=v=>v>=0?'color:#16a34a;':'color:#dc2626;';
