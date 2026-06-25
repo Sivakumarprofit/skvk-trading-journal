@@ -2,7 +2,9 @@
 ==========================================================
   SKVK TRADING JOURNAL — VERSION HISTORY
 ==========================================================
-  v15.8 | 2026-06-25 | Security: Google Auth login gate — permanent admins
+  v15.9 | 2026-06-25 | Fix: Corrected API key — capital O vs zero typo (cb0eBI → cbOeBI)
+  ──────────────────────────────────────────────────────
+  v15.8 | 2026-06-25 | Security: Google Auth login gate;
          |            | kayal.profit@gmail.com & sivakumar.profit@gmail.com;
          |            | allowed_emails whitelist in Firebase; Access Control
          |            | section in App Settings (admins only); sign-out button
@@ -357,7 +359,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>SKVK Trading Journal v15.8</title>
+<title>SKVK Trading Journal v15.9</title>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -1277,7 +1279,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div class="login-logo">📋</div>
     <div class="login-title">
       SKVK Trading Journal
-      <span class="login-vbadge">v15.8</span>
+      <span class="login-vbadge">v15.9</span>
     </div>
     <div class="login-sub">Sign in with your authorised Google account to access the journal.</div>
     <button class="google-signin-btn" id="googleSignInBtn" onclick="signInWithGoogle()">
@@ -1305,7 +1307,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
 <div id="topbar">
   <div class="brand">
     <span class="brand-dot"></span>
-    SKVK Trading Journal <span style="font-size:0.85rem;background:#1a73e8;color:#fff;padding:3px 10px;border-radius:10px;font-weight:700;margin-left:6px;vertical-align:middle;">v15.8</span>
+    SKVK Trading Journal <span style="font-size:0.85rem;background:#1a73e8;color:#fff;padding:3px 10px;border-radius:10px;font-weight:700;margin-left:6px;vertical-align:middle;">v15.9</span>
   </div>
   <nav class="nav-tabs">
     <button class="nav-tab active" onclick="showPage('journal')"    data-page="journal">📋 <span class="tl">Journal</span></button>
@@ -2418,7 +2420,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
 //  FIREBASE CONFIG  ← Replace with YOUR credentials
 // ════════════════════════════════════════════════════
 const FIREBASE_CONFIG = {
-  apiKey:            "AIzaSyB7jFAzyebJtIG9tRRsTPgUgH555cb0eBI",
+  apiKey:            "AIzaSyB7jFAzyebJtIG9tRRsTPgUgH555cbOeBI",
   authDomain:        "skvk-trading-journal.firebaseapp.com",
   databaseURL:       "https://skvk-trading-journal-default-rtdb.asia-southeast1.firebasedatabase.app",
   projectId:         "skvk-trading-journal",
