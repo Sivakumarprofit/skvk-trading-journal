@@ -2,7 +2,12 @@
 ==========================================================
   SKVK TRADING JOURNAL — VERSION HISTORY
 ==========================================================
-  v18.3 | 2026-06-26 | P&L Report-Strategy wise: full revamp inheriting Account wise design —
+  v18.4 | 2026-06-26 | P&L Report-Strategy wise: full Account wise layout — Monthly P&L Data
+         |            | block (chart + calendar heatmap), Yearly P&L Data block (Live Performance,
+         |            | Daily P&L table, Equity/Drawdown/Capital charts, Monthly Returns, Capital
+         |            | Deployed); Basket/Strategy dual selector (radio toggle) added just before
+         |            | Yearly Heatmap; Broker P&L removed; Strategy P&L table at bottom;
+         |            | capital_basket Firebase path added (journal/capital_basket/{name}/{YYYY-MM})
          |            | block headings (Monthly P&L Data / Yearly P&L Data / Strategy P&L), monthly
          |            | chart (current year Jan-Dec, K/L/Cr labels), current month calendar heatmap,
          |            | Zebu-style equity+drawdown curves, Live Performance stats bar; Basket/Strategy
@@ -468,7 +473,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>SKVK Trading Journal v18.3</title>
+<title>SKVK Trading Journal v18.4</title>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -1403,7 +1408,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div class="login-logo">📋</div>
     <div class="login-title">
       SKVK Trading Journal
-      <span class="login-vbadge">v18.3</span>
+      <span class="login-vbadge">v18.4</span>
     </div>
     <div class="login-sub">Sign in with your authorised Google account to access the journal.</div>
     <button class="google-signin-btn" id="googleSignInBtn" onclick="signInWithGoogle()">
@@ -1434,7 +1439,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div class="brand">
       <span class="brand-dot"></span>
       SKVK Trading Journal
-      <span style="font-size:0.78rem;background:#1a73e8;color:#fff;padding:2px 8px;border-radius:8px;font-weight:700;margin-left:4px;">v18.3</span>
+      <span style="font-size:0.78rem;background:#1a73e8;color:#fff;padding:2px 8px;border-radius:8px;font-weight:700;margin-left:4px;">v18.4</span>
     </div>
     <div id="brand-subline">
       <div id="db-status">● connecting…</div>
@@ -1483,25 +1488,6 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div class="period-tabs" id="year-tabs"></div>
   </div>
 
-  <!-- ── Live Performance stats ── -->
-  <div style="background:var(--bg);border:1.5px solid var(--border);border-radius:14px;padding:20px 24px;margin-bottom:24px;">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
-      <div style="display:flex;align-items:center;gap:8px;">
-        <span style="font-size:1rem;">📈</span>
-        <span style="font-size:1rem;font-weight:800;font-family:var(--display);">Live Performance</span>
-      </div>
-      <span id="dash-date-range" style="font-size:0.75rem;background:#eef2ff;color:#3730a3;padding:4px 12px;border-radius:20px;font-weight:600;"></span>
-    </div>
-    <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:16px 24px;">
-      <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Total P&L</div><div id="s-pnl" style="font-size:1.1rem;font-weight:800;">—</div></div>
-      <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Total Trades</div><div id="s-trades" style="font-size:1.1rem;font-weight:800;">—</div></div>
-      <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Win Rate</div><div id="s-wr" style="font-size:1.1rem;font-weight:800;">—</div></div>
-      <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Active Strategies</div><div id="s-algos" style="font-size:1.1rem;font-weight:800;">—</div></div>
-      <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Best Month</div><div id="s-best" style="font-size:1.1rem;font-weight:800;color:var(--green);">—</div><div id="s-best-lbl" style="font-size:0.68rem;color:var(--text2);"></div></div>
-      <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Worst Month</div><div id="s-worst" style="font-size:1.1rem;font-weight:800;color:var(--red);">—</div><div id="s-worst-lbl" style="font-size:0.68rem;color:var(--text2);"></div></div>
-    </div>
-  </div>
-
   <!-- ══ BLOCK 1: Monthly P&L Data ══ -->
   <div style="border-top:3px solid var(--blue);padding-top:10px;margin-bottom:16px;">
     <span style="font-size:1.05rem;font-weight:800;font-family:var(--display);color:var(--blue);">📅 Monthly P&L Data</span>
@@ -1531,41 +1517,139 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <span style="font-size:1.05rem;font-weight:800;font-family:var(--display);color:#6366f1;">📊 Yearly P&L Data</span>
   </div>
 
-  <!-- Basket / Algo radio selector -->
-  <div style="background:var(--bg);border:1.5px solid var(--border);border-radius:14px;padding:16px 20px;margin-bottom:18px;display:flex;align-items:center;gap:24px;flex-wrap:wrap;">
-    <span style="font-size:0.82rem;font-weight:700;color:var(--text1);">View by:</span>
-    <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:0.85rem;font-weight:600;color:var(--text0);">
-      <input type="radio" name="dash-view-mode" value="basket" checked onchange="renderDashboard()"
-        style="accent-color:var(--blue);width:15px;height:15px;"> 🧺 Basket
-    </label>
-    <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:0.85rem;font-weight:600;color:var(--text0);">
-      <input type="radio" name="dash-view-mode" value="algo" onchange="renderDashboard()"
-        style="accent-color:var(--blue);width:15px;height:15px;"> 📋 Strategy (Algo)
-    </label>
-    <div style="margin-left:auto;">
-      <div class="period-tabs" id="month-filter-tabs"></div>
+  <!-- ── Live Performance ── -->
+  <div style="background:var(--bg);border:1.5px solid var(--border);border-radius:14px;padding:20px 24px;margin-bottom:24px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span style="font-size:1rem;">📈</span>
+        <span style="font-size:1rem;font-weight:800;font-family:var(--display);">Live Performance</span>
+      </div>
+      <span id="dash-date-range" style="font-size:0.75rem;background:#eef2ff;color:#3730a3;padding:4px 12px;border-radius:20px;font-weight:600;"></span>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:16px 24px;">
+      <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Total Return</div><div id="s-return" style="font-size:1.1rem;font-weight:800;color:var(--green);">—</div></div>
+      <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">CAGR</div><div id="s-cagr" style="font-size:1.1rem;font-weight:800;color:var(--green);">—</div></div>
+      <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Net P&L</div><div id="s-pnl" style="font-size:1.1rem;font-weight:800;">—</div></div>
+      <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Win Rate</div><div id="s-wr" style="font-size:1.1rem;font-weight:800;">—</div></div>
+      <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Sharpe Ratio</div><div id="s-sharpe" style="font-size:1.1rem;font-weight:800;">—</div></div>
+      <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Max Drawdown</div><div id="s-dd" style="font-size:1.1rem;font-weight:800;color:var(--red);">—</div></div>
+      <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Profit Factor</div><div id="s-pf" style="font-size:1.1rem;font-weight:800;">—</div></div>
+      <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Total Trades</div><div id="s-trades" style="font-size:1.1rem;font-weight:800;">—</div></div>
+      <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Capital Deployed</div><div id="s-algos" style="font-size:1.1rem;font-weight:800;">—</div></div>
     </div>
   </div>
 
-  <!-- Equity & Drawdown charts -->
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:28px;">
-    <div style="background:var(--bg);border:1.5px solid var(--border);border-radius:14px;padding:16px 18px;">
-      <div style="font-size:0.72rem;font-weight:700;color:var(--text1);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:10px;">Equity Curve</div>
-      <canvas id="dash-chart-equity" style="max-height:180px;"></canvas>
+  <!-- ── Two-column: Daily P&L table (left) + Charts (right) ── -->
+  <div style="display:grid;grid-template-columns:420px 1fr;gap:24px;margin-bottom:28px;">
+    <!-- LEFT: Daily P&L table -->
+    <div style="background:var(--bg);border:1.5px solid var(--border);border-radius:14px;overflow:hidden;">
+      <div style="padding:14px 18px;border-bottom:1px solid var(--border);font-size:0.95rem;font-weight:800;font-family:var(--display);">Daily P&L</div>
+      <table style="width:100%;border-collapse:collapse;font-size:0.8rem;">
+        <thead id="dash-table-thead">
+          <tr style="background:var(--bg2);">
+            <th style="padding:8px 14px;text-align:left;font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;">DATE</th>
+            <th style="padding:8px 8px;text-align:left;font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;">DAY</th>
+            <th style="padding:8px 8px;text-align:right;font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;">DAILY P&L</th>
+            <th style="padding:8px 8px;text-align:right;font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;">TRADES</th>
+            <th style="padding:8px 14px;text-align:right;font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;">CUMULATIVE</th>
+          </tr>
+        </thead>
+        <tbody id="dash-daily-tbody"></tbody>
+      </table>
+      <div style="padding:10px 14px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
+        <span id="dash-daily-info" style="font-size:0.72rem;color:var(--text2);"></span>
+        <div style="display:flex;gap:6px;">
+          <button onclick="dashDailyPage(-1)" id="dash-pg-prev" style="padding:4px 10px;border:1px solid var(--border);border-radius:6px;font-size:0.72rem;cursor:pointer;background:#fff;">← Prev</button>
+          <button onclick="dashDailyPage(1)"  id="dash-pg-next" style="padding:4px 10px;border:1px solid var(--border);border-radius:6px;font-size:0.72rem;cursor:pointer;background:#fff;">Next →</button>
+        </div>
+      </div>
     </div>
-    <div style="background:var(--bg);border:1.5px solid var(--border);border-radius:14px;padding:16px 18px;">
-      <div style="font-size:0.72rem;font-weight:700;color:var(--text1);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:10px;">Drawdown</div>
-      <canvas id="dash-chart-drawdown" style="max-height:180px;"></canvas>
+
+    <!-- RIGHT: Charts stacked -->
+    <div style="display:flex;flex-direction:column;gap:18px;">
+      <div style="background:var(--bg);border:1.5px solid var(--border);border-radius:14px;padding:16px 18px;">
+        <div style="font-size:0.72rem;font-weight:700;color:var(--text1);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:10px;">Equity Curve</div>
+        <canvas id="dash-chart-equity" style="max-height:180px;"></canvas>
+      </div>
+      <div style="background:var(--bg);border:1.5px solid var(--border);border-radius:14px;padding:16px 18px;">
+        <div style="font-size:0.72rem;font-weight:700;color:var(--text1);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:10px;">Drawdown</div>
+        <canvas id="dash-chart-drawdown" style="max-height:160px;"></canvas>
+      </div>
+      <div style="background:var(--bg);border:1.5px solid var(--border);border-radius:14px;padding:16px 18px;">
+        <div style="font-size:0.72rem;font-weight:700;color:var(--text1);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:10px;">Capital Deployed</div>
+        <canvas id="dash-chart-capital" style="max-height:160px;"></canvas>
+      </div>
     </div>
   </div>
 
-  <!-- Strategy P&L table (always at bottom) -->
-  <div style="border-top:3px solid #0d9488;padding-top:10px;margin-bottom:16px;">
+  <!-- ── Monthly Returns table ── -->
+  <div style="background:var(--bg);border:1.5px solid var(--border);border-radius:14px;padding:20px 24px;margin-bottom:28px;">
+    <div style="font-size:0.95rem;font-weight:800;font-family:var(--display);margin-bottom:16px;">Monthly Returns</div>
+    <div id="dash-monthly-returns" style="overflow-x:auto;"></div>
+  </div>
+
+  <!-- ── Capital Deployed ── -->
+  <div style="background:var(--bg);border:1.5px solid var(--border);border-radius:14px;padding:20px 24px;margin-bottom:28px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+      <div style="font-size:0.95rem;font-weight:800;font-family:var(--display);">💰 Capital Deployed</div>
+      <button onclick="saveDashCapital()" class="btn btn-primary btn-sm">💾 Save Capital</button>
+    </div>
+    <div id="dash-capital-grid"></div>
+  </div>
+
+  <!-- ── Basket / Strategy Selector (before heatmap) ── -->
+  <div style="display:flex;gap:20px;justify-content:center;margin-bottom:24px;flex-wrap:wrap;">
+    <!-- Basket selector -->
+    <div style="flex:1;min-width:280px;max-width:400px;">
+      <label style="display:flex;align-items:center;gap:8px;margin-bottom:8px;cursor:pointer;">
+        <input type="radio" name="dash-sel-mode" value="basket" checked onchange="onDashSelMode()"
+          style="accent-color:var(--blue);width:15px;height:15px;">
+        <div style="background:var(--blue);padding:10px 18px;border-radius:12px;box-shadow:0 2px 8px rgba(26,115,232,0.25);width:100%;">
+          <div style="font-size:0.72rem;font-weight:700;color:rgba(255,255,255,0.85);letter-spacing:0.06em;margin-bottom:6px;">🧺 SELECT BASKET</div>
+          <select id="dash-basket-select" onchange="renderDashHeatmap()"
+            style="width:100%;padding:7px 10px;border:none;border-radius:8px;font-size:0.85rem;font-weight:600;outline:none;background:#fff;color:var(--blue);font-family:var(--font);cursor:pointer;">
+            <option value="__ALL__">All Baskets</option>
+          </select>
+        </div>
+      </label>
+    </div>
+    <!-- Strategy selector -->
+    <div style="flex:1;min-width:280px;max-width:400px;">
+      <label style="display:flex;align-items:center;gap:8px;margin-bottom:8px;cursor:pointer;">
+        <input type="radio" name="dash-sel-mode" value="algo" onchange="onDashSelMode()"
+          style="accent-color:var(--blue);width:15px;height:15px;">
+        <div id="dash-algo-box" style="background:#6366f1;padding:10px 18px;border-radius:12px;box-shadow:0 2px 8px rgba(99,102,241,0.25);width:100%;opacity:0.5;">
+          <div style="font-size:0.72rem;font-weight:700;color:rgba(255,255,255,0.85);letter-spacing:0.06em;margin-bottom:6px;">📋 SELECT STRATEGY</div>
+          <select id="dash-algo-select" onchange="renderDashHeatmap()" disabled
+            style="width:100%;padding:7px 10px;border:none;border-radius:8px;font-size:0.85rem;font-weight:600;outline:none;background:#fff;color:#6366f1;font-family:var(--font);cursor:pointer;">
+            <option value="__ALL__">All Strategies</option>
+          </select>
+        </div>
+      </label>
+    </div>
+  </div>
+
+  <!-- ── Yearly Heatmap ── -->
+  <div style="background:var(--bg);border:1.5px solid var(--border);border-radius:14px;padding:20px 24px;margin-bottom:28px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px;">
+      <div style="font-size:0.95rem;font-weight:800;font-family:var(--display);">Daily P&L Heatmap</div>
+      <div style="display:flex;gap:5px;font-size:0.68rem;align-items:center;">
+        <span style="background:#16a34a;color:#fff;padding:2px 8px;border-radius:4px;">Profit</span>
+        <span style="background:#dc2626;color:#fff;padding:2px 8px;border-radius:4px;">Loss</span>
+        <span style="background:#f3f4f6;color:#9ca3af;padding:2px 8px;border-radius:4px;border:1px solid #e5e7eb;">No trade</span>
+      </div>
+    </div>
+    <div id="dash-heatmap"></div>
+  </div>
+
+  <!-- ══ Strategy P&L table ══ -->
+  <div style="border-top:3px solid #0d9488;padding-top:10px;margin-bottom:12px;">
     <span style="font-size:1.05rem;font-weight:800;font-family:var(--display);color:#0d9488;">📋 Strategy P&L</span>
   </div>
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:8px;">
     <div style="font-size:0.75rem;color:var(--text2);">P&L by Strategy × Month · Click rows to expand/collapse</div>
     <div style="display:flex;align-items:center;gap:8px;">
+      <div class="period-tabs" id="month-filter-tabs"></div>
       <button class="btn btn-ghost btn-sm" onclick="expandAllReport()">Expand All</button>
       <button class="btn btn-ghost btn-sm" onclick="collapseAllReport()">Collapse All</button>
     </div>
@@ -1574,44 +1658,6 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div class="loading"><div class="spinner"></div> Loading data…</div>
   </div>
 
-  <!-- Broker P&L -->
-  <div style="margin-top:28px;">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-      <div>
-        <div style="font-size:1.1rem;font-weight:800;font-family:var(--display);">Broker P&L</div>
-        <div style="font-size:0.75rem;color:var(--text2);margin-top:2px;">P&L by Broker × Month</div>
-      </div>
-    </div>
-    <div class="table-wrap" id="broker-table">
-      <div class="loading"><div class="spinner"></div> Loading data…</div>
-    </div>
-  </div>
-
-  <!-- Daily P&L Heatmap -->
-  <div style="margin-top:28px;">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:10px;">
-      <div>
-        <div style="font-size:1.1rem;font-weight:800;font-family:var(--display);">Daily P&L Heatmap</div>
-        <div style="font-size:0.75rem;color:var(--text2);margin-top:2px;">P&L per day · value + % of monthly capital</div>
-      </div>
-      <div style="display:flex;gap:5px;font-size:0.68rem;align-items:center;">
-        <span style="background:#16a34a;color:#fff;padding:2px 8px;border-radius:4px;">Profit</span>
-        <span style="background:#dc2626;color:#fff;padding:2px 8px;border-radius:4px;">Loss</span>
-        <span style="background:#f3f4f6;color:#9ca3af;padding:2px 8px;border-radius:4px;border:1px solid #e5e7eb;">No trade</span>
-      </div>
-    </div>
-    <!-- Combined always shown -->
-    <div id="heatmap-combined"><div class="loading"><div class="spinner"></div> Loading…</div></div>
-    <!-- Strategy/Group selector -->
-    <div style="margin-top:20px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-      <span style="font-size:0.82rem;font-weight:600;color:var(--text1);">Drill down:</span>
-      <select id="heatmap-strategy" onchange="renderHeatmapDrilldown()"
-        style="padding:6px 12px;border:1px solid var(--border);border-radius:8px;font-size:0.82rem;outline:none;background:#fff;min-width:280px;">
-        <option value="">— Select a Strategy or Basket —</option>
-      </select>
-    </div>
-    <div id="heatmap-drilldown" style="margin-top:12px;"></div>
-  </div>
 </div>
 
 <!-- ══════════ P&L REPORT - ACCOUNT WISE ══════════ -->
@@ -3600,6 +3646,9 @@ function startListeners() {
     capitalDataAll = snap.val() || {};
     buildCapitalTable();
   });
+  db.ref('journal/capital_basket').on('value', snap => {
+    capitalBasket = snap.val() || {};
+  });
   db.ref('journal/nicknames').on('value', snap => {
     accountNicknames = snap.val() || {};
     buildClientIdTabs();
@@ -4152,36 +4201,20 @@ let ci=0; function nextColor(){return COLORS[ci++%COLORS.length];}
 // ════════════════════════════════════════════════════
 //  DASHBOARD
 // ════════════════════════════════════════════════════
-let dashChartEquity = null, dashChartDD = null;
+let dashChartEquity = null, dashChartDD = null, dashChartCap = null;
+let dashDailyRows = [], dashDailyPageNum = 0;
+let capitalBasket = {}; // basket-wise capital: {basketName: {YYYY-MM: amount}}
 
 function renderDashboard() {
   const tr = allTrades.filter(t=>!t.archived && (pnlDate(t)||t.entry_date||'').startsWith(currentYear));
   const total = tr.reduce((s,t)=>s+(t.pnl||0),0);
-  const wr = tr.length ? Math.round(tr.filter(t=>(t.pnl||0)>0).length/tr.length*100) : 0;
+  const yearStart = `${currentYear}-01-01`;
+  const today = new Date().toISOString().slice(0,10);
 
   // Monthly map (current year Jan-Dec)
   const mMap={};
   for(let m=1;m<=12;m++){const k=`${currentYear}-${String(m).padStart(2,'0')}`;mMap[k]=0;}
   tr.forEach(t=>{ const ym=(pnlDate(t)||'').slice(0,7); if(ym&&ym.startsWith(currentYear)) mMap[ym]=(mMap[ym]||0)+(t.pnl||0); });
-  const months=Object.keys(mMap).sort();
-  const nonZeroMonths = months.filter(m=>mMap[m]!==0);
-  const bestM = nonZeroMonths.length ? nonZeroMonths.reduce((b,m)=>(mMap[m]||0)>(mMap[b]||0)?m:b, nonZeroMonths[0]) : null;
-  const worstM= nonZeroMonths.length ? nonZeroMonths.reduce((b,m)=>(mMap[m]||0)<(mMap[b]||0)?m:b, nonZeroMonths[0]) : null;
-
-  // Stats
-  el('s-pnl').textContent = fmt(total);
-  el('s-pnl').style.color = total>=0?'var(--green)':'var(--red)';
-  el('s-trades').textContent = tr.length;
-  el('s-wr').textContent = wr+'%';
-  el('s-algos').textContent = new Set(tr.map(t=>t.algo_name)).size;
-  el('s-best').textContent = bestM?fmt(mMap[bestM]):'—';
-  el('s-best-lbl').textContent = bestM?fmtMonth(bestM):'—';
-  el('s-worst').textContent = worstM?fmt(mMap[worstM]):'—';
-  el('s-worst-lbl').textContent = worstM?fmtMonth(worstM):'—';
-
-  // Date range badge
-  const dateRangeEl = document.getElementById('dash-date-range');
-  if (dateRangeEl) dateRangeEl.textContent = `01 Jan ${currentYear} – ${new Date().toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'})}`;
 
   // Year tabs
   const years=[...new Set(allTrades.map(t=>(t.entry_date||'').slice(0,4)).filter(Boolean))];
@@ -4189,10 +4222,208 @@ function renderDashboard() {
   el('year-tabs').innerHTML = years.sort().reverse().map(y=>
     `<div class="period-tab ${y===currentYear?'active':''}" onclick="setYear('${y}')">${y}</div>`).join('');
 
+  // Date range badge
+  const dateRangeEl = document.getElementById('dash-date-range');
+  if (dateRangeEl) dateRangeEl.textContent = `01 Jan ${currentYear} – ${new Date().toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'})}`;
+
+  // Live Performance (full Account-wise stats)
+  const dayPnl={};
+  tr.forEach(t=>{const pd=pnlDate(t);if(pd&&pd>=yearStart)dayPnl[pd]=(dayPnl[pd]||0)+(t.pnl||0);});
+  const sortedDays=Object.keys(dayPnl).sort();
+  const winDays=sortedDays.filter(d=>dayPnl[d]>0).length;
+  const wr=sortedDays.length?Math.round(winDays/sortedDays.length*100):0;
+  // Get total capital (from capitalData or capitalBasket)
+  const totalCap = Object.values(capitalData).reduce((s,v)=>s+(v||0),0) ||
+    Object.values(capitalBasket).reduce((s,b)=>s+Object.values(b||{}).reduce((a,v)=>a+(v||0),0),0);
+  const daysSince = Math.max(1, Math.round((new Date(today)-new Date(yearStart))/(86400000)));
+  const totalReturn = totalCap>0?(total/totalCap*100).toFixed(1):0;
+  const cagr = totalCap>0?((Math.pow(1+(total/totalCap),365/daysSince)-1)*100).toFixed(1):0;
+  const dailyRets = sortedDays.map(d=>totalCap>0?dayPnl[d]/totalCap:0);
+  const avgRet = dailyRets.length?dailyRets.reduce((s,v)=>s+v,0)/dailyRets.length:0;
+  const stdDev = dailyRets.length>1?Math.sqrt(dailyRets.reduce((s,v)=>s+Math.pow(v-avgRet,2),0)/dailyRets.length):0;
+  const sharpe = stdDev>0?(avgRet/stdDev*Math.sqrt(252)).toFixed(2):'—';
+  let peak=0,maxDD=0,cum2=0;
+  sortedDays.forEach(d=>{cum2+=dayPnl[d];if(cum2>peak)peak=cum2;const dd=cum2-peak;if(dd<maxDD)maxDD=dd;});
+  const profits=sortedDays.filter(d=>dayPnl[d]>0).reduce((s,d)=>s+dayPnl[d],0);
+  const losses=Math.abs(sortedDays.filter(d=>dayPnl[d]<0).reduce((s,d)=>s+dayPnl[d],0));
+  const pf=losses>0?(profits/losses).toFixed(2):profits>0?'∞':'—';
+
+  const setEl=(id,txt,col)=>{const e=document.getElementById(id);if(e){e.textContent=txt;if(col)e.style.color=col;}};
+  setEl('s-return',(totalReturn>=0?'+':'')+totalReturn+'%',totalReturn>=0?'var(--green)':'var(--red)');
+  setEl('s-cagr',(cagr>=0?'+':'')+cagr+'% / yr',cagr>=0?'var(--green)':'var(--red)');
+  setEl('s-pnl',fmt(total),total>=0?'var(--green)':'var(--red)');
+  setEl('s-wr',wr+'%');
+  setEl('s-sharpe',sharpe);
+  setEl('s-dd',fmt(maxDD));
+  setEl('s-pf',pf);
+  setEl('s-trades',tr.filter(t=>{const pd=pnlDate(t);return pd&&pd>=yearStart;}).length);
+  setEl('s-algos',totalCap>0?fmt(totalCap):'₹0');
+
   drawMonthly(mMap);
   drawDashCalHeatmap(tr);
+  renderDashDailyTable(tr);
   drawDashEquityDD(tr);
+  renderDashMonthlyReturns(tr);
+  renderDashCapitalGrid();
+  renderDashHeatmap();
+  populateDashSelectors();
   renderDashTable(tr, mMap);
+}
+
+function onDashSelMode() {
+  const mode = document.querySelector('input[name="dash-sel-mode"]:checked')?.value || 'basket';
+  const basketBox = document.getElementById('dash-basket-select')?.closest('div');
+  const algoBox = document.getElementById('dash-algo-box');
+  const basketSel = document.getElementById('dash-basket-select');
+  const algoSel = document.getElementById('dash-algo-select');
+  if (mode === 'basket') {
+    if (algoBox) algoBox.style.opacity = '0.5';
+    if (algoSel) algoSel.disabled = true;
+    if (basketSel) basketSel.disabled = false;
+    const bParent = basketSel?.closest('div[style*="opacity"]');
+    if (bParent) bParent.style.opacity = '1';
+  } else {
+    if (algoBox) algoBox.style.opacity = '1';
+    if (algoSel) algoSel.disabled = false;
+    if (basketSel) basketSel.disabled = true;
+    const bParent = basketSel?.parentElement;
+    if (bParent) bParent.style.opacity = '0.5';
+  }
+  renderDashHeatmap();
+}
+
+function populateDashSelectors() {
+  const basketSel = document.getElementById('dash-basket-select');
+  if (basketSel) {
+    const groups = Object.values(algoGroups).sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+    basketSel.innerHTML = '<option value="__ALL__">All Baskets</option>' +
+      groups.map(g=>`<option value="${g.name}">${g.name}</option>`).join('');
+  }
+  const algoSel = document.getElementById('dash-algo-select');
+  if (algoSel) {
+    const algos = [...new Set(allTrades.filter(t=>!t.archived&&(pnlDate(t)||'').startsWith(currentYear)).map(t=>t.algo_name))].sort();
+    algoSel.innerHTML = '<option value="__ALL__">All Strategies</option>' +
+      algos.map(a=>`<option value="${a}">${algoMeta[a]?.display_name||a}</option>`).join('');
+  }
+}
+
+function getDashFilteredTrades() {
+  const mode = document.querySelector('input[name="dash-sel-mode"]:checked')?.value || 'basket';
+  const tr = allTrades.filter(t=>!t.archived && (pnlDate(t)||t.entry_date||'').startsWith(currentYear));
+  if (mode === 'basket') {
+    const val = document.getElementById('dash-basket-select')?.value || '__ALL__';
+    if (val === '__ALL__') return tr;
+    const g = Object.values(algoGroups).find(x=>x.name===val);
+    const members = new Set(g?.algos||[]);
+    return tr.filter(t=>members.has(t.algo_name));
+  } else {
+    const val = document.getElementById('dash-algo-select')?.value || '__ALL__';
+    if (val === '__ALL__') return tr;
+    return tr.filter(t=>t.algo_name===val);
+  }
+}
+
+function renderDashHeatmap() {
+  const tr = getDashFilteredTrades();
+  const mode = document.querySelector('input[name="dash-sel-mode"]:checked')?.value || 'basket';
+  const val = mode==='basket'
+    ? (document.getElementById('dash-basket-select')?.value||'__ALL__')
+    : (document.getElementById('dash-algo-select')?.value||'__ALL__');
+  const label = val==='__ALL__' ? (mode==='basket'?'All Baskets':'All Strategies')
+    : (mode==='basket'?val:(algoMeta[val]?.display_name||val));
+  const container = document.getElementById('dash-heatmap');
+  if (container) container.innerHTML = buildOneHeatmap(label, tr, '#1a73e8');
+}
+
+function renderDashDailyTable(tr) {
+  const yearStart = `${currentYear}-01-01`;
+  const dayPnl={}, dayCnt={};
+  tr.forEach(t=>{const pd=pnlDate(t);if(!pd||pd<yearStart)return;dayPnl[pd]=(dayPnl[pd]||0)+(t.pnl||0);dayCnt[pd]=(dayCnt[pd]||0)+1;});
+  const sortedDays=Object.keys(dayPnl).sort().reverse();
+  let cum=0; const cumMap={};
+  [...sortedDays].reverse().forEach(d=>{cum+=dayPnl[d];cumMap[d]=cum;});
+  dashDailyRows=sortedDays.map(d=>({date:d,day:new Date(d).toLocaleDateString('en-IN',{weekday:'short'}).toUpperCase(),pnl:dayPnl[d],trades:dayCnt[d],cum:cumMap[d]}));
+  dashDailyPageNum=0;
+  renderDashDailyPage();
+}
+
+function renderDashDailyPage() {
+  const start=dashDailyPageNum*20;
+  const page=dashDailyRows.slice(start,start+20);
+  const tbody=document.getElementById('dash-daily-tbody');
+  if(!tbody)return;
+  tbody.innerHTML=page.map(r=>`<tr style="border-top:1px solid var(--border);">
+    <td style="padding:8px 14px;font-size:0.78rem;color:var(--text1);">${r.date}</td>
+    <td style="padding:8px 8px;font-size:0.72rem;color:var(--text2);">${r.day}</td>
+    <td style="padding:8px 8px;text-align:right;font-weight:700;color:${r.pnl>=0?'var(--green)':'var(--red)'};">${r.pnl>=0?'+':''}${fmt(r.pnl)}</td>
+    <td style="padding:8px 8px;text-align:right;font-size:0.78rem;color:var(--text2);">${r.trades}</td>
+    <td style="padding:8px 14px;text-align:right;font-size:0.78rem;font-weight:600;color:${r.cum>=0?'var(--green)':'var(--red)'};">${r.cum>=0?'+':''}${fmt(r.cum)}</td>
+  </tr>`).join('');
+  const total=dashDailyRows.length;
+  const info=document.getElementById('dash-daily-info');
+  if(info)info.textContent=`Showing ${start+1}–${Math.min(start+20,total)} of ${total} trading days`;
+  const pp=document.getElementById('dash-pg-prev'),np=document.getElementById('dash-pg-next');
+  if(pp)pp.disabled=dashDailyPageNum===0;
+  if(np)np.disabled=dashDailyPageNum>=Math.ceil(total/20)-1;
+}
+
+function dashDailyPage(dir){
+  dashDailyPageNum=Math.max(0,Math.min(Math.ceil(dashDailyRows.length/20)-1,dashDailyPageNum+dir));
+  renderDashDailyPage();
+}
+
+function renderDashMonthlyReturns(tr) {
+  const container = document.getElementById('dash-monthly-returns');
+  if (!container) return;
+  const years=[...new Set(tr.map(t=>(pnlDate(t)||t.entry_date||'').slice(0,4)).filter(Boolean))].sort();
+  if(!years.length){container.innerHTML='<div style="color:var(--text3);font-size:0.82rem;">No data</div>';return;}
+  const MONTHS=['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+  const yMap={};
+  tr.forEach(t=>{const pd=pnlDate(t)||t.entry_date||'';if(!pd)return;const y=pd.slice(0,4),m=pd.slice(5,7);if(!yMap[y])yMap[y]={};yMap[y][m]=(yMap[y][m]||0)+(t.pnl||0);});
+  function fmtS(v){if(v===null||v===undefined)return'—';const abs=Math.abs(v),sign=v>=0?'+':'-';if(abs>=100000)return sign+(abs/100000).toFixed(1)+'L';if(abs>=1000)return sign+(abs/1000).toFixed(0)+'K';return sign+abs.toFixed(0);}
+  let h=`<table style="width:100%;border-collapse:collapse;font-size:0.78rem;"><thead><tr style="border-bottom:2px solid var(--border);"><th style="padding:8px 12px;text-align:left;color:var(--text2);font-size:0.65rem;letter-spacing:0.06em;">YEAR</th>`;
+  MONTHS.forEach(m=>{h+=`<th style="padding:8px 6px;text-align:center;color:var(--text2);font-size:0.65rem;letter-spacing:0.06em;">${m}</th>`;});
+  h+=`<th style="padding:8px 12px;text-align:center;color:var(--text2);font-size:0.65rem;letter-spacing:0.06em;">TOTAL</th></tr></thead><tbody>`;
+  years.forEach(y=>{
+    const mData=yMap[y]||{};const yearTotal=Object.values(mData).reduce((s,v)=>s+v,0);
+    const cap=Object.values(capitalData).find(v=>v>0)||0;
+    h+=`<tr style="border-bottom:1px solid var(--border);"><td style="padding:10px 12px;font-weight:800;color:var(--text0);">${y}</td>`;
+    for(let mi=1;mi<=12;mi++){const mk=String(mi).padStart(2,'0');const pnl=mData[mk]??null;const mCap=capitalData[`${y}-${mk}`]||cap||0;const pct=pnl!==null&&mCap>0?(pnl/mCap*100).toFixed(1)+'%':'';const bg=pnl===null?'transparent':pnl>=0?'#dcfce7':'#fee2e2';const col=pnl===null?'var(--text3)':pnl>=0?'#15803d':'#dc2626';h+=`<td style="padding:6px;text-align:center;">${pnl===null?`<span style="color:var(--text3);">—</span>`:`<div style="background:${bg};border-radius:6px;padding:5px 4px;display:inline-block;min-width:52px;"><div style="font-weight:700;color:${col};">${fmtS(pnl)}</div>${pct?`<div style="font-size:0.62rem;color:${col};opacity:0.8;">${pct}</div>`:''}</div>`}</td>`;}
+    const ytBg=yearTotal>=0?'#dcfce7':'#fee2e2';const ytCol=yearTotal>=0?'#15803d':'#dc2626';
+    h+=`<td style="padding:6px;text-align:center;"><div style="background:${ytBg};border-radius:6px;padding:5px 4px;display:inline-block;min-width:52px;font-weight:800;color:${ytCol};">${fmtS(yearTotal)}</div></td></tr>`;
+  });
+  h+=`</tbody></table>`;
+  container.innerHTML=h;
+}
+
+function renderDashCapitalGrid() {
+  const grid=document.getElementById('dash-capital-grid');
+  if(!grid)return;
+  const year=new Date().getFullYear();
+  const months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  let html=`<div style="display:flex;gap:10px;flex-wrap:wrap;">`;
+  months.forEach((m,i)=>{
+    const ym=`${year}-${String(i+1).padStart(2,'0')}`;
+    const val=capitalData[ym]||'';
+    html+=`<div style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:8px 10px;min-width:90px;text-align:center;">
+      <div style="font-size:0.65rem;font-weight:700;color:var(--text2);margin-bottom:4px;">${m} ${year}</div>
+      <input type="number" id="dash-cap-${ym}" value="${val}" placeholder="—"
+        style="width:100%;padding:3px 5px;border:1px solid var(--border);border-radius:5px;font-size:0.78rem;text-align:right;outline:none;background:#fff;"
+        onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--border)'">
+    </div>`;
+  });
+  html+=`</div>`;
+  grid.innerHTML=html;
+}
+
+async function saveDashCapital() {
+  const year=new Date().getFullYear();
+  const newData={};
+  for(let m=1;m<=12;m++){const ym=`${year}-${String(m).padStart(2,'0')}`;const inp=document.getElementById('dash-cap-'+ym);if(inp&&inp.value)newData[ym]=parseFloat(inp.value)||0;}
+  Object.assign(capitalData,newData);
+  if(db)await db.ref('journal/capital').update(newData);
+  toast('✓ Capital saved','success');
+  renderDashboard();
 }
 
 function setYear(y){ currentYear=y; renderDashboard(); }
