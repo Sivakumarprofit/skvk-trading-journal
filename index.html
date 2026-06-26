@@ -2,6 +2,19 @@
 ==========================================================
   SKVK TRADING JOURNAL — VERSION HISTORY
 ==========================================================
+  v18.7 | 2026-06-26 | App Settings: "Groups" renamed to "Basket Management"; new "Group Management"
+         |            | section added below Basket Management (same UI, optional — no warning badges);
+         |            | a strategy can belong to both a Basket and a Group independently;
+         |            | P&L Report tab renamed: "P&L Report-Strategy wise" → "P&L Report-Basket Level";
+         |            | page title/subtitle updated accordingly; 3-way selector added: Basket | Group | Strategy;
+         |            | Group view shows NA for Capital Deployed / capital-related metrics;
+         |            | Firebase path journal/algo_groups for group membership;
+         |            | App Settings subtitle updated; getDashFilteredTrades / renderDashLivePerf /
+         |            | renderDashCapitalGrid updated to handle group mode (NA for capital);
+         |            | populateDashSelectors populates new Group dropdown;
+         |            | Group Management functions: algoGroupsData map, listenAlgoGroups(),
+         |            | agRenderGroups(), agRenderSystems(), agAssignGroup(), agDeleteGroup()
+  ──────────────────────────────────────────────────────
   v18.6 | 2026-06-26 | Fix: Basket/Strategy selection now re-renders ALL sections (monthly
          |            | chart, calendar heatmap, Live Performance, Daily P&L table, Equity/DD,
          |            | Monthly Returns, Heatmap) with filtered trades — not just the heatmap;
@@ -1460,7 +1473,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
   <nav class="nav-tabs">
     <button class="nav-tab active" onclick="showPage('journal')"     data-page="journal">📋 <span class="tl">Daily<br>Journal</span></button>
     <button class="nav-tab" onclick="showPage('sysstat')"            data-page="sysstat">📈 <span class="tl">System<br>Statistics</span></button>
-    <button class="nav-tab" onclick="showPage('dashboard')"          data-page="dashboard">📊 <span class="tl">P&L Report-<br>Strategy wise</span></button>
+    <button class="nav-tab" onclick="showPage('dashboard')"          data-page="dashboard">📊 <span class="tl">P&L Report-<br>Basket Level</span></button>
     <button class="nav-tab" onclick="showPage('acctreport')"         data-page="acctreport">👤 <span class="tl">P&L Report-<br>Account wise</span></button>
     <button class="nav-tab" onclick="showPage('upload')"             data-page="upload">⬆ <span class="tl">Upload Trade<br>Reports</span></button>
     <button class="nav-tab" onclick="showPage('stockmock')"          data-page="stockmock">🔬 <span class="tl">StockMock<br>Compare</span></button>
@@ -1490,23 +1503,35 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
   <!-- Page header -->
   <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:20px;">
     <div>
-      <div class="page-title">P&L Report — Strategy wise</div>
-      <div class="page-subtitle">Consolidated P&L · Basket & Strategy Performance</div>
+      <div class="page-title">P&L Report — Basket Level</div>
+      <div class="page-subtitle">Consolidated P&L · Basket, Group & Strategy Performance</div>
       <div id="dash-last-updated" style="margin-top:4px;font-size:0.72rem;color:var(--text3);"></div>
     </div>
     <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
       <div class="period-tabs" id="year-tabs"></div>
-      <!-- Basket / Strategy selector — top right -->
+      <!-- Basket / Group / Strategy selector — top right -->
       <div style="display:flex;gap:10px;align-items:stretch;">
         <!-- Basket -->
         <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
           <input type="radio" name="dash-sel-mode" value="basket" checked onchange="onDashSelMode()"
             style="accent-color:var(--blue);width:14px;height:14px;flex-shrink:0;">
-          <div style="background:var(--blue);padding:8px 14px;border-radius:10px;box-shadow:0 2px 6px rgba(26,115,232,0.25);">
+          <div id="dash-basket-box" style="background:var(--blue);padding:8px 14px;border-radius:10px;box-shadow:0 2px 6px rgba(26,115,232,0.25);">
             <div style="font-size:0.65rem;font-weight:700;color:rgba(255,255,255,0.85);letter-spacing:0.05em;margin-bottom:4px;">🧺 BASKET</div>
             <select id="dash-basket-select" onchange="renderDashFiltered()"
               style="padding:4px 8px;border:none;border-radius:6px;font-size:0.82rem;font-weight:600;outline:none;background:#fff;color:var(--blue);font-family:var(--font);cursor:pointer;min-width:150px;">
               <option value="__ALL__">All Baskets</option>
+            </select>
+          </div>
+        </label>
+        <!-- Group -->
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
+          <input type="radio" name="dash-sel-mode" value="group" onchange="onDashSelMode()"
+            style="accent-color:#0d9488;width:14px;height:14px;flex-shrink:0;">
+          <div id="dash-group-box" style="background:#0d9488;padding:8px 14px;border-radius:10px;box-shadow:0 2px 6px rgba(13,148,136,0.25);opacity:0.5;">
+            <div style="font-size:0.65rem;font-weight:700;color:rgba(255,255,255,0.85);letter-spacing:0.05em;margin-bottom:4px;">📁 GROUP</div>
+            <select id="dash-group-select" onchange="renderDashFiltered()" disabled
+              style="padding:4px 8px;border:none;border-radius:6px;font-size:0.82rem;font-weight:600;outline:none;background:#fff;color:#0d9488;font-family:var(--font);cursor:pointer;min-width:150px;">
+              <option value="__ALL__">All Groups</option>
             </select>
           </div>
         </label>
@@ -1963,7 +1988,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
   <div class="page-header">
     <div>
       <div class="page-title">App Settings</div>
-      <div class="page-subtitle">Strategy Names · Groups · Display · Nicknames · Capital · Data Management</div>
+      <div class="page-subtitle">Strategy Names · Basket Management · Group Management · Display · Nicknames · Capital · Data Management</div>
     </div>
   </div>
 
@@ -2017,20 +2042,61 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
       </div>
     </div>
 
-    <!-- ── Groups Management ── -->
+    <!-- ── Basket Management ── -->
     <div style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:22px;box-shadow:var(--shadow-sm);">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
         <div style="display:flex;align-items:center;gap:10px;">
-          <span style="font-size:1.3rem;">📂</span>
+          <span style="font-size:1.3rem;">🧺</span>
           <div>
-            <div style="font-size:0.95rem;font-weight:700;color:var(--text0);">Groups</div>
-            <div style="font-size:0.72rem;color:var(--text2);margin-top:2px;">Create and manage system groups</div>
+            <div style="font-size:0.95rem;font-weight:700;color:var(--text0);">Basket Management</div>
+            <div style="font-size:0.72rem;color:var(--text2);margin-top:2px;">Create and manage baskets · Capital Deployed is tracked at Basket level</div>
           </div>
         </div>
         <button onclick="asOpenAddGroup()" class="btn btn-primary btn-sm">+ New Basket</button>
       </div>
       <div id="as-group-list">
         <div style="color:var(--text3);font-size:0.8rem;">No baskets yet</div>
+      </div>
+    </div>
+
+    <!-- ── Group Management ── -->
+    <div style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:22px;box-shadow:var(--shadow-sm);">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span style="font-size:1.3rem;">📁</span>
+          <div>
+            <div style="font-size:0.95rem;font-weight:700;color:var(--text0);">Group Management</div>
+            <div style="font-size:0.72rem;color:var(--text2);margin-top:2px;">Create and manage groups · Groups are optional — strategies without a group show NA</div>
+          </div>
+        </div>
+        <button onclick="agOpenAddGroup()" class="btn btn-primary btn-sm" style="background:#0d9488;border-color:#0d9488;">+ New Group</button>
+      </div>
+      <div id="ag-group-list">
+        <div style="color:var(--text3);font-size:0.8rem;">No groups yet</div>
+      </div>
+    </div>
+
+    <!-- ── Group Allocation ── -->
+    <div style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:22px;box-shadow:var(--shadow-sm);">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span style="font-size:1.3rem;">📋</span>
+          <div>
+            <div style="font-size:0.95rem;font-weight:700;color:var(--text0);">Group Allocation</div>
+            <div style="font-size:0.72rem;color:var(--text2);margin-top:2px;">Assign strategies to groups · Groups are optional — unassigned strategies show NA (no warning)</div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <input type="text" id="ag-search" placeholder="Search strategies…" oninput="agRenderSystems()"
+            style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:0.82rem;outline:none;min-width:180px;">
+          <select id="ag-filter-group" onchange="agRenderSystems()"
+            style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:0.82rem;outline:none;background:var(--bg);color:var(--text0);">
+            <option value="">All Groups</option>
+          </select>
+        </div>
+      </div>
+      <div id="ag-system-list">
+        <div class="loading"><div class="spinner"></div> Loading…</div>
       </div>
     </div>
 
@@ -3598,7 +3664,8 @@ let selectedAlgos = new Set(); // empty = all selected
 let selectedUnderlying = '';   // empty = all
 let selectedDTE = 'SHOWALL';   // SHOWALL=no filter, ALLDAYS=positional, 0DTE/1DTE/2DTE=exact
 let selectedClientId = '';     // empty = all client IDs
-let algoGroups = {};           // groupName → { name, color, algos:[] }
+let algoGroups = {};           // groupName → { name, color, algos:[] }  (Baskets)
+let algoGroupsData = {};       // groupName → { name, color, algos:[] }  (Groups — optional)
 
 
 // ════════════════════════════════════════════════════
@@ -3628,6 +3695,7 @@ function startListeners() {
     return;
   }
   listenGroups();
+  listenAlgoGroups();
   listenMCX();
   db.ref('journal/trades').on('value', snap => {
     allTrades = Object.values(snap.val() || {});
@@ -4258,6 +4326,7 @@ function renderDashFiltered() {
 
 // Render Live Performance stats for filtered trades
 function renderDashLivePerf(tr) {
+  const mode = document.querySelector('input[name="dash-sel-mode"]:checked')?.value || 'basket';
   const yearStart = `${currentYear}-01-01`;
   const today = new Date().toISOString().slice(0,10);
   const dayPnl={};
@@ -4266,8 +4335,14 @@ function renderDashLivePerf(tr) {
   const total=sortedDays.reduce((s,d)=>s+dayPnl[d],0);
   const winDays=sortedDays.filter(d=>dayPnl[d]>0).length;
   const wr=sortedDays.length?Math.round(winDays/sortedDays.length*100):0;
-  const totalCap=Object.values(capitalData).reduce((s,v)=>s+(v||0),0)||
-    Object.values(capitalBasket).reduce((s,b)=>s+Object.values(b||{}).reduce((a,v)=>a+(v||0),0),0);
+
+  // Capital only meaningful at Basket level
+  const hasCapital = (mode === 'basket');
+  const totalCap = hasCapital
+    ? (Object.values(capitalData).reduce((s,v)=>s+(v||0),0)||
+       Object.values(capitalBasket).reduce((s,b)=>s+Object.values(b||{}).reduce((a,v)=>a+(v||0),0),0))
+    : 0;
+
   const daysSince=Math.max(1,Math.round((new Date(today)-new Date(yearStart))/86400000));
   const totalReturn=totalCap>0?(total/totalCap*100).toFixed(1):0;
   const cagr=totalCap>0?((Math.pow(1+(total/totalCap),365/daysSince)-1)*100).toFixed(1):0;
@@ -4281,30 +4356,44 @@ function renderDashLivePerf(tr) {
   const losses=Math.abs(sortedDays.filter(d=>dayPnl[d]<0).reduce((s,d)=>s+dayPnl[d],0));
   const pf=losses>0?(profits/losses).toFixed(2):profits>0?'∞':'—';
   const setEl=(id,txt,col)=>{const e=document.getElementById(id);if(e){e.textContent=txt;if(col)e.style.color=col;}};
-  setEl('s-return',(totalReturn>=0?'+':'')+totalReturn+'%',totalReturn>=0?'var(--green)':'var(--red)');
-  setEl('s-cagr',(cagr>=0?'+':'')+cagr+'% / yr',cagr>=0?'var(--green)':'var(--red)');
+  setEl('s-return', hasCapital?(totalReturn>=0?'+':'')+totalReturn+'%':'NA', hasCapital?(totalReturn>=0?'var(--green)':'var(--red)'):'var(--text3)');
+  setEl('s-cagr',   hasCapital?(cagr>=0?'+':'')+cagr+'% / yr':'NA', hasCapital?(cagr>=0?'var(--green)':'var(--red)'):'var(--text3)');
   setEl('s-pnl',fmt(total),total>=0?'var(--green)':'var(--red)');
   setEl('s-wr',wr+'%');
   setEl('s-sharpe',sharpe);
   setEl('s-dd',fmt(maxDD));
   setEl('s-pf',pf);
   setEl('s-trades',tr.filter(t=>{const pd=pnlDate(t);return pd&&pd>=yearStart;}).length);
-  setEl('s-algos',totalCap>0?fmt(totalCap):'₹0');
+  setEl('s-algos', hasCapital?(totalCap>0?fmt(totalCap):'₹0'):'NA', hasCapital?undefined:'var(--text3)');
 }
 
 function onDashSelMode() {
   const mode = document.querySelector('input[name="dash-sel-mode"]:checked')?.value || 'basket';
-  const algoBox = document.getElementById('dash-algo-box');
+  const basketBox = document.getElementById('dash-basket-box');
+  const groupBox  = document.getElementById('dash-group-box');
+  const algoBox   = document.getElementById('dash-algo-box');
   const basketSel = document.getElementById('dash-basket-select');
-  const algoSel = document.getElementById('dash-algo-select');
+  const groupSel  = document.getElementById('dash-group-select');
+  const algoSel   = document.getElementById('dash-algo-select');
+
+  // Reset all to dimmed/disabled
+  if (basketBox) basketBox.style.opacity = '0.5';
+  if (groupBox)  groupBox.style.opacity  = '0.5';
+  if (algoBox)   algoBox.style.opacity   = '0.5';
+  if (basketSel) basketSel.disabled = true;
+  if (groupSel)  groupSel.disabled  = true;
+  if (algoSel)   algoSel.disabled   = true;
+
+  // Activate the selected one
   if (mode === 'basket') {
-    if (algoBox) algoBox.style.opacity = '0.5';
-    if (algoSel) algoSel.disabled = true;
+    if (basketBox) basketBox.style.opacity = '1';
     if (basketSel) basketSel.disabled = false;
+  } else if (mode === 'group') {
+    if (groupBox) groupBox.style.opacity = '1';
+    if (groupSel) groupSel.disabled = false;
   } else {
     if (algoBox) algoBox.style.opacity = '1';
     if (algoSel) algoSel.disabled = false;
-    if (basketSel) basketSel.disabled = true;
   }
   renderDashFiltered();
 }
@@ -4315,6 +4404,12 @@ function populateDashSelectors() {
     const groups = Object.values(algoGroups).sort((a,b)=>(a.name||'').localeCompare(b.name||''));
     basketSel.innerHTML = '<option value="__ALL__">All Baskets</option>' +
       groups.map(g=>`<option value="${g.name}">${g.name}</option>`).join('');
+  }
+  const groupSel = document.getElementById('dash-group-select');
+  if (groupSel) {
+    const grps = Object.values(algoGroupsData).sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+    groupSel.innerHTML = '<option value="__ALL__">All Groups</option>' +
+      grps.map(g=>`<option value="${g.name}">${g.name}</option>`).join('');
   }
   const algoSel = document.getElementById('dash-algo-select');
   if (algoSel) {
@@ -4333,6 +4428,12 @@ function getDashFilteredTrades() {
     const g = Object.values(algoGroups).find(x=>x.name===val);
     const members = new Set(g?.algos||[]);
     return tr.filter(t=>members.has(t.algo_name));
+  } else if (mode === 'group') {
+    const val = document.getElementById('dash-group-select')?.value || '__ALL__';
+    if (val === '__ALL__') return tr;
+    const g = Object.values(algoGroupsData).find(x=>x.name===val);
+    const members = new Set(g?.algos||[]);
+    return tr.filter(t=>members.has(t.algo_name));
   } else {
     const val = document.getElementById('dash-algo-select')?.value || '__ALL__';
     if (val === '__ALL__') return tr;
@@ -4343,11 +4444,17 @@ function getDashFilteredTrades() {
 function renderDashHeatmap() {
   const tr = getDashFilteredTrades();
   const mode = document.querySelector('input[name="dash-sel-mode"]:checked')?.value || 'basket';
-  const val = mode==='basket'
-    ? (document.getElementById('dash-basket-select')?.value||'__ALL__')
-    : (document.getElementById('dash-algo-select')?.value||'__ALL__');
-  const label = val==='__ALL__' ? (mode==='basket'?'All Baskets':'All Strategies')
-    : (mode==='basket'?val:(algoMeta[val]?.display_name||val));
+  let val, label;
+  if (mode === 'basket') {
+    val = document.getElementById('dash-basket-select')?.value||'__ALL__';
+    label = val==='__ALL__' ? 'All Baskets' : val;
+  } else if (mode === 'group') {
+    val = document.getElementById('dash-group-select')?.value||'__ALL__';
+    label = val==='__ALL__' ? 'All Groups' : val;
+  } else {
+    val = document.getElementById('dash-algo-select')?.value||'__ALL__';
+    label = val==='__ALL__' ? 'All Strategies' : (algoMeta[val]?.display_name||val);
+  }
   const container = document.getElementById('dash-heatmap');
   if (container) container.innerHTML = buildOneHeatmap(label, tr, '#1a73e8');
 }
@@ -4416,6 +4523,11 @@ function renderDashMonthlyReturns(tr) {
 function renderDashCapitalGrid() {
   const grid=document.getElementById('dash-capital-grid');
   if(!grid)return;
+  const mode = document.querySelector('input[name="dash-sel-mode"]:checked')?.value || 'basket';
+  if (mode !== 'basket') {
+    grid.innerHTML = `<div style="padding:16px;text-align:center;color:var(--text3);font-size:0.85rem;font-style:italic;">Capital Deployed is only tracked at Basket level — NA for ${mode==='group'?'Group':'Strategy'} view</div>`;
+    return;
+  }
   const year=new Date().getFullYear();
   const months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   let html=`<div style="display:flex;gap:10px;flex-wrap:wrap;">`;
@@ -6742,6 +6854,180 @@ async function removeAlgoFromGroup(groupName, algoName) {
 }
 
 // ════════════════════════════════════════════════════
+//  ALGO GROUPS DATA (Groups — optional, separate from Baskets)
+// ════════════════════════════════════════════════════
+function listenAlgoGroups() {
+  if (!db) return;
+  db.ref('journal/algo_groups').on('value', snap => {
+    algoGroupsData = snap.val() || {};
+    agRenderGroups();
+    agRenderSystems();
+    agPopulateDropdowns();
+    populateDashSelectors();
+  });
+}
+
+function agPopulateDropdowns() {
+  const grps = Object.values(algoGroupsData).sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+  const opts = '<option value="">— no group —</option>' + grps.map(g=>`<option value="${g.name}">${g.name}</option>`).join('');
+  const selFilter = document.getElementById('ag-filter-group');
+  if (selFilter) selFilter.innerHTML = '<option value="">All Groups</option>' + grps.map(g=>`<option value="${g.name}">${g.name}</option>`).join('');
+}
+
+function agRenderGroups() {
+  const list = document.getElementById('ag-group-list');
+  if (!list) return;
+  const grps = Object.values(algoGroupsData).sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+  if (!grps.length) { list.innerHTML = '<div style="color:var(--text3);font-size:0.8rem;">No groups yet — groups are optional</div>'; return; }
+  list.innerHTML = grps.map(g => {
+    const color = g.color || '#0d9488';
+    const members = (g.algos || []).length;
+    return `
+      <div style="display:flex;align-items:center;gap:12px;padding:10px 14px;border:1px solid var(--border);border-radius:8px;margin-bottom:8px;">
+        <span style="width:14px;height:14px;border-radius:50%;background:${color};flex-shrink:0;display:inline-block;"></span>
+        <div style="flex:1;">
+          <div style="font-size:0.85rem;font-weight:600;color:var(--text0);">${g.name}</div>
+          <div style="font-size:0.72rem;color:var(--text2);">${members} strategy${members!==1?'s':''}</div>
+        </div>
+        <button onclick="agEditGroup('${g.name}')" class="btn btn-ghost btn-sm">✏️ Edit</button>
+        <button onclick="agDeleteGroup('${g.name}')" class="btn btn-sm" style="background:var(--red-lt);color:var(--red);border:none;">🗑</button>
+      </div>`;
+  }).join('');
+}
+
+function agRenderSystems() {
+  const list = document.getElementById('ag-system-list');
+  if (!list) return;
+  const search = (document.getElementById('ag-search')?.value || '').toLowerCase();
+  const filterGroup = document.getElementById('ag-filter-group')?.value || '';
+
+  let algos = Object.values(algoMeta).sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+  if (search) algos = algos.filter(a => (a.name||'').toLowerCase().includes(search) || (a.display_name||'').toLowerCase().includes(search));
+  if (filterGroup) {
+    const g = Object.values(algoGroupsData).find(x=>x.name===filterGroup);
+    const members = new Set(g?.algos || []);
+    algos = algos.filter(a => members.has(a.name));
+  }
+
+  if (!algos.length) { list.innerHTML = '<div style="color:var(--text3);font-size:0.8rem;padding:10px 0;">No strategies found</div>'; return; }
+
+  // Build group lookup (a strategy can be in multiple groups — show all)
+  const groupLookup = {};
+  Object.values(algoGroupsData).forEach(g => { (g.algos||[]).forEach(n => { groupLookup[n] = groupLookup[n] ? groupLookup[n]+', '+g.name : g.name; }); });
+
+  const groupOpts = '<option value="">— no group —</option>' +
+    Object.values(algoGroupsData).sort((a,b)=>(a.name||'').localeCompare(b.name||'')).map(g=>`<option value="${g.name}">${g.name}</option>`).join('');
+
+  list.innerHTML = `
+    <table style="width:100%;border-collapse:collapse;font-size:0.82rem;">
+      <thead>
+        <tr style="background:var(--bg2);">
+          <th style="padding:8px 10px;text-align:left;font-weight:600;color:var(--text1);border-bottom:1px solid var(--border);">Strategy Name</th>
+          <th style="padding:8px 10px;text-align:left;font-weight:600;color:var(--text1);border-bottom:1px solid var(--border);">Group(s)</th>
+          <th style="padding:8px 10px;text-align:left;font-weight:600;color:var(--text1);border-bottom:1px solid var(--border);">Assign Group</th>
+          <th style="padding:8px 10px;text-align:center;font-weight:600;color:var(--text1);border-bottom:1px solid var(--border);">Remove</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${algos.map(a => {
+          const grpLabel = groupLookup[a.name] || '<span style="color:var(--text3);font-style:italic;">NA</span>';
+          const gopts = groupOpts;
+          return `
+          <tr style="border-bottom:1px solid var(--border);">
+            <td style="padding:8px 10px;font-weight:600;color:var(--text0);">${a.name}
+              ${a.display_name && a.display_name !== a.name ? `<div style="font-size:0.7rem;color:var(--text2);">${a.display_name}</div>` : ''}
+            </td>
+            <td style="padding:8px 10px;font-size:0.78rem;color:var(--text1);">${grpLabel}</td>
+            <td style="padding:8px 10px;">
+              <select onchange="agAssignGroup('${a.name}',this.value);this.value=''"
+                style="padding:4px 7px;border:1px solid var(--border);border-radius:5px;font-size:0.8rem;background:var(--bg);color:var(--text0);">
+                <option value="">+ Add to group…</option>
+                ${Object.values(algoGroupsData).sort((a,b)=>(a.name||'').localeCompare(b.name||'')).map(g=>`<option value="${g.name}">${g.name}</option>`).join('')}
+              </select>
+            </td>
+            <td style="padding:8px 10px;text-align:center;">
+              ${Object.values(algoGroupsData).filter(g=>(g.algos||[]).includes(a.name)).map(g=>
+                `<button onclick="agRemoveFromGroup('${a.name}','${g.name}')" class="btn btn-sm" style="background:var(--red-lt);color:var(--red);border:none;padding:3px 8px;margin:2px;font-size:0.72rem;" title="Remove from ${g.name}">✕ ${g.name}</button>`
+              ).join('')}
+            </td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>`;
+}
+
+function agOpenAddGroup() {
+  const name = prompt('New Group name:');
+  if (!name || !name.trim()) return;
+  agSaveGroup(name.trim(), '#0d9488');
+}
+
+async function agEditGroup(name) {
+  const g = algoGroupsData[safeKey(name)] || Object.values(algoGroupsData).find(x=>x.name===name) || {};
+  const newName = prompt('Group name:', g.name || name);
+  if (!newName || !newName.trim()) return;
+  const newColor = prompt('Group color (hex):', g.color || '#0d9488');
+  await agSaveGroup(newName.trim(), newColor||'#0d9488', name);
+}
+
+async function agSaveGroup(name, color, oldName) {
+  const gk = safeKey(name);
+  const existing = oldName ? (Object.keys(algoGroupsData).find(k=>algoGroupsData[k].name===oldName)||safeKey(oldName)) : gk;
+  const group = {
+    name,
+    color: color || '#0d9488',
+    algos: algoGroupsData[existing]?.algos || [],
+    created_at: algoGroupsData[existing]?.created_at || new Date().toISOString()
+  };
+  if (oldName && existing !== gk) {
+    delete algoGroupsData[existing];
+    if (db) await db.ref('journal/algo_groups/' + existing).remove();
+  }
+  algoGroupsData[gk] = group;
+  if (db) await db.ref('journal/algo_groups/' + gk).set(group);
+  agRenderGroups();
+  agRenderSystems();
+  agPopulateDropdowns();
+  populateDashSelectors();
+  toast(`Group "${name}" saved`, 'success');
+}
+
+async function agDeleteGroup(name) {
+  if (!confirm(`Delete group "${name}"? Strategies in this group will show NA.`)) return;
+  const gk = Object.keys(algoGroupsData).find(k=>algoGroupsData[k].name===name) || safeKey(name);
+  delete algoGroupsData[gk];
+  if (db) await db.ref('journal/algo_groups/' + gk).remove();
+  agRenderGroups();
+  agRenderSystems();
+  agPopulateDropdowns();
+  populateDashSelectors();
+  toast(`Group "${name}" deleted`, 'info');
+}
+
+async function agAssignGroup(algoName, groupName) {
+  if (!groupName) return;
+  const gk = Object.keys(algoGroupsData).find(k=>algoGroupsData[k].name===groupName) || safeKey(groupName);
+  if (!algoGroupsData[gk]) return;
+  algoGroupsData[gk].algos = [...new Set([...(algoGroupsData[gk].algos||[]), algoName])];
+  if (db) await db.ref('journal/algo_groups/' + gk + '/algos').set(algoGroupsData[gk].algos);
+  agRenderGroups();
+  agRenderSystems();
+  populateDashSelectors();
+  toast(`"${algoName}" added to group "${groupName}"`, 'success');
+}
+
+async function agRemoveFromGroup(algoName, groupName) {
+  const gk = Object.keys(algoGroupsData).find(k=>algoGroupsData[k].name===groupName) || safeKey(groupName);
+  if (!algoGroupsData[gk]) return;
+  algoGroupsData[gk].algos = (algoGroupsData[gk].algos||[]).filter(n=>n!==algoName);
+  if (db) await db.ref('journal/algo_groups/' + gk + '/algos').set(algoGroupsData[gk].algos);
+  agRenderGroups();
+  agRenderSystems();
+  populateDashSelectors();
+  toast(`"${algoName}" removed from group "${groupName}"`, 'info');
+}
+
+// ════════════════════════════════════════════════════
 //  BROKER COMPARISON
 // ════════════════════════════════════════════════════
 function populateCompareSelects() {
@@ -7837,6 +8123,9 @@ function initAppSettings() {
   asRenderGroups();
   asRenderSystems();
   asPopulateGroupDropdowns();
+  agRenderGroups();
+  agRenderSystems();
+  agPopulateDropdowns();
 }
 
 function asPopulateGroupDropdowns() {
