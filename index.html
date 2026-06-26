@@ -2,6 +2,9 @@
 ==========================================================
   SKVK TRADING JOURNAL — VERSION HISTORY
 ==========================================================
+  v18.5 | 2026-06-26 | Fix: Basket/Strategy selector moved to top-right of page header (was
+         |            | incorrectly placed mid-page before heatmap); selector now always visible
+  ──────────────────────────────────────────────────────
   v18.4 | 2026-06-26 | P&L Report-Strategy wise: full Account wise layout — Monthly P&L Data
          |            | block (chart + calendar heatmap), Yearly P&L Data block (Live Performance,
          |            | Daily P&L table, Equity/Drawdown/Capital charts, Monthly Returns, Capital
@@ -473,7 +476,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>SKVK Trading Journal v18.4</title>
+<title>SKVK Trading Journal v18.5</title>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -1408,7 +1411,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div class="login-logo">📋</div>
     <div class="login-title">
       SKVK Trading Journal
-      <span class="login-vbadge">v18.4</span>
+      <span class="login-vbadge">v18.5</span>
     </div>
     <div class="login-sub">Sign in with your authorised Google account to access the journal.</div>
     <button class="google-signin-btn" id="googleSignInBtn" onclick="signInWithGoogle()">
@@ -1439,7 +1442,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div class="brand">
       <span class="brand-dot"></span>
       SKVK Trading Journal
-      <span style="font-size:0.78rem;background:#1a73e8;color:#fff;padding:2px 8px;border-radius:8px;font-weight:700;margin-left:4px;">v18.4</span>
+      <span style="font-size:0.78rem;background:#1a73e8;color:#fff;padding:2px 8px;border-radius:8px;font-weight:700;margin-left:4px;">v18.5</span>
     </div>
     <div id="brand-subline">
       <div id="db-status">● connecting…</div>
@@ -1485,7 +1488,36 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
       <div class="page-subtitle">Consolidated P&L · Basket & Strategy Performance</div>
       <div id="dash-last-updated" style="margin-top:4px;font-size:0.72rem;color:var(--text3);"></div>
     </div>
-    <div class="period-tabs" id="year-tabs"></div>
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+      <div class="period-tabs" id="year-tabs"></div>
+      <!-- Basket / Strategy selector — top right -->
+      <div style="display:flex;gap:10px;align-items:stretch;">
+        <!-- Basket -->
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
+          <input type="radio" name="dash-sel-mode" value="basket" checked onchange="onDashSelMode()"
+            style="accent-color:var(--blue);width:14px;height:14px;flex-shrink:0;">
+          <div style="background:var(--blue);padding:8px 14px;border-radius:10px;box-shadow:0 2px 6px rgba(26,115,232,0.25);">
+            <div style="font-size:0.65rem;font-weight:700;color:rgba(255,255,255,0.85);letter-spacing:0.05em;margin-bottom:4px;">🧺 BASKET</div>
+            <select id="dash-basket-select" onchange="renderDashHeatmap()"
+              style="padding:4px 8px;border:none;border-radius:6px;font-size:0.82rem;font-weight:600;outline:none;background:#fff;color:var(--blue);font-family:var(--font);cursor:pointer;min-width:150px;">
+              <option value="__ALL__">All Baskets</option>
+            </select>
+          </div>
+        </label>
+        <!-- Strategy -->
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
+          <input type="radio" name="dash-sel-mode" value="algo" onchange="onDashSelMode()"
+            style="accent-color:#6366f1;width:14px;height:14px;flex-shrink:0;">
+          <div id="dash-algo-box" style="background:#6366f1;padding:8px 14px;border-radius:10px;box-shadow:0 2px 6px rgba(99,102,241,0.25);opacity:0.5;">
+            <div style="font-size:0.65rem;font-weight:700;color:rgba(255,255,255,0.85);letter-spacing:0.05em;margin-bottom:4px;">📋 STRATEGY</div>
+            <select id="dash-algo-select" onchange="renderDashHeatmap()" disabled
+              style="padding:4px 8px;border:none;border-radius:6px;font-size:0.82rem;font-weight:600;outline:none;background:#fff;color:#6366f1;font-family:var(--font);cursor:pointer;min-width:150px;">
+              <option value="__ALL__">All Strategies</option>
+            </select>
+          </div>
+        </label>
+      </div>
+    </div>
   </div>
 
   <!-- ══ BLOCK 1: Monthly P&L Data ══ -->
@@ -1595,38 +1627,6 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
       <button onclick="saveDashCapital()" class="btn btn-primary btn-sm">💾 Save Capital</button>
     </div>
     <div id="dash-capital-grid"></div>
-  </div>
-
-  <!-- ── Basket / Strategy Selector (before heatmap) ── -->
-  <div style="display:flex;gap:20px;justify-content:center;margin-bottom:24px;flex-wrap:wrap;">
-    <!-- Basket selector -->
-    <div style="flex:1;min-width:280px;max-width:400px;">
-      <label style="display:flex;align-items:center;gap:8px;margin-bottom:8px;cursor:pointer;">
-        <input type="radio" name="dash-sel-mode" value="basket" checked onchange="onDashSelMode()"
-          style="accent-color:var(--blue);width:15px;height:15px;">
-        <div style="background:var(--blue);padding:10px 18px;border-radius:12px;box-shadow:0 2px 8px rgba(26,115,232,0.25);width:100%;">
-          <div style="font-size:0.72rem;font-weight:700;color:rgba(255,255,255,0.85);letter-spacing:0.06em;margin-bottom:6px;">🧺 SELECT BASKET</div>
-          <select id="dash-basket-select" onchange="renderDashHeatmap()"
-            style="width:100%;padding:7px 10px;border:none;border-radius:8px;font-size:0.85rem;font-weight:600;outline:none;background:#fff;color:var(--blue);font-family:var(--font);cursor:pointer;">
-            <option value="__ALL__">All Baskets</option>
-          </select>
-        </div>
-      </label>
-    </div>
-    <!-- Strategy selector -->
-    <div style="flex:1;min-width:280px;max-width:400px;">
-      <label style="display:flex;align-items:center;gap:8px;margin-bottom:8px;cursor:pointer;">
-        <input type="radio" name="dash-sel-mode" value="algo" onchange="onDashSelMode()"
-          style="accent-color:var(--blue);width:15px;height:15px;">
-        <div id="dash-algo-box" style="background:#6366f1;padding:10px 18px;border-radius:12px;box-shadow:0 2px 8px rgba(99,102,241,0.25);width:100%;opacity:0.5;">
-          <div style="font-size:0.72rem;font-weight:700;color:rgba(255,255,255,0.85);letter-spacing:0.06em;margin-bottom:6px;">📋 SELECT STRATEGY</div>
-          <select id="dash-algo-select" onchange="renderDashHeatmap()" disabled
-            style="width:100%;padding:7px 10px;border:none;border-radius:8px;font-size:0.85rem;font-weight:600;outline:none;background:#fff;color:#6366f1;font-family:var(--font);cursor:pointer;">
-            <option value="__ALL__">All Strategies</option>
-          </select>
-        </div>
-      </label>
-    </div>
   </div>
 
   <!-- ── Yearly Heatmap ── -->
