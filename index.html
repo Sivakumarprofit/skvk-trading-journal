@@ -2,6 +2,14 @@
 ==========================================================
   SKVK TRADING JOURNAL — VERSION HISTORY
 ==========================================================
+  v17.8 | 2026-06-26 | P&L Report-Account wise: block headings "Monthly P&L Data" and "Yearly P&L
+         |            | Data" with visual separators; monthly P&L chart always 12 months with value
+         |            | labels (K/L/Cr); current-month calendar heatmap added to Monthly P&L block;
+         |            | account selector moved to page center, supports multi-select (combined P&L);
+         |            | Capital Deployed inline editable from Live Performance tile (click to edit);
+         |            | Tradetron P&L: new method — P&L = -(sum of amount col) per counter;
+         |            | open counter (net qty ≠ 0) → pnl=0 (no MTM); closed counters match TT exactly
+  ──────────────────────────────────────────────────────
   v17.7 | 2026-06-25 | Fix: Tradetron re-upload now force-overwrites existing trades (no more skips);
          |            | Journal: Tradetron accounts show Counter view (CntrN header, date range,
          |            | OPEN/CLOSED badge, LIVE for open counters); subtitle updates dynamically;
@@ -439,7 +447,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>SKVK Trading Journal v17.7</title>
+<title>SKVK Trading Journal v17.8</title>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -447,6 +455,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
 
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Syne:wght@600;700;800&display=swap');
@@ -1373,7 +1382,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div class="login-logo">📋</div>
     <div class="login-title">
       SKVK Trading Journal
-      <span class="login-vbadge">v17.7</span>
+      <span class="login-vbadge">v17.8</span>
     </div>
     <div class="login-sub">Sign in with your authorised Google account to access the journal.</div>
     <button class="google-signin-btn" id="googleSignInBtn" onclick="signInWithGoogle()">
@@ -1404,7 +1413,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div class="brand">
       <span class="brand-dot"></span>
       SKVK Trading Journal
-      <span style="font-size:0.78rem;background:#1a73e8;color:#fff;padding:2px 8px;border-radius:8px;font-weight:700;margin-left:4px;">v17.7</span>
+      <span style="font-size:0.78rem;background:#1a73e8;color:#fff;padding:2px 8px;border-radius:8px;font-weight:700;margin-left:4px;">v17.8</span>
     </div>
     <div id="brand-subline">
       <div id="db-status">● connecting…</div>
@@ -1560,30 +1569,63 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
 <!-- ══════════ P&L REPORT - ACCOUNT WISE ══════════ -->
 <div id="page-acctreport" class="page">
 
-  <!-- ── Header: Title + Account Selector (left, highlighted) ── -->
-  <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:16px;margin-bottom:22px;">
-    <div>
-      <div class="page-title">P&L Report — Account wise</div>
-      <div class="page-subtitle">Select an account to view performance analytics</div>
-    </div>
-    <div style="display:flex;align-items:center;gap:10px;background:var(--blue);padding:10px 18px;border-radius:12px;box-shadow:0 2px 8px rgba(26,115,232,0.25);">
-      <span style="font-size:0.78rem;font-weight:700;color:rgba(255,255,255,0.85);letter-spacing:0.04em;">ACCOUNT</span>
-      <select id="acct-select" onchange="renderAcctReport()"
-        style="padding:6px 12px;border:none;border-radius:8px;font-size:0.88rem;font-weight:700;outline:none;background:#fff;color:var(--blue);min-width:200px;font-family:var(--font);cursor:pointer;">
-        <option value="">— Select —</option>
+  <!-- ── Header: Title ── -->
+  <div style="margin-bottom:18px;">
+    <div class="page-title">P&L Report — Account wise</div>
+    <div class="page-subtitle">Select one or more accounts to view combined performance analytics</div>
+  </div>
+
+  <!-- ── Account Multi-Selector (centered) ── -->
+  <div style="display:flex;justify-content:center;margin-bottom:24px;">
+    <div style="background:var(--blue);padding:14px 24px;border-radius:14px;box-shadow:0 2px 10px rgba(26,115,232,0.25);min-width:360px;max-width:560px;width:100%;">
+      <div style="font-size:0.72rem;font-weight:700;color:rgba(255,255,255,0.85);letter-spacing:0.06em;text-align:center;margin-bottom:8px;">SELECT ACCOUNT(S)</div>
+      <div id="acct-multi-pills" style="display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-bottom:10px;min-height:28px;"></div>
+      <select id="acct-select" onchange="acctMultiAdd(this.value)" style="width:100%;padding:8px 12px;border:none;border-radius:8px;font-size:0.88rem;font-weight:600;outline:none;background:#fff;color:var(--blue);font-family:var(--font);cursor:pointer;">
+        <option value="">— Add account —</option>
         <option value="__ALL__">All Accounts</option>
       </select>
     </div>
   </div>
 
-  <!-- Monthly P&L chart just below selector -->
-  <div id="acct-monthly-chart-wrap" style="display:none;background:var(--bg);border:1.5px solid var(--border);border-radius:14px;padding:16px 20px;margin-bottom:20px;">
-    <div style="font-size:0.78rem;font-weight:700;color:var(--text1);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:10px;">Monthly P&L</div>
-    <canvas id="acct-chart-monthly-top" style="max-height:160px;"></canvas>
+  <!-- ══ BLOCK 1: Monthly P&L Data ══ -->
+  <div id="acct-monthly-block" style="display:none;margin-bottom:28px;">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+      <div style="flex:1;height:2px;background:linear-gradient(90deg,var(--blue),transparent);"></div>
+      <span style="font-size:1.05rem;font-weight:800;font-family:var(--display);color:var(--blue);white-space:nowrap;padding:0 8px;">📅 Monthly P&L Data</span>
+      <div style="flex:1;height:2px;background:linear-gradient(270deg,var(--blue),transparent);"></div>
+    </div>
+
+    <!-- 12-month bar chart -->
+    <div id="acct-monthly-chart-wrap" style="background:var(--bg);border:1.5px solid var(--border);border-radius:14px;padding:16px 20px;margin-bottom:18px;">
+      <div style="font-size:0.78rem;font-weight:700;color:var(--text1);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:10px;">Monthly P&L — Last 12 Months</div>
+      <canvas id="acct-chart-monthly-top" style="max-height:200px;"></canvas>
+    </div>
+
+    <!-- Current month calendar heatmap -->
+    <div style="background:var(--bg);border:1.5px solid var(--border);border-radius:14px;padding:16px 20px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+        <div style="font-size:0.78rem;font-weight:700;color:var(--text1);letter-spacing:0.06em;text-transform:uppercase;" id="acct-cal-title">Current Month Heatmap</div>
+        <div style="display:flex;gap:5px;font-size:0.68rem;align-items:center;">
+          <span style="background:#16a34a;color:#fff;padding:2px 8px;border-radius:4px;">Profit</span>
+          <span style="background:#dc2626;color:#fff;padding:2px 8px;border-radius:4px;">Loss</span>
+          <span style="background:#f3f4f6;color:#9ca3af;padding:2px 8px;border-radius:4px;border:1px solid #e5e7eb;">No trade</span>
+        </div>
+      </div>
+      <div id="acct-cal-heatmap"></div>
+    </div>
   </div>
 
   <div id="acct-empty" style="text-align:center;padding:80px 0;color:var(--text3);font-size:0.9rem;">
     ← Select an account above to view P&L analytics
+  </div>
+
+  <!-- ══ BLOCK 2: Yearly P&L Data ══ -->
+  <div id="acct-yearly-block-hdr" style="display:none;margin-bottom:16px;">
+    <div style="display:flex;align-items:center;gap:12px;">
+      <div style="flex:1;height:2px;background:linear-gradient(90deg,#6366f1,transparent);"></div>
+      <span style="font-size:1.05rem;font-weight:800;font-family:var(--display);color:#6366f1;white-space:nowrap;padding:0 8px;">📊 Yearly P&L Data</span>
+      <div style="flex:1;height:2px;background:linear-gradient(270deg,#6366f1,transparent);"></div>
+    </div>
   </div>
 
   <div id="acct-main" style="display:none;">
@@ -1606,7 +1648,12 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
         <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Max Drawdown</div><div id="acct-lp-dd" style="font-size:1.1rem;font-weight:800;color:var(--red);">—</div></div>
         <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Profit Factor</div><div id="acct-lp-pf" style="font-size:1.1rem;font-weight:800;">—</div></div>
         <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Total Trades</div><div id="acct-lp-trades" style="font-size:1.1rem;font-weight:800;">—</div></div>
-        <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Capital Deployed</div><div id="acct-lp-cap" style="font-size:1.1rem;font-weight:800;">—</div></div>
+        <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Capital Deployed</div>
+          <div style="display:flex;align-items:center;gap:6px;">
+            <div id="acct-lp-cap" style="font-size:1.1rem;font-weight:800;cursor:pointer;border-bottom:1.5px dashed var(--blue);" title="Click to edit capital" onclick="acctCapInlineEdit()">—</div>
+            <span style="font-size:0.65rem;color:var(--blue);cursor:pointer;" onclick="acctCapInlineEdit()">✏️</span>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -2689,8 +2736,11 @@ let algoMeta  = {};
 let uploads   = [];
 let mChart = null, aChart = null;
 let acctChartEquity = null, acctChartDD = null, acctChartCap = null;
+// Register datalabels plugin for monthly bar chart value labels
+if (typeof ChartDataLabels !== 'undefined') Chart.register(ChartDataLabels);
 let acctWeekOffset = 0;
 let currentAcct = '';
+let selectedAccts = []; // multi-select array
 let acctDailyPageNum = 0;
 let acctDailyRows = [];
 const ACCT_PAGE_SIZE = 20;
@@ -2700,38 +2750,80 @@ function initAcctReport() {
   const accounts = [...new Set(allTrades.map(t=>t.client_id||'').filter(id=>id&&!junk.has(id.toLowerCase())))].sort();
   const sel = document.getElementById('acct-select');
   if (!sel) return;
-  sel.innerHTML = '<option value="">— Select —</option><option value="__ALL__">All Accounts</option>' +
+  sel.innerHTML = '<option value="">— Add account —</option><option value="__ALL__">All Accounts</option>' +
     accounts.map(a=>`<option value="${a}">${getClientLabel(a)}</option>`).join('');
-  if (currentAcct) { sel.value = currentAcct; renderAcctReport(); }
+  if (currentAcct && selectedAccts.length===0) { selectedAccts=[currentAcct]; renderAcctPills(); renderAcctReport(); }
+}
+
+function acctMultiAdd(val) {
+  const sel = document.getElementById('acct-select');
+  if (!val) return;
+  sel.value = '';
+  if (val === '__ALL__') { selectedAccts = ['__ALL__']; }
+  else {
+    selectedAccts = selectedAccts.filter(v=>v!=='__ALL__');
+    if (!selectedAccts.includes(val)) selectedAccts.push(val);
+  }
+  renderAcctPills();
+  renderAcctReport();
+}
+
+function acctMultiRemove(val) {
+  selectedAccts = selectedAccts.filter(v=>v!==val);
+  renderAcctPills();
+  if (selectedAccts.length) renderAcctReport(); else {
+    document.getElementById('acct-empty').style.display='';
+    document.getElementById('acct-main').style.display='none';
+    document.getElementById('acct-monthly-block').style.display='none';
+    document.getElementById('acct-yearly-block-hdr').style.display='none';
+  }
+}
+
+function renderAcctPills() {
+  const wrap = document.getElementById('acct-multi-pills');
+  if (!wrap) return;
+  wrap.innerHTML = selectedAccts.map(a => {
+    const lbl = a==='__ALL__' ? 'All Accounts' : getClientLabel(a);
+    return `<span style="display:inline-flex;align-items:center;gap:5px;background:rgba(255,255,255,0.9);color:var(--blue);font-size:0.75rem;font-weight:700;padding:3px 10px;border-radius:20px;">
+      ${lbl}<span style="cursor:pointer;font-size:0.8rem;color:#888;" onclick="acctMultiRemove('${a}')">✕</span></span>`;
+  }).join('');
+}
+
+function getAcctTrades() {
+  if (!selectedAccts.length) return [];
+  if (selectedAccts.includes('__ALL__')) return allTrades.filter(t=>!t.archived);
+  return allTrades.filter(t=>!t.archived && selectedAccts.includes(t.client_id||''));
 }
 
 function renderAcctReport() {
-  const sel = document.getElementById('acct-select');
-  currentAcct = sel?.value || '';
-  document.getElementById('acct-empty').style.display = currentAcct ? 'none' : '';
-  document.getElementById('acct-main').style.display  = currentAcct ? '' : 'none';
-  if (!currentAcct) return;
+  const hasAcct = selectedAccts.length > 0;
+  document.getElementById('acct-empty').style.display = hasAcct ? 'none' : '';
+  document.getElementById('acct-main').style.display  = hasAcct ? '' : 'none';
+  document.getElementById('acct-monthly-block').style.display = hasAcct ? '' : 'none';
+  document.getElementById('acct-yearly-block-hdr').style.display = hasAcct ? '' : 'none';
+  if (!hasAcct) return;
 
-  const tr = currentAcct === '__ALL__'
-    ? allTrades.filter(t=>!t.archived)
-    : allTrades.filter(t=>!t.archived && (t.client_id||'')===currentAcct);
+  // currentAcct = first selected (for capital functions that need single acct)
+  currentAcct = selectedAccts[0];
+
+  const tr = getAcctTrades();
+  const label = selectedAccts.includes('__ALL__') ? 'All Accounts'
+    : selectedAccts.map(a=>getClientLabel(a)).join(', ');
 
   renderAcctWeekTiles(tr);
   renderAcctLivePerf(tr);
   renderAcctMonthlyTopChart(tr);
+  renderAcctCalHeatmap(tr);
   renderAcctDailyTable(tr);
   renderAcctCharts(tr);
   renderAcctCapitalGrid();
   renderAcctMonthlyReturns(tr);
-  document.getElementById('acct-heatmap').innerHTML = buildOneHeatmap(
-    currentAcct === '__ALL__' ? 'All Accounts' : getClientLabel(currentAcct), tr, '#1a73e8');
+  document.getElementById('acct-heatmap').innerHTML = buildOneHeatmap(label, tr, '#1a73e8');
 }
 
 function acctWeekNav(dir) {
   acctWeekOffset += dir;
-  const tr = currentAcct === '__ALL__'
-    ? allTrades.filter(t=>!t.archived)
-    : allTrades.filter(t=>!t.archived && (t.client_id||'')===currentAcct);
+  const tr = getAcctTrades();
   renderAcctWeekTiles(tr);
 }
 
@@ -3087,33 +3179,130 @@ function renderAcctCharts(tr) {
 }
 
 function renderAcctMonthlyTopChart(tr) {
-  const year = new Date().getFullYear();
-  const yearStart = `${year}-01-01`;
+  const today = new Date();
+  const keys = [];
+  for (let i=11; i>=0; i--) {
+    const d = new Date(today.getFullYear(), today.getMonth()-i, 1);
+    keys.push(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`);
+  }
   const mMap = {};
-  tr.forEach(t => { const ym=(pnlDate(t)||'').slice(0,7); if(ym&&ym>=yearStart.slice(0,7)) mMap[ym]=(mMap[ym]||0)+(t.pnl||0); });
-  const keys = Object.keys(mMap).sort();
-  const vals = keys.map(k=>mMap[k]);
-
-  document.getElementById('acct-monthly-chart-wrap').style.display = keys.length ? '' : 'none';
-  if (!keys.length) return;
+  tr.forEach(t => { const ym=(pnlDate(t)||'').slice(0,7); if(ym) mMap[ym]=(mMap[ym]||0)+(t.pnl||0); });
+  const vals = keys.map(k=>mMap[k]||0);
 
   const ctx = document.getElementById('acct-chart-monthly-top')?.getContext('2d');
   if (!ctx) return;
   if (window._acctMonthlyTopChart) window._acctMonthlyTopChart.destroy();
+
+  function fmtBarLabel(v) {
+    if (!v) return '';
+    const abs=Math.abs(v), sign=v>=0?'+':'-';
+    if (abs>=10000000) return sign+(abs/10000000).toFixed(2)+'Cr';
+    if (abs>=100000)   return sign+(abs/100000).toFixed(2)+'L';
+    return sign+(abs/1000).toFixed(2)+'K';
+  }
+
   window._acctMonthlyTopChart = new Chart(ctx, {
     type:'bar',
     data:{ labels:keys.map(fmtMonth), datasets:[{
       data:vals,
-      backgroundColor:vals.map(v=>v>=0?'rgba(26,158,92,0.75)':'rgba(217,48,37,0.75)'),
+      backgroundColor:vals.map(v=>v>0?'rgba(26,158,92,0.75)':v<0?'rgba(217,48,37,0.75)':'rgba(156,163,175,0.35)'),
       borderRadius:5, borderSkipped:false
     }]},
     options:{ responsive:true, maintainAspectRatio:true,
-      plugins:{legend:{display:false}},
+      plugins:{
+        legend:{display:false},
+        datalabels:{
+          display: ctx2 => ctx2.dataset.data[ctx2.dataIndex]!==0,
+          anchor:  ctx2 => ctx2.dataset.data[ctx2.dataIndex]>=0?'end':'start',
+          align:   ctx2 => ctx2.dataset.data[ctx2.dataIndex]>=0?'top':'bottom',
+          color:   ctx2 => ctx2.dataset.data[ctx2.dataIndex]>=0?'#15803d':'#dc2626',
+          font:{size:9,weight:'700'},
+          formatter: v => fmtBarLabel(v)
+        }
+      },
       scales:{
-        x:{grid:{color:'rgba(0,0,0,0.04)'},ticks:{color:'#6b7280',font:{size:11}}},
-        y:{grid:{color:'rgba(0,0,0,0.04)'},ticks:{color:'#6b7280',font:{size:11},callback:v=>fmtHeat(v)}}
+        x:{grid:{color:'rgba(0,0,0,0.04)'},ticks:{color:'#6b7280',font:{size:10},autoSkip:false,maxRotation:45}},
+        y:{grid:{color:'rgba(0,0,0,0.04)'},ticks:{color:'#6b7280',font:{size:10},callback:v=>fmtHeat(v)}}
       }}
   });
+}
+
+// Current-month calendar heatmap
+function renderAcctCalHeatmap(tr) {
+  const today = new Date();
+  const yr = today.getFullYear();
+  const mo = today.getMonth(); // 0-based
+  const ym = `${yr}-${String(mo+1).padStart(2,'0')}`;
+  const monthName = today.toLocaleDateString('en-IN',{month:'long',year:'numeric'});
+  document.getElementById('acct-cal-title').textContent = `Current Month Heatmap — ${monthName}`;
+
+  const dayPnl = {};
+  tr.forEach(t => { const pd=pnlDate(t); if(pd&&pd.startsWith(ym)) dayPnl[pd]=(dayPnl[pd]||0)+(t.pnl||0); });
+
+  const dim = new Date(yr, mo+1, 0).getDate();
+  const firstDow = new Date(yr, mo, 1).getDay(); // 0=Sun
+  // Mon-start: shift so Mon=0
+  const startOffset = firstDow===0 ? 6 : firstDow-1;
+
+  const days=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  let html = `<div style="overflow-x:auto;"><table style="border-collapse:separate;border-spacing:4px;width:100%;"><thead><tr>`;
+  days.forEach(d => { html+=`<th style="font-size:0.65rem;font-weight:700;color:var(--text2);padding:4px 2px;text-align:center;width:14.28%;">${d}</th>`; });
+  html+=`</tr></thead><tbody><tr>`;
+
+  // Empty cells before month start
+  for(let i=0;i<startOffset;i++) html+=`<td></td>`;
+
+  let col = startOffset;
+  for(let day=1;day<=dim;day++){
+    const ds=`${ym}-${String(day).padStart(2,'0')}`;
+    const pnl=dayPnl[ds]??null;
+    const dow=new Date(yr,mo,day).getDay();
+    const isWeekend=(dow===0||dow===6);
+    let bg='#f1f5f9',color='#94a3b8',border='#e2e8f0';
+    if(pnl!==null&&pnl>0){bg='#dcfce7';color='#15803d';border='#86efac';}
+    else if(pnl!==null&&pnl<0){bg='#fee2e2';color='#dc2626';border='#fca5a5';}
+    else if(pnl===0&&!isWeekend){bg='#f8fafc';color='#64748b';border='#e2e8f0';}
+    const isToday=ds===today.toISOString().slice(0,10);
+    const todayBorder=isToday?'2px solid #1a73e8':'1px solid '+border;
+    function fmtC(v){if(v===null)return '';const a=Math.abs(v),s=v>=0?'+':'-';if(a>=100000)return s+(a/100000).toFixed(1)+'L';if(a>=1000)return s+(a/1000).toFixed(1)+'K';return s+a.toFixed(0);}
+    html+=`<td style="background:${bg};border:${todayBorder};border-radius:8px;padding:6px 4px;text-align:center;vertical-align:top;min-width:40px;">
+      <div style="font-size:0.72rem;font-weight:700;color:${isWeekend?'#94a3b8':color};">${day}</div>
+      <div style="font-size:0.65rem;font-weight:600;color:${color};margin-top:2px;">${isWeekend?'':fmtC(pnl)}</div>
+    </td>`;
+    col++;
+    if(col%7===0&&day<dim) html+=`</tr><tr>`;
+  }
+  // Fill remaining cells
+  const rem=(7-(col%7))%7;
+  for(let i=0;i<rem;i++) html+=`<td></td>`;
+  html+=`</tr></tbody></table></div>`;
+  document.getElementById('acct-cal-heatmap').innerHTML=html;
+}
+
+// Inline capital edit from Live Performance tile
+function acctCapInlineEdit() {
+  if (!currentAcct || currentAcct==='__ALL__') { toast('Select a single account to edit capital','warning'); return; }
+  const el = document.getElementById('acct-lp-cap');
+  const today = new Date();
+  const ym = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}`;
+  const acctCap = capitalDataAll[currentAcct]||{};
+  const cur = acctCap[ym]||0;
+  const input = document.createElement('input');
+  input.type='number'; input.value=cur||'';
+  input.style.cssText='width:120px;padding:3px 8px;border:1.5px solid var(--blue);border-radius:6px;font-size:1rem;font-weight:700;outline:none;';
+  input.placeholder='Enter capital';
+  el.replaceWith(input);
+  input.focus();
+  async function saveIt() {
+    const val = parseFloat(input.value)||0;
+    if (!capitalDataAll[currentAcct]) capitalDataAll[currentAcct]={};
+    capitalDataAll[currentAcct][ym]=val;
+    if (db) await db.ref('journal/capital_v2/'+currentAcct+'/'+ym).set(val);
+    toast('✓ Capital saved for '+getClientLabel(currentAcct),'success');
+    renderAcctReport();
+  }
+  input.addEventListener('keydown', e=>{ if(e.key==='Enter') saveIt(); if(e.key==='Escape') renderAcctReport(); });
+  input.addEventListener('blur', saveIt);
 }
 
 function renderAcctCapitalGrid() {
@@ -3657,16 +3846,10 @@ function parseTradetron(csv, algoName) {
 
   const rows = data.filter(r => r.Instrument && r.entry_date && r.price);
 
-  // Separate entries and exits
-  const entries = rows.filter(r => (r.condition_type||'').toLowerCase() === 'entry');
-  const exits   = rows.filter(r => {
-    const ct = (r.condition_type||'').toLowerCase();
-    return ct === 'exit' || ct === 'universal exit';
-  });
-
-  const paired = [];
-
-  // Group by run_counter for strict scoping
+  // ── NEW P&L METHOD ──
+  // P&L per counter = -(sum of amount column for that counter)
+  // Open counter (any instrument with net qty ≠ 0) → pnl = 0
+  // amount column is signed: negative for sells (they receive cash), so we negate to get P&L
   const byCounter = {};
   rows.forEach(r => {
     const rc = r.run_counter || '1';
@@ -3674,17 +3857,44 @@ function parseTradetron(csv, algoName) {
     byCounter[rc].push(r);
   });
 
-  // Process each run_counter separately with used-exit tracking
+  // Compute counter-level P&L and open status
+  const counterPnl  = {};
+  const counterOpen = {};
+  Object.keys(byCounter).forEach(rc => {
+    const rcRows = byCounter[rc];
+    // Net qty per instrument to detect open positions
+    const netQty = {};
+    rcRows.forEach(r => {
+      const key = r.Instrument || '';
+      const qty = parseFloat((r.quantity||'0').toString().replace(/,/g,''))||0;
+      netQty[key] = (netQty[key]||0) + qty;
+    });
+    const isOpen = Object.values(netQty).some(q => Math.abs(q) > 0.01);
+    counterOpen[rc] = isOpen;
+    if (isOpen) {
+      counterPnl[rc] = 0; // open counter — no MTM, show 0
+    } else {
+      const amtSum = rcRows.reduce((s,r) => {
+        const amt = parseFloat((r.amount||'0').toString().replace(/,/g,''))||0;
+        return s + amt;
+      }, 0);
+      counterPnl[rc] = Math.round(-amtSum * 100) / 100;
+    }
+  });
+
+  const paired = [];
+
+  // Now parse individual legs for Journal display (entry/exit pairing unchanged)
   Object.keys(byCounter).forEach(rc => {
     const rcRows     = byCounter[rc];
     const rcEntries  = rcRows.filter(r => (r.condition_type||'').toLowerCase() === 'entry');
     const rcRegExits = rcRows.filter(r => (r.condition_type||'').toLowerCase() === 'exit');
     const rcUnivExits= rcRows.filter(r => (r.condition_type||'').toLowerCase() === 'universal exit');
 
-    // Track which regular exits have been consumed
     const usedRegExits = new Set();
+    const legCount = rcEntries.length;
 
-    rcEntries.forEach(entry => {
+    rcEntries.forEach((entry, idx) => {
       const inst       = parseInstrument(entry.Instrument);
       const entryTxn   = (entry.txn_type||'').toUpperCase();
       const exitTxn    = entryTxn === 'S' ? 'B' : 'S';
@@ -3708,8 +3918,7 @@ function parseTradetron(csv, algoName) {
           break;
         }
       }
-
-      // 2. Universal exit: same instrument + reversed txn (not consumed — shared across re-entries)
+      // 2. Universal exit
       if (!matchExit) {
         matchExit = rcUnivExits.find(ex =>
           ex.Instrument === entry.Instrument &&
@@ -3724,15 +3933,10 @@ function parseTradetron(csv, algoName) {
         ? ((matchExit.condition_type||'').toLowerCase()==='universal exit' ? 'EOD' : 'TARGET')
         : 'OPEN';
 
-      // P&L using entry qty (correct for both regular and universal exits)
-      // Only compute P&L when exit price is known (>0) — open legs stay at 0
-      let pnl = 0;
-      if (exitPrice > 0) {
-        pnl = action === 'SELL'
-          ? (entryPrice - exitPrice) * qty
-          : (exitPrice - entryPrice) * qty;
-        pnl = Math.round(pnl * 100) / 100;
-      }
+      // Distribute counter P&L across legs (first leg carries it all, rest=0)
+      // This way sum of leg pnls = counter pnl
+      const isFirstLeg = idx === 0;
+      const legPnl = isFirstLeg ? counterPnl[rc] : 0;
 
       paired.push({
         source:       'tradetron',
@@ -3753,13 +3957,13 @@ function parseTradetron(csv, algoName) {
         exit_time:    exitTime,
         exit_price:   exitPrice,
         exit_reason:  exitReason,
-        pnl:          pnl,
+        pnl:          legPnl,
         condition_type: 'entry',
         trade_type:   exitDate && exitDate !== entryDate ? 'OVERNIGHT' : 'INTRADAY',
         run_counter:  runCounter,
         leg_id:       entry.leg_id || '',
         is_re_entry:  false,
-        status:       exitPrice ? 'ACTIVE' : 'OPEN',
+        status:       counterOpen[rc] ? 'OPEN' : 'ACTIVE',
         created_at:   new Date().toISOString()
       });
     });
