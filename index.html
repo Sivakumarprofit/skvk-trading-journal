@@ -2,6 +2,13 @@
 ==========================================================
   SKVK TRADING JOURNAL — VERSION HISTORY
 ==========================================================
+  v19.1 | 2026-06-26 | Deep fix for initial load blank journal: root cause was nicknames
+         |            | Firebase path sometimes not existing, so .on('value') never fires,
+         |            | blocking _maybeInitialRender forever; fix: removed nicknames from
+         |            | gate (only trades + algos required); added 3s safety timeout fallback
+         |            | in case algos path also absent; nicknames listener still triggers
+         |            | refreshAll() after initial render is done
+  ──────────────────────────────────────────────────────
   v19.0 | 2026-06-26 | Removed System Statistics tab entirely (nav button, page HTML,
          |            | all JS functions: updateSysStatDropdown, onSysStatYearChange,
          |            | onSysStatStratChange, renderSysStat, renderSysStatCounter,
@@ -526,7 +533,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>SKVK Trading Journal v19.0</title>
+<title>SKVK Trading Journal v19.1</title>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -1461,7 +1468,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div class="login-logo">📋</div>
     <div class="login-title">
       SKVK Trading Journal
-      <span class="login-vbadge">v19.0</span>
+      <span class="login-vbadge">v19.1</span>
     </div>
     <div class="login-sub">Sign in with your authorised Google account to access the journal.</div>
     <button class="google-signin-btn" id="googleSignInBtn" onclick="signInWithGoogle()">
@@ -1492,7 +1499,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div class="brand">
       <span class="brand-dot"></span>
       SKVK Trading Journal
-      <span style="font-size:0.78rem;background:#1a73e8;color:#fff;padding:2px 8px;border-radius:8px;font-weight:700;margin-left:4px;">v19.0</span>
+      <span style="font-size:0.78rem;background:#1a73e8;color:#fff;padding:2px 8px;border-radius:8px;font-weight:700;margin-left:4px;">v19.1</span>
     </div>
     <div id="brand-subline">
       <div id="db-status">● connecting…</div>
@@ -3672,14 +3679,22 @@ function startListeners() {
   listenAlgoGroups();
   listenMCX();
 
-  // Track readiness of the two dependencies needed before first journal render
-  let _tradesReady = false, _algosReady = false, _nicksReady = false;
+  // Gate: wait for trades + algos before first render
+  // Nicknames excluded from gate — path may not exist, causing the listener to never fire
+  let _tradesReady = false, _algosReady = false;
   let _initialRenderDone = false;
   function _maybeInitialRender() {
-    if (_initialRenderDone || !_tradesReady || !_algosReady || !_nicksReady) return;
+    if (_initialRenderDone || !_tradesReady || !_algosReady) return;
     _initialRenderDone = true;
     refreshAll();
   }
+  // Safety fallback: if algos never arrive (e.g. empty Firebase), still render after 3s
+  setTimeout(() => {
+    if (!_initialRenderDone && _tradesReady) {
+      _initialRenderDone = true;
+      refreshAll();
+    }
+  }, 3000);
 
   db.ref('journal/trades').on('value', snap => {
     allTrades = Object.values(snap.val() || {});
@@ -3712,10 +3727,9 @@ function startListeners() {
   });
   db.ref('journal/nicknames').on('value', snap => {
     accountNicknames = snap.val() || {};
-    _nicksReady = true;
     buildClientIdTabs();
     buildNicknameList();
-    if (_initialRenderDone) refreshAll(); else _maybeInitialRender();
+    if (_initialRenderDone) refreshAll();
   });
   loadSMTrades();
   // Listen for last updated tag
