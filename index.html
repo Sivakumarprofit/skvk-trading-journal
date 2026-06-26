@@ -2,6 +2,18 @@
 ==========================================================
   SKVK TRADING JOURNAL — VERSION HISTORY
 ==========================================================
+  v18.8 | 2026-06-26 | App Settings restructured: Add New System form now has both Basket &
+         |            | Group dropdowns; separate Basket Allocation + Group Allocation tables
+         |            | merged into one combined "Basket & Group Allocation" table with columns
+         |            | Strategy | Underlying | Type | Basket | Group | Color | Actions;
+         |            | App Settings order: Add System → Basket Management → Basket & Group
+         |            | Allocation → Group Management → Display Prefs → Nicknames → ...;
+         |            | duplicate subtitle line in old Basket Allocation header removed;
+         |            | asRenderSystems() updated to combined table rendering both basket+group;
+         |            | asAddSystem() updated to also assign basket on add;
+         |            | asPopulateGroupDropdowns() populates both basket and group selects;
+         |            | all three version badges updated (title, login, topbar)
+  ──────────────────────────────────────────────────────
   v18.7 | 2026-06-26 | App Settings: "Groups" renamed to "Basket Management"; new "Group Management"
          |            | section added below Basket Management (same UI, optional — no warning badges);
          |            | a strategy can belong to both a Basket and a Group independently;
@@ -495,7 +507,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>SKVK Trading Journal v18.6</title>
+<title>SKVK Trading Journal v18.8</title>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -1430,7 +1442,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div class="login-logo">📋</div>
     <div class="login-title">
       SKVK Trading Journal
-      <span class="login-vbadge">v18.6</span>
+      <span class="login-vbadge">v18.8</span>
     </div>
     <div class="login-sub">Sign in with your authorised Google account to access the journal.</div>
     <button class="google-signin-btn" id="googleSignInBtn" onclick="signInWithGoogle()">
@@ -1461,7 +1473,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div class="brand">
       <span class="brand-dot"></span>
       SKVK Trading Journal
-      <span style="font-size:0.78rem;background:#1a73e8;color:#fff;padding:2px 8px;border-radius:8px;font-weight:700;margin-left:4px;">v18.6</span>
+      <span style="font-size:0.78rem;background:#1a73e8;color:#fff;padding:2px 8px;border-radius:8px;font-weight:700;margin-left:4px;">v18.8</span>
     </div>
     <div id="brand-subline">
       <div id="db-status">● connecting…</div>
@@ -2001,13 +2013,13 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
         <span style="font-size:0.95rem;font-weight:700;color:var(--text0);">Add New System Name</span>
       </div>
       <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;">
-        <div style="display:flex;flex-direction:column;gap:5px;flex:1;min-width:220px;">
+        <div style="display:flex;flex-direction:column;gap:5px;flex:2;min-width:200px;">
           <label style="font-size:0.75rem;font-weight:600;color:var(--text1);">System Name</label>
           <input type="text" id="as-new-name" placeholder="e.g. NF_NW_ALL_ATM_SL22…"
             style="padding:8px 11px;border:1.5px solid var(--border);border-radius:7px;font-size:0.84rem;outline:none;width:100%;box-sizing:border-box;"
             onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--border)'">
         </div>
-        <div style="display:flex;flex-direction:column;gap:5px;min-width:150px;">
+        <div style="display:flex;flex-direction:column;gap:5px;min-width:130px;">
           <label style="font-size:0.75rem;font-weight:600;color:var(--text1);">Underlying</label>
           <select id="as-new-underlying" style="padding:8px 10px;border:1.5px solid var(--border);border-radius:7px;font-size:0.84rem;outline:none;background:var(--bg);color:var(--text0);">
             <option value="NIFTY">NIFTY</option>
@@ -2016,7 +2028,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
             <option value="MULTI">MULTI</option>
           </select>
         </div>
-        <div style="display:flex;flex-direction:column;gap:5px;min-width:120px;">
+        <div style="display:flex;flex-direction:column;gap:5px;min-width:110px;">
           <label style="font-size:0.75rem;font-weight:600;color:var(--text1);">Type</label>
           <select id="as-new-type" style="padding:8px 10px;border:1.5px solid var(--border);border-radius:7px;font-size:0.84rem;outline:none;background:var(--bg);color:var(--text0);">
             <option value="0DTE">0DTE</option>
@@ -2025,13 +2037,19 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
             <option value="HEDGE">HEDGE</option>
           </select>
         </div>
-        <div style="display:flex;flex-direction:column;gap:5px;min-width:90px;">
+        <div style="display:flex;flex-direction:column;gap:5px;min-width:60px;">
           <label style="font-size:0.75rem;font-weight:600;color:var(--text1);">Color</label>
           <input type="color" id="as-new-color" value="#1a73e8"
-            style="padding:2px;border:1.5px solid var(--border);border-radius:7px;height:36px;width:60px;cursor:pointer;">
+            style="padding:2px;border:1.5px solid var(--border);border-radius:7px;height:36px;width:48px;cursor:pointer;">
         </div>
-        <div style="display:flex;flex-direction:column;gap:5px;flex:1;min-width:160px;">
-          <label style="font-size:0.75rem;font-weight:600;color:var(--text1);">Group (optional)</label>
+        <div style="display:flex;flex-direction:column;gap:5px;flex:1;min-width:150px;">
+          <label style="font-size:0.75rem;font-weight:600;color:var(--text1);">Basket</label>
+          <select id="as-new-basket" style="padding:8px 10px;border:1.5px solid var(--border);border-radius:7px;font-size:0.84rem;outline:none;background:var(--bg);color:var(--text0);">
+            <option value="">— no basket —</option>
+          </select>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:5px;flex:1;min-width:150px;">
+          <label style="font-size:0.75rem;font-weight:600;color:var(--text1);">Group <span style="font-weight:400;color:var(--text3);">(optional)</span></label>
           <select id="as-new-group" style="padding:8px 10px;border:1.5px solid var(--border);border-radius:7px;font-size:0.84rem;outline:none;background:var(--bg);color:var(--text0);">
             <option value="">— no group —</option>
           </select>
@@ -2059,6 +2077,34 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
       </div>
     </div>
 
+    <!-- ── Basket & Group Allocation (combined) ── -->
+    <div style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:22px;box-shadow:var(--shadow-sm);">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span style="font-size:1.3rem;">📋</span>
+          <div>
+            <div style="font-size:0.95rem;font-weight:700;color:var(--text0);">Basket & Group Allocation</div>
+            <div style="font-size:0.72rem;color:var(--text2);margin-top:2px;">Assign each strategy to a Basket (required) and optionally a Group · ⚠️ Unassigned basket shown with error</div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <input type="text" id="as-search" placeholder="Search strategies…" oninput="asRenderSystems()"
+            style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:0.82rem;outline:none;min-width:160px;">
+          <select id="as-filter-basket" onchange="asRenderSystems()"
+            style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:0.82rem;outline:none;background:var(--bg);color:var(--text0);">
+            <option value="">All Baskets</option>
+          </select>
+          <select id="as-filter-group" onchange="asRenderSystems()"
+            style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:0.82rem;outline:none;background:var(--bg);color:var(--text0);">
+            <option value="">All Groups</option>
+          </select>
+        </div>
+      </div>
+      <div id="as-system-list">
+        <div class="loading"><div class="spinner"></div> Loading…</div>
+      </div>
+    </div>
+
     <!-- ── Group Management ── -->
     <div style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:22px;box-shadow:var(--shadow-sm);">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
@@ -2073,55 +2119,6 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
       </div>
       <div id="ag-group-list">
         <div style="color:var(--text3);font-size:0.8rem;">No groups yet</div>
-      </div>
-    </div>
-
-    <!-- ── Group Allocation ── -->
-    <div style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:22px;box-shadow:var(--shadow-sm);">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
-        <div style="display:flex;align-items:center;gap:10px;">
-          <span style="font-size:1.3rem;">📋</span>
-          <div>
-            <div style="font-size:0.95rem;font-weight:700;color:var(--text0);">Group Allocation</div>
-            <div style="font-size:0.72rem;color:var(--text2);margin-top:2px;">Assign strategies to groups · Groups are optional — unassigned strategies show NA (no warning)</div>
-          </div>
-        </div>
-        <div style="display:flex;align-items:center;gap:8px;">
-          <input type="text" id="ag-search" placeholder="Search strategies…" oninput="agRenderSystems()"
-            style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:0.82rem;outline:none;min-width:180px;">
-          <select id="ag-filter-group" onchange="agRenderSystems()"
-            style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:0.82rem;outline:none;background:var(--bg);color:var(--text0);">
-            <option value="">All Groups</option>
-          </select>
-        </div>
-      </div>
-      <div id="ag-system-list">
-        <div class="loading"><div class="spinner"></div> Loading…</div>
-      </div>
-    </div>
-
-    <!-- ── Basket Allocation ── -->
-    <div style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:22px;box-shadow:var(--shadow-sm);">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
-        <div style="display:flex;align-items:center;gap:10px;">
-          <span style="font-size:1.3rem;">📋</span>
-          <div>
-            <div style="font-size:0.95rem;font-weight:700;color:var(--text0);">Basket Allocation</div>
-            <div style="font-size:0.72rem;color:var(--text2);margin-top:2px;">Edit, delete or reassign basket for each strategy · ⚠️ Unassigned strategies shown with error</div>
-            <div style="font-size:0.72rem;color:var(--text2);margin-top:2px;">Edit, delete or reassign basket for each strategy</div>
-          </div>
-        </div>
-        <div style="display:flex;align-items:center;gap:8px;">
-          <input type="text" id="as-search" placeholder="Search strategies…" oninput="asRenderSystems()"
-            style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:0.82rem;outline:none;min-width:180px;">
-          <select id="as-filter-basket" onchange="asRenderSystems()"
-            style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:0.82rem;outline:none;background:var(--bg);color:var(--text0);">
-            <option value="">All Baskets</option>
-          </select>
-        </div>
-      </div>
-      <div id="as-system-list">
-        <div class="loading"><div class="spinner"></div> Loading…</div>
       </div>
     </div>
 
@@ -6869,9 +6866,10 @@ function listenAlgoGroups() {
 
 function agPopulateDropdowns() {
   const grps = Object.values(algoGroupsData).sort((a,b)=>(a.name||'').localeCompare(b.name||''));
-  const opts = '<option value="">— no group —</option>' + grps.map(g=>`<option value="${g.name}">${g.name}</option>`).join('');
   const selFilter = document.getElementById('ag-filter-group');
   if (selFilter) selFilter.innerHTML = '<option value="">All Groups</option>' + grps.map(g=>`<option value="${g.name}">${g.name}</option>`).join('');
+  // Also refresh the combined table dropdowns
+  asPopulateGroupDropdowns();
 }
 
 function agRenderGroups() {
@@ -8121,20 +8119,35 @@ function _ssFmtFullDate(d) {
 
 function initAppSettings() {
   asRenderGroups();
-  asRenderSystems();
+  asRenderSystems();      // combined Basket & Group allocation table
   asPopulateGroupDropdowns();
   agRenderGroups();
-  agRenderSystems();
   agPopulateDropdowns();
 }
 
 function asPopulateGroupDropdowns() {
   const groups = Object.values(algoGroups).sort((a,b)=>(a.name||'').localeCompare(b.name||''));
-  const opts = '<option value="">— no group —</option>' + groups.map(g=>`<option value="${g.name}">${g.name}</option>`).join('');
-  const selAdd    = document.getElementById('as-new-group');
+  const grps   = Object.values(algoGroupsData).sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+
+  // Add form — Basket dropdown
+  const selAddBasket = document.getElementById('as-new-basket');
+  if (selAddBasket) selAddBasket.innerHTML = '<option value="">— no basket —</option>' +
+    groups.map(g=>`<option value="${g.name}">${g.name}</option>`).join('');
+
+  // Add form — Group dropdown
+  const selAddGroup = document.getElementById('as-new-group');
+  if (selAddGroup) selAddGroup.innerHTML = '<option value="">— no group —</option>' +
+    grps.map(g=>`<option value="${g.name}">${g.name}</option>`).join('');
+
+  // Filter — Basket
   const selFilter = document.getElementById('as-filter-basket');
-  if (selAdd)    selAdd.innerHTML = opts;
-  if (selFilter) selFilter.innerHTML = '<option value="">All Baskets</option>' + groups.map(g=>`<option value="${g.name}">${g.name}</option>`).join('');
+  if (selFilter) selFilter.innerHTML = '<option value="">All Baskets</option>' +
+    groups.map(g=>`<option value="${g.name}">${g.name}</option>`).join('');
+
+  // Filter — Group (combined table)
+  const selFilterGrp = document.getElementById('as-filter-group');
+  if (selFilterGrp) selFilterGrp.innerHTML = '<option value="">All Groups</option>' +
+    grps.map(g=>`<option value="${g.name}">${g.name}</option>`).join('');
 }
 
 function asRenderGroups() {
@@ -8162,22 +8175,34 @@ function asRenderSystems() {
   const list = document.getElementById('as-system-list');
   if (!list) return;
   const search = (document.getElementById('as-search')?.value || '').toLowerCase();
-  const filterGroup = document.getElementById('as-filter-basket')?.value || '';
+  const filterBasket = document.getElementById('as-filter-basket')?.value || '';
+  const filterGroup  = document.getElementById('as-filter-group')?.value || '';
 
   let algos = Object.values(algoMeta).sort((a,b)=>(a.name||'').localeCompare(b.name||''));
   if (search) algos = algos.filter(a => (a.name||'').toLowerCase().includes(search) || (a.display_name||'').toLowerCase().includes(search));
+
+  // Build basket lookup
+  const basketLookup = {};
+  Object.values(algoGroups).forEach(g => { (g.algos||[]).forEach(n => { basketLookup[n] = g.name; }); });
+
+  // Build group lookup (strategy → group name, optional)
+  const groupLookup = {};
+  Object.values(algoGroupsData).forEach(g => { (g.algos||[]).forEach(n => { groupLookup[n] = groupLookup[n] ? groupLookup[n]+', '+g.name : g.name; }); });
+
+  if (filterBasket) {
+    const g = Object.values(algoGroups).find(x=>x.name===filterBasket);
+    const members = new Set(g?.algos||[]);
+    algos = algos.filter(a => members.has(a.name));
+  }
   if (filterGroup) {
-    const g = algoGroups[filterGroup] || Object.values(algoGroups).find(x=>x.name===filterGroup);
-    const members = new Set(g?.algos || []);
+    const g = Object.values(algoGroupsData).find(x=>x.name===filterGroup);
+    const members = new Set(g?.algos||[]);
     algos = algos.filter(a => members.has(a.name));
   }
 
   if (!algos.length) { list.innerHTML = '<div style="color:var(--text3);font-size:0.8rem;padding:10px 0;">No strategies found</div>'; return; }
 
-  const groupLookup = {};
-  Object.values(algoGroups).forEach(g => { (g.algos||[]).forEach(n => { groupLookup[n] = g.name; }); });
-
-  const unassignedCount = algos.filter(a => !groupLookup[a.name]).length;
+  const unassignedCount = algos.filter(a => !basketLookup[a.name]).length;
   const warningBanner = unassignedCount > 0
     ? `<div style="background:#fef2f2;border:2px solid #dc2626;border-radius:10px;padding:12px 16px;margin-bottom:14px;display:flex;align-items:center;gap:12px;">
         <span style="font-size:2rem;">⚠️</span>
@@ -8185,8 +8210,11 @@ function asRenderSystems() {
         <div style="font-size:0.75rem;color:#b91c1c;margin-top:2px;">Assign each strategy to a basket using the dropdown below.</div></div>
        </div>` : '';
 
-  const groupOpts = '<option value="">— no basket —</option>' +
+  const basketOpts = '<option value="">— no basket —</option>' +
     Object.values(algoGroups).sort((a,b)=>(a.name||'').localeCompare(b.name||'')).map(g=>`<option value="${g.name}">${g.name}</option>`).join('');
+
+  const groupOpts = '<option value="">— no group —</option>' +
+    Object.values(algoGroupsData).sort((a,b)=>(a.name||'').localeCompare(b.name||'')).map(g=>`<option value="${g.name}">${g.name}</option>`).join('');
 
   list.innerHTML = warningBanner + `
     <table style="width:100%;border-collapse:collapse;font-size:0.82rem;">
@@ -8195,20 +8223,23 @@ function asRenderSystems() {
           <th style="padding:8px 10px;text-align:left;font-weight:600;color:var(--text1);border-bottom:1px solid var(--border);">Strategy Name</th>
           <th style="padding:8px 10px;text-align:left;font-weight:600;color:var(--text1);border-bottom:1px solid var(--border);">Underlying</th>
           <th style="padding:8px 10px;text-align:left;font-weight:600;color:var(--text1);border-bottom:1px solid var(--border);">Type</th>
-          <th style="padding:8px 10px;text-align:left;font-weight:600;color:var(--text1);border-bottom:1px solid var(--border);">Basket</th>
+          <th style="padding:8px 10px;text-align:left;font-weight:600;color:var(--text1);border-bottom:1px solid var(--border);">🧺 Basket</th>
+          <th style="padding:8px 10px;text-align:left;font-weight:600;color:var(--text1);border-bottom:1px solid var(--border);">📁 Group <span style="font-size:0.65rem;font-weight:400;color:var(--text3);">(optional)</span></th>
           <th style="padding:8px 10px;text-align:center;font-weight:600;color:var(--text1);border-bottom:1px solid var(--border);">Color</th>
           <th style="padding:8px 10px;text-align:center;font-weight:600;color:var(--text1);border-bottom:1px solid var(--border);">Actions</th>
         </tr>
       </thead>
       <tbody>
-        ${algos.map((a,i) => {
-          const grp = groupLookup[a.name] || '';
-          const isUnassigned = !grp;
-          const gopts = groupOpts.replace(`value="${grp}"`, `value="${grp}" selected`);
+        ${algos.map(a => {
+          const basket = basketLookup[a.name] || '';
+          const grp    = groupLookup[a.name]  || '';
+          const isUnassigned = !basket;
+          const bOpts = basketOpts.replace(`value="${basket}"`, `value="${basket}" selected`);
+          const gOpts = groupOpts.replace(`value="${grp}"`, `value="${grp}" selected`);
           return `
           <tr style="border-bottom:1px solid var(--border);${isUnassigned?'background:#fff5f5;':''}">
             <td style="padding:8px 10px;">
-              ${isUnassigned ? '<span style="font-size:1.2rem;margin-right:6px;" title="Not assigned to any basket">⚠️</span>' : ''}
+              ${isUnassigned ? '<span style="font-size:1rem;margin-right:4px;" title="Not assigned to any basket">⚠️</span>' : ''}
               <span style="font-weight:600;color:${isUnassigned?'#dc2626':'var(--text0)'};">${a.name}</span>
               ${isUnassigned ? '<span style="background:#dc2626;color:#fff;font-size:0.6rem;font-weight:700;padding:1px 6px;border-radius:4px;margin-left:6px;">ERROR</span>' : ''}
               ${a.display_name && a.display_name !== a.name ? `<div style="font-size:0.7rem;color:var(--text2);">${a.display_name}</div>` : ''}
@@ -8227,8 +8258,14 @@ function asRenderSystems() {
             </td>
             <td style="padding:8px 10px;">
               <select onchange="asAssignGroup('${a.name}',this.value)"
+                style="padding:4px 7px;border:1px solid var(--border);border-radius:5px;font-size:0.8rem;background:var(--bg);color:var(--text0);${isUnassigned?'border-color:#dc2626;':''}" >
+                ${bOpts}
+              </select>
+            </td>
+            <td style="padding:8px 10px;">
+              <select onchange="agAssignGroup('${a.name}',this.value)"
                 style="padding:4px 7px;border:1px solid var(--border);border-radius:5px;font-size:0.8rem;background:var(--bg);color:var(--text0);">
-                ${gopts}
+                ${gOpts}
               </select>
             </td>
             <td style="padding:8px 10px;text-align:center;">
@@ -8260,14 +8297,19 @@ async function asAddSystem() {
   algoMeta[name] = meta;
   if (db) await db.ref('journal/algos/' + safeKey(name)).set(meta);
 
+  // Assign to basket if selected
+  const basket = document.getElementById('as-new-basket')?.value;
+  if (basket) await asAssignGroup(name, basket);
+
   // Assign to group if selected
   const grp = document.getElementById('as-new-group')?.value;
-  if (grp) await asAssignGroup(name, grp);
+  if (grp) await agAssignGroup(name, grp);
 
   document.getElementById('as-new-name').value = '';
   asRenderSystems();
   asRenderGroups();
   asPopulateGroupDropdowns();
+  agRenderGroups();
   toast(`"${name}" added`, 'success');
 }
 
