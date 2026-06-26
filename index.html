@@ -2,6 +2,17 @@
 ==========================================================
   SKVK TRADING JOURNAL — VERSION HISTORY
 ==========================================================
+  v19.0 | 2026-06-26 | Removed System Statistics tab entirely (nav button, page HTML,
+         |            | all JS functions: updateSysStatDropdown, onSysStatYearChange,
+         |            | onSysStatStratChange, renderSysStat, renderSysStatCounter,
+         |            | renderSysStatBelow, _ssFmtCntrDate, _ssFmtFullDate);
+         |            | SNO column added to Basket Management list (display only);
+         |            | SNO column added to Group Management list (display only);
+         |            | Bug fix: initial load missing Cntr1-3 — renderJournal now waits
+         |            | for algoMeta and accountNicknames to settle before first render
+         |            | using a readyFlags counter; subsequent Firebase updates render
+         |            | immediately as before; all three version badges updated
+  ──────────────────────────────────────────────────────
   v18.9 | 2026-06-26 | Live Performance tile (both Basket Level & Account Wise pages):
          |            | new "Drawdown %" stat added as separate entity next to Max Drawdown;
          |            | calculated as Max Drawdown / Capital Deployed × 100; shows NA in
@@ -515,7 +526,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>SKVK Trading Journal v18.9</title>
+<title>SKVK Trading Journal v19.0</title>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -1450,7 +1461,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div class="login-logo">📋</div>
     <div class="login-title">
       SKVK Trading Journal
-      <span class="login-vbadge">v18.9</span>
+      <span class="login-vbadge">v19.0</span>
     </div>
     <div class="login-sub">Sign in with your authorised Google account to access the journal.</div>
     <button class="google-signin-btn" id="googleSignInBtn" onclick="signInWithGoogle()">
@@ -1481,7 +1492,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div class="brand">
       <span class="brand-dot"></span>
       SKVK Trading Journal
-      <span style="font-size:0.78rem;background:#1a73e8;color:#fff;padding:2px 8px;border-radius:8px;font-weight:700;margin-left:4px;">v18.9</span>
+      <span style="font-size:0.78rem;background:#1a73e8;color:#fff;padding:2px 8px;border-radius:8px;font-weight:700;margin-left:4px;">v19.0</span>
     </div>
     <div id="brand-subline">
       <div id="db-status">● connecting…</div>
@@ -1492,7 +1503,6 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
   <!-- Nav tabs -->
   <nav class="nav-tabs">
     <button class="nav-tab active" onclick="showPage('journal')"     data-page="journal">📋 <span class="tl">Daily<br>Journal</span></button>
-    <button class="nav-tab" onclick="showPage('sysstat')"            data-page="sysstat">📈 <span class="tl">System<br>Statistics</span></button>
     <button class="nav-tab" onclick="showPage('dashboard')"          data-page="dashboard">📊 <span class="tl">P&L Report-<br>Basket Level</span></button>
     <button class="nav-tab" onclick="showPage('acctreport')"         data-page="acctreport">👤 <span class="tl">P&L Report-<br>Account wise</span></button>
     <button class="nav-tab" onclick="showPage('upload')"             data-page="upload">⬆ <span class="tl">Upload Trade<br>Reports</span></button>
@@ -2674,53 +2684,6 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
 </div>
 
 <!-- ══════════ SYSTEM STATISTICS ══════════ -->
-<div id="page-sysstat" class="page">
-  <div style="margin-bottom:20px;">
-    <div class="page-title">Strategy Statistics</div>
-    <div class="page-subtitle" style="margin-bottom:14px;">Performance analytics per strategy or group · Calculated from broker trades</div>
-    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-      <select id="sysstat-select" onchange="onSysStatStratChange()" style="padding:7px 12px;border:1px solid var(--border);border-radius:8px;background:var(--bg2);color:var(--text0);font-size:0.85rem;min-width:280px;">
-        <option value="">— Select Strategy or Group —</option>
-      </select>
-      <select id="sysstat-year" onchange="onSysStatYearChange()" style="padding:7px 12px;border:1px solid var(--border);border-radius:8px;background:var(--bg2);color:var(--text0);font-size:0.85rem;">
-        <option value="ALL">All Years</option>
-      </select>
-      <span style="font-size:0.78rem;color:var(--text3);font-weight:600;">FROM</span>
-      <input type="date" id="sysstat-from" onchange="renderSysStatBelow()" style="padding:6px 10px;border:1px solid var(--border);border-radius:8px;background:var(--bg2);color:var(--text0);font-size:0.82rem;">
-      <span style="font-size:0.78rem;color:var(--text3);font-weight:600;">TO</span>
-      <input type="date" id="sysstat-to" onchange="renderSysStatBelow()" style="padding:6px 10px;border:1px solid var(--border);border-radius:8px;background:var(--bg2);color:var(--text0);font-size:0.82rem;">
-    </div>
-  </div>
-
-  <!-- Empty state -->
-  <div id="sysstat-empty" style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:80px 20px;color:var(--text3);">
-    <div style="font-size:3rem;margin-bottom:16px;">📊</div>
-    <div style="font-size:1.1rem;font-weight:700;color:var(--text1);margin-bottom:6px;">Select a Strategy or Basket</div>
-    <div style="font-size:0.85rem;">Choose from the dropdown above to view performance statistics</div>
-  </div>
-
-  <!-- Counter section (shown after strategy selected) -->
-  <div id="sysstat-counter-section" style="display:none;margin-bottom:24px;">
-    <!-- Purple pill for strategy name -->
-    <div style="margin-bottom:14px;">
-      <span id="sysstat-label-pill" style="display:inline-block;background:#EEEDFE;color:#3C3489;font-size:0.85rem;font-weight:600;padding:5px 16px;border-radius:20px;"></span>
-    </div>
-    <!-- Counter dropdown -->
-    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-      <span style="font-size:0.8rem;font-weight:700;color:var(--text2);">Counter</span>
-      <select id="sysstat-counter-sel" onchange="renderSysStatCounter()" style="padding:6px 12px;border:1.5px solid var(--border);border-radius:8px;background:var(--bg2);color:var(--text0);font-size:0.82rem;min-width:260px;cursor:pointer;">
-      </select>
-      <span id="sysstat-counter-meta" style="font-size:0.75rem;color:var(--text3);"></span>
-    </div>
-  </div>
-
-  <!-- Counter P&L table -->
-  <div id="sysstat-counter-table" style="display:none;margin-bottom:28px;"></div>
-
-  <!-- Stats/Chart/Summary (date-range driven) -->
-  <div id="sysstat-below" style="display:none;"></div>
-</div>
-
 <!-- ══════════ COMPARE ══════════ -->
 <div id="page-compare" class="page">
   <div class="page-header">
@@ -3708,15 +3671,28 @@ function startListeners() {
   listenGroups();
   listenAlgoGroups();
   listenMCX();
+
+  // Track readiness of the two dependencies needed before first journal render
+  let _tradesReady = false, _algosReady = false, _nicksReady = false;
+  let _initialRenderDone = false;
+  function _maybeInitialRender() {
+    if (_initialRenderDone || !_tradesReady || !_algosReady || !_nicksReady) return;
+    _initialRenderDone = true;
+    refreshAll();
+  }
+
   db.ref('journal/trades').on('value', snap => {
     allTrades = Object.values(snap.val() || {});
     allTrades.sort((a,b) => (b.entry_date||'').localeCompare(a.entry_date||''));
-    refreshAll();
+    _tradesReady = true;
+    if (_initialRenderDone) refreshAll(); else _maybeInitialRender();
   });
   db.ref('journal/algos').on('value', snap => {
     algoMeta = snap.val() || {};
+    _algosReady = true;
     renderAlgoPage();
     populateAlgoDropdowns();
+    if (_initialRenderDone) refreshAll(); else _maybeInitialRender();
   });
   db.ref('journal/uploads').on('value', snap => {
     uploads = Object.values(snap.val() || {});
@@ -3736,8 +3712,10 @@ function startListeners() {
   });
   db.ref('journal/nicknames').on('value', snap => {
     accountNicknames = snap.val() || {};
+    _nicksReady = true;
     buildClientIdTabs();
     buildNicknameList();
+    if (_initialRenderDone) refreshAll(); else _maybeInitialRender();
   });
   loadSMTrades();
   // Listen for last updated tag
@@ -3778,7 +3756,6 @@ function showPage(name) {
   if (name === 'stockmock') { loadSMTolerances(); updateSMStrategyDropdown(); updateSMLoadedSummary(); onSMStratChange(); }
   if (name === 'algos') { renderGroupList(); renderAlgoPage(); }
   if (name === 'compare') { populateCompareSelects(); }
-  if (name === 'sysstat') { updateSysStatDropdown(); renderSysStat(); }
   if (name === 'acctreport') { acctWeekOffset = 0; initAcctReport(); }
 }
 
@@ -6893,11 +6870,12 @@ function agRenderGroups() {
   if (!list) return;
   const grps = Object.values(algoGroupsData).sort((a,b)=>(a.name||'').localeCompare(b.name||''));
   if (!grps.length) { list.innerHTML = '<div style="color:var(--text3);font-size:0.8rem;">No groups yet — groups are optional</div>'; return; }
-  list.innerHTML = grps.map(g => {
+  list.innerHTML = grps.map((g, idx) => {
     const color = g.color || '#0d9488';
     const members = (g.algos || []).length;
     return `
       <div style="display:flex;align-items:center;gap:12px;padding:10px 14px;border:1px solid var(--border);border-radius:8px;margin-bottom:8px;">
+        <span style="min-width:24px;text-align:center;font-size:0.75rem;font-weight:700;color:var(--text3);">${idx+1}</span>
         <span style="width:14px;height:14px;border-radius:50%;background:${color};flex-shrink:0;display:inline-block;"></span>
         <div style="flex:1;">
           <div style="font-size:0.85rem;font-weight:600;color:var(--text0);">${g.name}</div>
@@ -7724,412 +7702,6 @@ function listenMCX() {
 
 
 // ════════════════════════════════════════════════════
-//  SYSTEM STATISTICS
-// ════════════════════════════════════════════════════
-let ssChart = null;
-let ssCounters = [];      // [{date, pnl, legs, trades, cntr}]
-let ssStratTrades = [];   // all trades for selected strategy/group (unfiltered by date)
-let ssLabel = '';
-
-function updateSysStatDropdown() {
-  const sel   = document.getElementById('sysstat-select');
-  const yrSel = document.getElementById('sysstat-year');
-  if (!sel || !yrSel) return;
-  const cur = sel.value;
-
-  sel.innerHTML = '<option value="">— Select Strategy or Group —</option>';
-  const groups = Object.values(algoGroups);
-  if (groups.length) {
-    const og = document.createElement('optgroup');
-    og.label = '── Groups ──';
-    groups.forEach(g => {
-      const o = document.createElement('option');
-      o.value = 'grp:' + g.name;
-      o.textContent = `${g.name} (${(g.algos||[]).length} algos)`;
-      og.appendChild(o);
-    });
-    sel.appendChild(og);
-  }
-  const brokerStrats = [...new Set(allTrades.map(t=>t.algo_name).filter(Boolean))].sort();
-  const os = document.createElement('optgroup');
-  os.label = '── Individual Strategies ──';
-  brokerStrats.forEach(s => {
-    const o = document.createElement('option');
-    o.value = 'strat:' + s;
-    o.textContent = s;
-    os.appendChild(o);
-  });
-  sel.appendChild(os);
-  if (cur) sel.value = cur;
-
-  const years = [...new Set(allTrades.map(t=>(t.entry_date||'').slice(0,4)).filter(Boolean))].sort().reverse();
-  const curYr = yrSel.value;
-  yrSel.innerHTML = '<option value="ALL">All Years</option>';
-  years.forEach(y => {
-    const o = document.createElement('option');
-    o.value = y; o.textContent = y;
-    yrSel.appendChild(o);
-  });
-  if (curYr) yrSel.value = curYr;
-}
-
-function onSysStatYearChange() {
-  const yr = document.getElementById('sysstat-year')?.value || 'ALL';
-  const fromEl = document.getElementById('sysstat-from');
-  const toEl   = document.getElementById('sysstat-to');
-  if (!fromEl || !toEl) return;
-  if (yr === 'ALL') { fromEl.value=''; toEl.value=''; }
-  else { fromEl.value=`${yr}-01-01`; toEl.value=`${yr}-12-31`; }
-  renderSysStat();
-}
-
-function onSysStatStratChange() {
-  // Auto-set to current year if ALL
-  const yrSel = document.getElementById('sysstat-year');
-  if (yrSel && yrSel.value === 'ALL') {
-    const curYear = new Date().getFullYear().toString();
-    const opt = [...yrSel.options].find(o => o.value === curYear);
-    if (opt) { yrSel.value = curYear; onSysStatYearChange(); return; }
-  }
-  renderSysStat();
-}
-
-// ── Main render: called on strategy/year/date change ──────────────────────
-function renderSysStat() {
-  const selVal  = document.getElementById('sysstat-select')?.value || '';
-  const emptyEl = document.getElementById('sysstat-empty');
-  const ctrSec  = document.getElementById('sysstat-counter-section');
-  const ctrTbl  = document.getElementById('sysstat-counter-table');
-  const belowEl = document.getElementById('sysstat-below');
-
-  if (!selVal) {
-    emptyEl.style.display='flex'; ctrSec.style.display='none';
-    ctrTbl.style.display='none'; belowEl.style.display='none';
-    return;
-  }
-
-  // Resolve ALL trades for this strategy/group (no date filter — for counters)
-  let base = allTrades.filter(t => !t.archived && t.status !== 'CANCELLED');
-  if (selVal.startsWith('grp:')) {
-    const gName = selVal.slice(4);
-    const g = Object.values(algoGroups).find(x => x.name === gName);
-    const algos = g ? (g.algos||[]) : [];
-    ssStratTrades = base.filter(t => algos.includes(t.algo_name));
-    ssLabel = gName;
-  } else {
-    const sName = selVal.slice(6);
-    ssStratTrades = base.filter(t => t.algo_name === sName);
-    ssLabel = sName;
-  }
-
-  if (!ssStratTrades.length) {
-    emptyEl.style.display='flex';
-    emptyEl.innerHTML=`<div style="font-size:2rem;margin-bottom:12px;">🔍</div><div style="font-size:1rem;font-weight:700;color:var(--text1);">No trades found for "${ssLabel}"</div>`;
-    ctrSec.style.display='none'; ctrTbl.style.display='none'; belowEl.style.display='none';
-    return;
-  }
-
-  // ── Build counters: one per unique date (aggregate all algos) ──
-  const dateMap = {};
-  ssStratTrades.forEach(t => {
-    const d = t.entry_date||'';
-    if (!d) return;
-    if (!dateMap[d]) dateMap[d] = { date:d, pnl:0, legs:0, trades:[] };
-    dateMap[d].pnl   += (t.pnl||0);
-    dateMap[d].legs++;
-    dateMap[d].trades.push(t);
-  });
-  ssCounters = Object.values(dateMap).sort((a,b)=>a.date.localeCompare(b.date));
-  ssCounters.forEach((c,i) => c.cntr = i+1);
-
-  // Show counter section
-  emptyEl.style.display = 'none';
-  ctrSec.style.display  = 'block';
-  ctrTbl.style.display  = 'block';
-  belowEl.style.display = 'block';
-
-  // Purple pill
-  document.getElementById('sysstat-label-pill').textContent = ssLabel;
-
-  // Populate counter dropdown (latest first)
-  const ctrSel = document.getElementById('sysstat-counter-sel');
-  const prevVal = ctrSel.value;
-  ctrSel.innerHTML = ssCounters.slice().reverse().map(c => {
-    const fmtD = _ssFmtCntrDate(c.date);
-    const sign = c.pnl >= 0 ? '+' : '';
-    return `<option value="${c.date}">Cntr${c.cntr} — ${fmtD} (₹ ${sign}${c.pnl.toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2})})</option>`;
-  }).join('');
-
-  // Keep previous selection if still valid, else default to latest
-  if (prevVal && ssCounters.find(c=>c.date===prevVal)) ctrSel.value = prevVal;
-  else ctrSel.value = ssCounters[ssCounters.length-1].date;
-
-  // Render counter table + below stats
-  renderSysStatCounter();
-  renderSysStatBelow();
-}
-
-// ── Counter table only: called on counter dropdown change ─────────────────
-function renderSysStatCounter() {
-  const ctrSel = document.getElementById('sysstat-counter-sel');
-  const ctrTbl = document.getElementById('sysstat-counter-table');
-  if (!ctrSel || !ctrTbl || !ssCounters.length) return;
-
-  const selDate = ctrSel.value;
-  const c = ssCounters.find(x => x.date === selDate) || ssCounters[ssCounters.length-1];
-
-  // Update meta
-  const metaEl = document.getElementById('sysstat-counter-meta');
-  if (metaEl) metaEl.textContent = `${c.legs} leg(s) · ${_ssFmtFullDate(c.date)}`;
-
-  const fmtStat = v=>`₹ ${v>=0?'':'-'}${Math.abs(v).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2})}`;
-  const clr = v=>v>=0?'color:#16a34a;':'color:#dc2626;';
-
-  // Detect if group is selected
-  const selVal = document.getElementById('sysstat-select')?.value || '';
-  const isGroup = selVal.startsWith('grp:');
-
-  ctrTbl.innerHTML = `
-  <div style="font-size:0.9rem;font-weight:800;font-family:var(--display);margin-bottom:10px;">Counter P&L
-    <span style="font-size:0.72rem;font-weight:400;color:var(--text2);margin-left:8px;">Cntr${c.cntr} · ${_ssFmtFullDate(c.date)}</span>
-  </div>
-  <div class="table-wrap">
-    <table style="width:100%;table-layout:auto;">
-      <thead><tr>
-        ${isGroup?`<th style="padding:9px 14px;text-align:left;white-space:nowrap;">Strategy</th>`:''}
-        <th style="padding:9px 14px;text-align:left;white-space:nowrap;">Symbol</th>
-        <th style="padding:9px 14px;text-align:left;white-space:nowrap;">Broker</th>
-        <th style="padding:9px 14px;text-align:center;white-space:nowrap;">Action</th>
-        <th style="padding:9px 14px;text-align:right;white-space:nowrap;">Entry Price</th>
-        <th style="padding:9px 14px;text-align:right;white-space:nowrap;">Exit Price</th>
-        <th style="padding:9px 14px;text-align:right;white-space:nowrap;">Qty</th>
-        <th style="padding:9px 14px;text-align:right;white-space:nowrap;">P&L ₹</th>
-      </tr></thead>
-      <tbody>
-        ${c.trades.map(t=>`<tr class="trade-row">
-          ${isGroup?`<td style="padding:8px 14px;font-size:0.75rem;color:var(--purple);font-weight:600;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${t.algo_name||''}">${t.algo_name||'—'}</td>`:''}
-          <td style="padding:8px 14px;font-size:0.8rem;font-weight:600;">${t.symbol||'—'}</td>
-          <td style="padding:8px 14px;font-size:0.78rem;color:var(--text2);">${t.broker||'—'}${t.client_id?' · '+t.client_id:''}</td>
-          <td style="padding:8px 14px;text-align:center;">
-            <span style="font-size:0.7rem;font-weight:700;padding:2px 8px;border-radius:10px;
-              background:${(t.action||'').includes('BUY')?'var(--green-lt)':'var(--red-lt)'};
-              color:${(t.action||'').includes('BUY')?'var(--green)':'var(--red)'};">${t.action||'—'}</span>
-          </td>
-          <td style="padding:8px 14px;text-align:right;font-size:0.82rem;">${t.entry_price!=null?t.entry_price:'—'}</td>
-          <td style="padding:8px 14px;text-align:right;font-size:0.82rem;">${t.exit_price!=null?t.exit_price:'—'}</td>
-          <td style="padding:8px 14px;text-align:right;font-size:0.82rem;">${t.qty||'—'}</td>
-          <td style="padding:8px 14px;text-align:right;font-weight:700;${clr(t.pnl||0)}">${fmtStat(t.pnl||0)}</td>
-        </tr>`).join('')}
-        <tr style="background:var(--bg3);border-top:2px solid var(--border2);">
-          <td colspan="${isGroup?8:7}" style="padding:10px 14px;font-weight:800;font-size:0.85rem;">Counter Total</td>
-          <td style="padding:10px 14px;text-align:right;font-weight:800;font-size:0.9rem;${clr(c.pnl)}">${fmtStat(c.pnl)}</td>
-        </tr>
-      </tbody>
-    </table>
-  </div>`;
-}
-
-// ── Below section: Equity + Stats + Daily + Monthly (date-range driven) ───
-function renderSysStatBelow() {
-  const belowEl = document.getElementById('sysstat-below');
-  if (!belowEl || !ssStratTrades.length) return;
-
-  const fromVal = document.getElementById('sysstat-from')?.value || '';
-  const toVal   = document.getElementById('sysstat-to')?.value   || '';
-
-  let rangeTrades = ssStratTrades;
-  if (fromVal) rangeTrades = rangeTrades.filter(t=>(t.entry_date||'')>=fromVal);
-  if (toVal)   rangeTrades = rangeTrades.filter(t=>(t.entry_date||'')<=toVal);
-
-  const dayPnl={};
-  rangeTrades.forEach(t=>{const pd=pnlDate(t);if(pd)dayPnl[pd]=(dayPnl[pd]||0)+(t.pnl||0);});
-  const dayVals=Object.values(dayPnl);
-  const tradingDays=dayVals.length;
-  const winDays=dayVals.filter(v=>v>0).length;
-  const lossDays=dayVals.filter(v=>v<0).length;
-  const totalPnl=dayVals.reduce((s,v)=>s+v,0);
-  const sortedDates=Object.keys(dayPnl).sort();
-
-  let cum=0; const eqLabels=[],eqVals=[];
-  sortedDates.forEach(d=>{cum+=dayPnl[d];eqLabels.push(d.slice(5));eqVals.push(parseFloat(cum.toFixed(2)));});
-
-  let maxWS=0,maxLS=0,cw=0,cl=0;
-  sortedDates.forEach(d=>{const v=dayPnl[d];if(v>0){cw++;cl=0;maxWS=Math.max(maxWS,cw);}else if(v<0){cl++;cw=0;maxLS=Math.max(maxLS,cl);}else{cw=0;cl=0;}});
-
-  const mPnl={};
-  rangeTrades.forEach(t=>{const ym=(pnlDate(t)||'').slice(0,7);if(ym)mPnl[ym]=(mPnl[ym]||0)+(t.pnl||0);});
-  const mVals=Object.values(mPnl);
-  const avgMonthlyPnl=mVals.length?mVals.reduce((s,v)=>s+v,0)/mVals.length:0;
-  const avgMonthCap=Object.keys(mPnl).length?Object.keys(mPnl).reduce((s,ym)=>s+getGlobalCapital(ym),0)/Object.keys(mPnl).length||1:1;
-  const totalROI=avgMonthCap?totalPnl/avgMonthCap*100:0;
-  const avgMonthROI=avgMonthCap?avgMonthlyPnl/avgMonthCap*100:0;
-
-  const profitDays=dayVals.filter(v=>v>0),lossDaysArr=dayVals.filter(v=>v<0);
-  const maxProfit=profitDays.length?Math.max(...profitDays):0;
-  const maxLoss=lossDaysArr.length?Math.min(...lossDaysArr):0;
-  const avgDaily=tradingDays?totalPnl/tradingDays:0;
-  const avgProfitDay=profitDays.length?profitDays.reduce((s,v)=>s+v,0)/profitDays.length:null;
-  const avgLossDay=lossDaysArr.length?lossDaysArr.reduce((s,v)=>s+v,0)/lossDaysArr.length:null;
-
-  let peak=0,maxDD=0,rEq=0;
-  sortedDates.forEach(d=>{rEq+=dayPnl[d];if(rEq>peak)peak=rEq;const dd=peak-rEq;if(dd>maxDD)maxDD=dd;});
-  const maxDDPct=avgMonthCap?maxDD/avgMonthCap*100:0;
-
-  const RF=0.065/252,n=dayVals.length;
-  const meanR=avgMonthCap&&n?(dayVals.reduce((s,v)=>s+v,0)/n)/avgMonthCap:0;
-  const variance=n>1?dayVals.map(v=>(avgMonthCap?v/avgMonthCap:0)-meanR).map(r=>r*r).reduce((s,v)=>s+v,0)/(n-1):0;
-  const sd=Math.sqrt(variance),sdAnn=sd*Math.sqrt(252)*100;
-  const sharpe=sd?((meanR-RF)/sd*Math.sqrt(252)):0;
-  const dDev=n>1?Math.sqrt(dayVals.map(v=>(avgMonthCap?v/avgMonthCap:0)).map(r=>r<0?r*r:0).reduce((s,v)=>s+v,0)/(n-1)):0;
-  const sortino=dDev?((meanR-RF)/dDev*Math.sqrt(252)):0;
-
-  const dowMap={Mon:{ret:0,profit:0,loss:0,c:0},Tue:{ret:0,profit:0,loss:0,c:0},Wed:{ret:0,profit:0,loss:0,c:0},Thu:{ret:0,profit:0,loss:0,c:0},Fri:{ret:0,profit:0,loss:0,c:0}};
-  const dowKeys=['Mon','Tue','Wed','Thu','Fri'];
-  sortedDates.forEach(d=>{const dow=new Date(d).toLocaleDateString('en-IN',{weekday:'short'});if(dowMap[dow]){const v=dayPnl[d];dowMap[dow].c++;dowMap[dow].ret+=avgMonthCap?v/avgMonthCap*100:0;if(v>0)dowMap[dow].profit=Math.max(dowMap[dow].profit,v);if(v<0)dowMap[dow].loss=Math.min(dowMap[dow].loss,v);}});
-
-  const mwPnl={};
-  rangeTrades.forEach(t=>{const ym=(pnlDate(t)||'').slice(0,7);if(!ym)return;if(!mwPnl[ym])mwPnl[ym]={trades:0,pnl:0};mwPnl[ym].trades++;mwPnl[ym].pnl+=(t.pnl||0);});
-
-  const fmtStat=v=>`₹ ${v>=0?'':'-'}${Math.abs(v).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2})}`;
-  const clr=v=>v>=0?'color:#16a34a;':'color:#dc2626;';
-  const dowFull={Mon:'Monday',Tue:'Tuesday',Wed:'Wednesday',Thu:'Thursday',Fri:'Friday'};
-  const rangeDesc=fromVal||toVal?`${fromVal||'start'} → ${toVal||'today'}`:'all-time';
-
-  belowEl.innerHTML = `
-  <div style="font-size:0.72rem;color:var(--text3);padding:8px 14px;background:var(--bg2);border-radius:8px;margin-bottom:20px;">
-    📅 Statistics for <strong style="color:var(--text1);">${ssLabel}</strong> — ${rangeDesc} · ${rangeTrades.length} trades · ${tradingDays} trading days
-  </div>
-
-  <div style="margin-bottom:28px;">
-    <div style="font-size:1rem;font-weight:800;font-family:var(--display);margin-bottom:10px;">Equity Curve</div>
-    <div class="chart-card" style="max-width:100%;"><canvas id="sysstat-eq-chart" style="max-height:260px;"></canvas></div>
-  </div>
-
-  <div style="margin-bottom:28px;">
-    <div style="font-size:1rem;font-weight:800;font-family:var(--display);margin-bottom:4px;">Statistics</div>
-    <div style="font-size:0.72rem;color:var(--text3);margin-bottom:10px;">* Sharpe, Sortino & Std. Dev. calculated based on 6.5% annualised risk-free rate (Indian benchmark)</div>
-    <div class="table-wrap"><table style="width:100%;max-width:680px;">
-      <thead><tr>
-        <th style="padding:8px 14px;text-align:center;width:40px;">No</th>
-        <th style="padding:8px 14px;text-align:left;">Name</th>
-        <th style="padding:8px 14px;text-align:right;">Value</th>
-      </tr></thead>
-      <tbody>
-        ${[
-          ['Capital Required (Avg Monthly)',fmtStat(avgMonthCap)],
-          ['Total Trading Days',tradingDays],
-          ['Win Days',winDays],['Loss Days',lossDays],
-          ['Max Winning Streak Days',maxWS],['Max Losing Streak Days',maxLS],
-          ['Win Rate',tradingDays?(winDays/tradingDays*100).toFixed(2)+'%':'0.00%'],
-          ['Avg Monthly Profit',`<span style="${clr(avgMonthlyPnl)}">${fmtStat(avgMonthlyPnl)}</span>`],
-          ['Total Profit',`<span style="${clr(totalPnl)}">${fmtStat(totalPnl)}</span>`],
-          ['Avg Monthly ROI',`<span style="${clr(avgMonthROI)}">${avgMonthROI.toFixed(2)}%</span>`],
-          ['Total ROI',`<span style="${clr(totalROI)}">${totalROI.toFixed(2)}%</span>`],
-          ['Standard Deviation (Annualised) *',sdAnn.toFixed(2)+'%'],
-          ['Sharpe Ratio (Annualised) *',`<span style="${clr(sharpe)}">${sharpe.toFixed(2)}</span>`],
-          ['Sortino Ratio (Annualised) *',`<span style="${clr(sortino)}">${sortino.toFixed(2)}</span>`],
-          ['Max Profit in a Day',`<span style="${clr(maxProfit)}">${fmtStat(maxProfit)}</span>`],
-          ['Max Loss in a Day',`<span style="${clr(maxLoss)}">${fmtStat(maxLoss)}</span>`],
-          ['Avg Profit / Loss Daily',`<span style="${clr(avgDaily)}">${fmtStat(avgDaily)}</span>`],
-          ['Avg Profit on Profit Days',profitDays.length?`<span style="${clr(avgProfitDay)}">${fmtStat(avgProfitDay)}</span>`:'—'],
-          ['Avg Loss on Loss Days',lossDaysArr.length?`<span style="${clr(avgLossDay)}">${fmtStat(avgLossDay)}</span>`:'—'],
-          ['Avg no. of Trades (Legs) per Trading Day',tradingDays?(rangeTrades.length/tradingDays).toFixed(2):'—'],
-          ['Max Drawdown',`<span style="color:#dc2626;">${fmtStat(maxDD)}</span>`],
-          ['Max Drawdown %',`<span style="color:#dc2626;">${maxDDPct.toFixed(2)} %</span>`],
-        ].map(([name,val],i)=>`<tr class="trade-row">
-          <td style="padding:7px 14px;text-align:center;color:var(--text3);font-size:0.8rem;">${i+1}</td>
-          <td style="padding:7px 14px;font-size:0.82rem;color:var(--text1);">${name}</td>
-          <td style="padding:7px 14px;text-align:right;font-size:0.82rem;font-weight:600;">${val}</td>
-        </tr>`).join('')}
-      </tbody>
-    </table></div>
-  </div>
-
-  <div style="margin-bottom:28px;">
-    <div style="font-size:1rem;font-weight:800;font-family:var(--display);margin-bottom:10px;">Daily Summary</div>
-    <div class="table-wrap"><table style="width:100%;max-width:560px;">
-      <thead><tr>
-        <th style="padding:8px 14px;text-align:left;">Day</th>
-        <th style="padding:8px 14px;text-align:right;">Returns (%)</th>
-        <th style="padding:8px 14px;text-align:right;">Max Profit</th>
-        <th style="padding:8px 14px;text-align:right;">Max Loss</th>
-      </tr></thead>
-      <tbody>
-        ${dowKeys.map(d=>{const row=dowMap[d];const avgRet=row.c?row.ret/row.c:0;
-          return `<tr class="trade-row">
-            <td style="padding:8px 14px;font-weight:600;">${dowFull[d]}</td>
-            <td style="padding:8px 14px;text-align:right;${clr(avgRet)}">${avgRet.toFixed(2)}</td>
-            <td style="padding:8px 14px;text-align:right;${clr(row.profit)}">${row.c?fmtStat(row.profit):'₹ 0.00'}</td>
-            <td style="padding:8px 14px;text-align:right;${clr(row.loss)}">${row.c?fmtStat(row.loss):'₹ 0.00'}</td>
-          </tr>`;}).join('')}
-      </tbody>
-    </table></div>
-  </div>
-
-  <div style="margin-bottom:40px;">
-    <div style="font-size:1rem;font-weight:800;font-family:var(--display);margin-bottom:10px;">Month Wise PNL</div>
-    <div class="table-wrap"><table style="width:100%;max-width:480px;">
-      <thead><tr>
-        <th style="padding:8px 14px;text-align:left;">Month</th>
-        <th style="padding:8px 14px;text-align:right;">Total Legs</th>
-        <th style="padding:8px 14px;text-align:right;">PNL</th>
-        <th style="padding:8px 14px;text-align:right;">PNL %</th>
-      </tr></thead>
-      <tbody>
-        ${Object.keys(mwPnl).sort().map(ym=>{
-          const row=mwPnl[ym];
-          const cap=getGlobalCapital(ym)||avgMonthCap||1;
-          const pct=(row.pnl/cap*100).toFixed(2);
-          const mo=new Date(ym+'-01').toLocaleDateString('en-IN',{month:'short',year:'2-digit'});
-          return `<tr class="trade-row">
-            <td style="padding:8px 14px;font-weight:600;">${mo}</td>
-            <td style="padding:8px 14px;text-align:right;">${row.trades}</td>
-            <td style="padding:8px 14px;text-align:right;${clr(row.pnl)};font-weight:600;">${fmtStat(row.pnl)}</td>
-            <td style="padding:8px 14px;text-align:right;${clr(row.pnl)}">${pct}%</td>
-          </tr>`;}).join('')}
-      </tbody>
-    </table></div>
-  </div>
-  `;
-
-  // Draw equity curve (only called from here, not on counter change)
-  setTimeout(()=>{
-    const ctx=document.getElementById('sysstat-eq-chart');
-    if(!ctx)return;
-    if(ssChart){ssChart.destroy();ssChart=null;}
-    const lastVal=eqVals[eqVals.length-1]||0;
-    ssChart=new Chart(ctx.getContext('2d'),{
-      type:'line',
-      data:{labels:eqLabels,datasets:[{
-        label:'Cumulative P&L (₹)',data:eqVals,
-        borderColor:lastVal>=0?'#16a34a':'#dc2626',
-        backgroundColor:lastVal>=0?'rgba(22,163,74,0.08)':'rgba(220,38,38,0.08)',
-        borderWidth:2,pointRadius:eqVals.length>60?0:3,fill:true,tension:0.3
-      }]},
-      options:{responsive:true,maintainAspectRatio:true,
-        plugins:{legend:{display:false}},
-        scales:{
-          x:{grid:{color:'rgba(0,0,0,0.04)'},ticks:{color:'#6b7280',font:{size:10},maxTicksLimit:20}},
-          y:{grid:{color:'rgba(0,0,0,0.04)'},ticks:{color:'#6b7280',font:{size:10},callback:v=>'₹'+v.toLocaleString('en-IN')}}
-        }
-      }
-    });
-  },50);
-}
-
-// ── Helpers ──────────────────────────────────────────
-function _ssFmtCntrDate(d) {
-  if (!d) return '';
-  const p=d.split('-');
-  return ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][parseInt(p[1])-1]+p[2].replace(/^0/,'')+"'"+p[0].slice(2);
-}
-function _ssFmtFullDate(d) {
-  if (!d) return '';
-  const p=d.split('-');
-  return p[2]+' '+['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][parseInt(p[1])-1]+' '+p[0];
-}
-
-// ════════════════════════════════════════════════════
 //  APP SETTINGS — System Name Management
 // ════════════════════════════════════════════════════
 
@@ -8171,11 +7743,12 @@ function asRenderGroups() {
   if (!list) return;
   const groups = Object.values(algoGroups).sort((a,b)=>(a.name||'').localeCompare(b.name||''));
   if (!groups.length) { list.innerHTML = '<div style="color:var(--text3);font-size:0.8rem;">No baskets yet — create one below</div>'; return; }
-  list.innerHTML = groups.map(g => {
+  list.innerHTML = groups.map((g, idx) => {
     const color = g.color || '#1a73e8';
     const members = (g.algos || []).length;
     return `
       <div style="display:flex;align-items:center;gap:12px;padding:10px 14px;border:1px solid var(--border);border-radius:8px;margin-bottom:8px;">
+        <span style="min-width:24px;text-align:center;font-size:0.75rem;font-weight:700;color:var(--text3);">${idx+1}</span>
         <span style="width:14px;height:14px;border-radius:50%;background:${color};flex-shrink:0;display:inline-block;"></span>
         <div style="flex:1;">
           <div style="font-size:0.85rem;font-weight:600;color:var(--text0);">${g.name}</div>
