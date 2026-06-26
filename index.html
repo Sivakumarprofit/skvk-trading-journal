@@ -2,6 +2,14 @@
 ==========================================================
   SKVK TRADING JOURNAL — VERSION HISTORY
 ==========================================================
+  v18.9 | 2026-06-26 | Live Performance tile (both Basket Level & Account Wise pages):
+         |            | new "Drawdown %" stat added as separate entity next to Max Drawdown;
+         |            | calculated as Max Drawdown / Capital Deployed × 100; shows NA in
+         |            | Group/Strategy mode where capital is unavailable; grid updated from
+         |            | repeat(5) to repeat(5) with 10 items (2 rows of 5);
+         |            | Basket & Group Allocation table: # serial number column added as
+         |            | first column (display only, no functionality)
+  ──────────────────────────────────────────────────────
   v18.8 | 2026-06-26 | App Settings restructured: Add New System form now has both Basket &
          |            | Group dropdowns; separate Basket Allocation + Group Allocation tables
          |            | merged into one combined "Basket & Group Allocation" table with columns
@@ -507,7 +515,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>SKVK Trading Journal v18.8</title>
+<title>SKVK Trading Journal v18.9</title>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -1442,7 +1450,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div class="login-logo">📋</div>
     <div class="login-title">
       SKVK Trading Journal
-      <span class="login-vbadge">v18.8</span>
+      <span class="login-vbadge">v18.9</span>
     </div>
     <div class="login-sub">Sign in with your authorised Google account to access the journal.</div>
     <button class="google-signin-btn" id="googleSignInBtn" onclick="signInWithGoogle()">
@@ -1473,7 +1481,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div class="brand">
       <span class="brand-dot"></span>
       SKVK Trading Journal
-      <span style="font-size:0.78rem;background:#1a73e8;color:#fff;padding:2px 8px;border-radius:8px;font-weight:700;margin-left:4px;">v18.8</span>
+      <span style="font-size:0.78rem;background:#1a73e8;color:#fff;padding:2px 8px;border-radius:8px;font-weight:700;margin-left:4px;">v18.9</span>
     </div>
     <div id="brand-subline">
       <div id="db-status">● connecting…</div>
@@ -1608,6 +1616,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
       <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Win Rate</div><div id="s-wr" style="font-size:1.1rem;font-weight:800;">—</div></div>
       <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Sharpe Ratio</div><div id="s-sharpe" style="font-size:1.1rem;font-weight:800;">—</div></div>
       <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Max Drawdown</div><div id="s-dd" style="font-size:1.1rem;font-weight:800;color:var(--red);">—</div></div>
+      <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Drawdown %</div><div id="s-dd-pct" style="font-size:1.1rem;font-weight:800;color:var(--red);">—</div></div>
       <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Profit Factor</div><div id="s-pf" style="font-size:1.1rem;font-weight:800;">—</div></div>
       <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Total Trades</div><div id="s-trades" style="font-size:1.1rem;font-weight:800;">—</div></div>
       <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Capital Deployed</div><div id="s-algos" style="font-size:1.1rem;font-weight:800;">—</div></div>
@@ -1778,6 +1787,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
         <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Win Rate</div><div id="acct-lp-wr" style="font-size:1.1rem;font-weight:800;">—</div></div>
         <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Sharpe Ratio</div><div id="acct-lp-sharpe" style="font-size:1.1rem;font-weight:800;">—</div></div>
         <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Max Drawdown</div><div id="acct-lp-dd" style="font-size:1.1rem;font-weight:800;color:var(--red);">—</div></div>
+        <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Drawdown %</div><div id="acct-lp-dd-pct" style="font-size:1.1rem;font-weight:800;color:var(--red);">—</div></div>
         <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Profit Factor</div><div id="acct-lp-pf" style="font-size:1.1rem;font-weight:800;">—</div></div>
         <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Total Trades</div><div id="acct-lp-trades" style="font-size:1.1rem;font-weight:800;">—</div></div>
         <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Capital Deployed</div><div id="acct-lp-cap" style="font-size:1.1rem;font-weight:800;">—</div></div>
@@ -3063,6 +3073,10 @@ function renderAcctLivePerf(tr) {
   document.getElementById('acct-lp-wr').textContent     = wr+'%';
   document.getElementById('acct-lp-sharpe').textContent = sharpe;
   document.getElementById('acct-lp-dd').textContent     = fmt(maxDD);
+  document.getElementById('acct-lp-dd').style.color     = 'var(--red)';
+  const acctDdPct = totalCap > 0 ? (maxDD / totalCap * 100).toFixed(1) : null;
+  const ddPctEl = document.getElementById('acct-lp-dd-pct');
+  if (ddPctEl) { ddPctEl.textContent = acctDdPct !== null ? acctDdPct+'%' : 'NA'; ddPctEl.style.color = acctDdPct !== null ? 'var(--red)' : 'var(--text3)'; }
   document.getElementById('acct-lp-pf').textContent     = pf;
   document.getElementById('acct-lp-trades').textContent = tr.filter(t=>{const pd=pnlDate(t);return pd&&pd>=yearStart;}).length;
   document.getElementById('acct-lp-cap').textContent    = fmt(totalCap);
@@ -4353,12 +4367,14 @@ function renderDashLivePerf(tr) {
   const losses=Math.abs(sortedDays.filter(d=>dayPnl[d]<0).reduce((s,d)=>s+dayPnl[d],0));
   const pf=losses>0?(profits/losses).toFixed(2):profits>0?'∞':'—';
   const setEl=(id,txt,col)=>{const e=document.getElementById(id);if(e){e.textContent=txt;if(col)e.style.color=col;}};
+  const ddPct = hasCapital && totalCap > 0 ? (maxDD / totalCap * 100).toFixed(1) : null;
   setEl('s-return', hasCapital?(totalReturn>=0?'+':'')+totalReturn+'%':'NA', hasCapital?(totalReturn>=0?'var(--green)':'var(--red)'):'var(--text3)');
   setEl('s-cagr',   hasCapital?(cagr>=0?'+':'')+cagr+'% / yr':'NA', hasCapital?(cagr>=0?'var(--green)':'var(--red)'):'var(--text3)');
   setEl('s-pnl',fmt(total),total>=0?'var(--green)':'var(--red)');
   setEl('s-wr',wr+'%');
   setEl('s-sharpe',sharpe);
   setEl('s-dd',fmt(maxDD));
+  setEl('s-dd-pct', ddPct !== null ? ddPct+'%' : 'NA', ddPct !== null ? 'var(--red)' : 'var(--text3)');
   setEl('s-pf',pf);
   setEl('s-trades',tr.filter(t=>{const pd=pnlDate(t);return pd&&pd>=yearStart;}).length);
   setEl('s-algos', hasCapital?(totalCap>0?fmt(totalCap):'₹0'):'NA', hasCapital?undefined:'var(--text3)');
@@ -8220,6 +8236,7 @@ function asRenderSystems() {
     <table style="width:100%;border-collapse:collapse;font-size:0.82rem;">
       <thead>
         <tr style="background:var(--bg2);">
+          <th style="padding:8px 10px;text-align:center;font-weight:600;color:var(--text1);border-bottom:1px solid var(--border);min-width:40px;">#</th>
           <th style="padding:8px 10px;text-align:left;font-weight:600;color:var(--text1);border-bottom:1px solid var(--border);">Strategy Name</th>
           <th style="padding:8px 10px;text-align:left;font-weight:600;color:var(--text1);border-bottom:1px solid var(--border);">Underlying</th>
           <th style="padding:8px 10px;text-align:left;font-weight:600;color:var(--text1);border-bottom:1px solid var(--border);">Type</th>
@@ -8230,7 +8247,7 @@ function asRenderSystems() {
         </tr>
       </thead>
       <tbody>
-        ${algos.map(a => {
+        ${algos.map((a, idx) => {
           const basket = basketLookup[a.name] || '';
           const grp    = groupLookup[a.name]  || '';
           const isUnassigned = !basket;
@@ -8238,6 +8255,7 @@ function asRenderSystems() {
           const gOpts = groupOpts.replace(`value="${grp}"`, `value="${grp}" selected`);
           return `
           <tr style="border-bottom:1px solid var(--border);${isUnassigned?'background:#fff5f5;':''}">
+            <td style="padding:8px 10px;text-align:center;color:var(--text3);font-size:0.78rem;font-weight:600;">${idx+1}</td>
             <td style="padding:8px 10px;">
               ${isUnassigned ? '<span style="font-size:1rem;margin-right:4px;" title="Not assigned to any basket">⚠️</span>' : ''}
               <span style="font-weight:600;color:${isUnassigned?'#dc2626':'var(--text0)'};">${a.name}</span>
