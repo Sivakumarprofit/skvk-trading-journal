@@ -2,6 +2,10 @@
 ==========================================================
   SKVK TRADING JOURNAL — VERSION HISTORY
 ==========================================================
+  v18.1 | 2026-06-26 | Fix: Monthly Returns, Capital Deployed, Daily P&L Heatmap sections broken
+         |            | (capital chart referenced old chartDefaults — fixed to chartScales);
+         |            | Weekly day tiles removed from Account wise page (redundant with calendar)
+  ──────────────────────────────────────────────────────
   v18.0 | 2026-06-26 | Calendar heatmap: date fixed black, P&L green/red, weekends greyed, open=dash;
          |            | Monthly chart label → "Monthly P&L"; calendar label → "Current Month P&L";
          |            | Block separators: thick top border + heading below (both Monthly & Yearly);
@@ -453,7 +457,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>SKVK Trading Journal v18.0</title>
+<title>SKVK Trading Journal v18.1</title>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -1388,7 +1392,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div class="login-logo">📋</div>
     <div class="login-title">
       SKVK Trading Journal
-      <span class="login-vbadge">v18.0</span>
+      <span class="login-vbadge">v18.1</span>
     </div>
     <div class="login-sub">Sign in with your authorised Google account to access the journal.</div>
     <button class="google-signin-btn" id="googleSignInBtn" onclick="signInWithGoogle()">
@@ -1419,7 +1423,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div class="brand">
       <span class="brand-dot"></span>
       SKVK Trading Journal
-      <span style="font-size:0.78rem;background:#1a73e8;color:#fff;padding:2px 8px;border-radius:8px;font-weight:700;margin-left:4px;">v18.0</span>
+      <span style="font-size:0.78rem;background:#1a73e8;color:#fff;padding:2px 8px;border-radius:8px;font-weight:700;margin-left:4px;">v18.1</span>
     </div>
     <div id="brand-subline">
       <div id="db-status">● connecting…</div>
@@ -1651,16 +1655,6 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
         <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Total Trades</div><div id="acct-lp-trades" style="font-size:1.1rem;font-weight:800;">—</div></div>
         <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Capital Deployed</div><div id="acct-lp-cap" style="font-size:1.1rem;font-weight:800;">—</div></div>
       </div>
-    </div>
-
-    <!-- ── Weekly Tiles ── -->
-    <div style="margin-bottom:24px;">
-      <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
-        <button onclick="acctWeekNav(-1)" style="width:30px;height:30px;border-radius:50%;border:1.5px solid var(--border);background:#fff;cursor:pointer;font-size:0.9rem;display:flex;align-items:center;justify-content:center;flex-shrink:0;">‹</button>
-        <div id="acct-week-label" style="font-size:0.85rem;font-weight:700;color:var(--text0);min-width:180px;text-align:center;"></div>
-        <button onclick="acctWeekNav(1)" style="width:30px;height:30px;border-radius:50%;border:1.5px solid var(--border);background:#fff;cursor:pointer;font-size:0.9rem;display:flex;align-items:center;justify-content:center;flex-shrink:0;">›</button>
-      </div>
-      <div id="acct-week-tiles" style="display:flex;gap:10px;flex-wrap:nowrap;overflow-x:auto;padding-bottom:6px;"></div>
     </div>
 
     <!-- ── Two-column: Daily P&L table (left) + Charts (right) ── -->
@@ -2793,7 +2787,6 @@ function renderAcctReport() {
     : allTrades.filter(t=>!t.archived && (t.client_id||'')===currentAcct);
   const label = currentAcct === '__ALL__' ? 'All Accounts' : getClientLabel(currentAcct);
 
-  renderAcctWeekTiles(tr);
   renderAcctLivePerf(tr);
   renderAcctMonthlyTopChart(tr);
   renderAcctCalHeatmap(tr);
@@ -3227,7 +3220,12 @@ function renderAcctCharts(tr) {
         data:capData, borderColor:'#6366f1', borderWidth:2,
         fill:false, stepped:true, tension:0
       }]},
-      options:chartDefaults
+      options:{
+        responsive:true, maintainAspectRatio:true,
+        plugins:{ legend:{display:false}, datalabels:{display:false} },
+        elements:{ point:{radius:0} },
+        scales: chartScales
+      }
     });
   }
 }
