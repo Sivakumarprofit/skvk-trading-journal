@@ -2,6 +2,11 @@
 ==========================================================
   SKVK TRADING JOURNAL — VERSION HISTORY
 ==========================================================
+  v18.0 | 2026-06-26 | Calendar heatmap: date fixed black, P&L green/red, weekends greyed, open=dash;
+         |            | Monthly chart label → "Monthly P&L"; calendar label → "Current Month P&L";
+         |            | Block separators: thick top border + heading below (both Monthly & Yearly);
+         |            | Equity/DD charts: Zebu-style data points, smooth curve, hover tooltip with date+value
+  ──────────────────────────────────────────────────────
   v17.9 | 2026-06-26 | Account wise: revert to single-select (centered UI kept); monthly P&L chart
          |            | fixed to current year Jan-Dec; equity/drawdown labels as K/L/Cr (fixes floats);
          |            | Capital Deployed tile inline-edit removed; Upload: Tradetron ASP shows Account
@@ -448,7 +453,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>SKVK Trading Journal v17.9</title>
+<title>SKVK Trading Journal v18.0</title>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -1383,7 +1388,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div class="login-logo">📋</div>
     <div class="login-title">
       SKVK Trading Journal
-      <span class="login-vbadge">v17.9</span>
+      <span class="login-vbadge">v18.0</span>
     </div>
     <div class="login-sub">Sign in with your authorised Google account to access the journal.</div>
     <button class="google-signin-btn" id="googleSignInBtn" onclick="signInWithGoogle()">
@@ -1414,7 +1419,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div class="brand">
       <span class="brand-dot"></span>
       SKVK Trading Journal
-      <span style="font-size:0.78rem;background:#1a73e8;color:#fff;padding:2px 8px;border-radius:8px;font-weight:700;margin-left:4px;">v17.9</span>
+      <span style="font-size:0.78rem;background:#1a73e8;color:#fff;padding:2px 8px;border-radius:8px;font-weight:700;margin-left:4px;">v18.0</span>
     </div>
     <div id="brand-subline">
       <div id="db-status">● connecting…</div>
@@ -1589,22 +1594,20 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
 
   <!-- ══ BLOCK 1: Monthly P&L Data ══ -->
   <div id="acct-monthly-block" style="display:none;margin-bottom:28px;">
-    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
-      <div style="flex:1;height:2px;background:linear-gradient(90deg,var(--blue),transparent);"></div>
-      <span style="font-size:1.05rem;font-weight:800;font-family:var(--display);color:var(--blue);white-space:nowrap;padding:0 8px;">📅 Monthly P&L Data</span>
-      <div style="flex:1;height:2px;background:linear-gradient(270deg,var(--blue),transparent);"></div>
+    <div style="border-top:3px solid var(--blue);padding-top:10px;margin-bottom:16px;">
+      <span style="font-size:1.05rem;font-weight:800;font-family:var(--display);color:var(--blue);">📅 Monthly P&L Data</span>
     </div>
 
     <!-- 12-month bar chart -->
     <div id="acct-monthly-chart-wrap" style="background:var(--bg);border:1.5px solid var(--border);border-radius:14px;padding:16px 20px;margin-bottom:18px;">
-      <div style="font-size:0.78rem;font-weight:700;color:var(--text1);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:10px;">Monthly P&L — Last 12 Months</div>
+      <div style="font-size:0.78rem;font-weight:700;color:var(--text1);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:10px;">Monthly P&L</div>
       <canvas id="acct-chart-monthly-top" style="max-height:200px;"></canvas>
     </div>
 
     <!-- Current month calendar heatmap -->
     <div style="background:var(--bg);border:1.5px solid var(--border);border-radius:14px;padding:16px 20px;">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
-        <div style="font-size:0.78rem;font-weight:700;color:var(--text1);letter-spacing:0.06em;text-transform:uppercase;" id="acct-cal-title">Current Month Heatmap</div>
+        <div style="font-size:0.78rem;font-weight:700;color:var(--text1);letter-spacing:0.06em;text-transform:uppercase;" id="acct-cal-title">Current Month P&L</div>
         <div style="display:flex;gap:5px;font-size:0.68rem;align-items:center;">
           <span style="background:#16a34a;color:#fff;padding:2px 8px;border-radius:4px;">Profit</span>
           <span style="background:#dc2626;color:#fff;padding:2px 8px;border-radius:4px;">Loss</span>
@@ -1621,10 +1624,8 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
 
   <!-- ══ BLOCK 2: Yearly P&L Data ══ -->
   <div id="acct-yearly-block-hdr" style="display:none;margin-bottom:16px;">
-    <div style="display:flex;align-items:center;gap:12px;">
-      <div style="flex:1;height:2px;background:linear-gradient(90deg,#6366f1,transparent);"></div>
-      <span style="font-size:1.05rem;font-weight:800;font-family:var(--display);color:#6366f1;white-space:nowrap;padding:0 8px;">📊 Yearly P&L Data</span>
-      <div style="flex:1;height:2px;background:linear-gradient(270deg,#6366f1,transparent);"></div>
+    <div style="border-top:3px solid #6366f1;padding-top:10px;">
+      <span style="font-size:1.05rem;font-weight:800;font-family:var(--display);color:#6366f1;">📊 Yearly P&L Data</span>
     </div>
   </div>
 
@@ -3110,50 +3111,109 @@ function renderAcctCharts(tr) {
     if (abs>=10000000) return sign+(abs/10000000).toFixed(2)+'Cr';
     if (abs>=100000)   return sign+(abs/100000).toFixed(2)+'L';
     if (abs>=1000)     return sign+(abs/1000).toFixed(2)+'K';
-    return sign+abs;
+    return (v>=0?'+':'-')+abs;
   }
 
-  const chartDefaults = {
-    responsive: true, maintainAspectRatio: true,
-    plugins: { legend:{display:false}, datalabels:{display:false} },
-    elements: { point:{radius:0} },
-    scales: {
-      x: { grid:{color:'rgba(0,0,0,0.04)'}, ticks:{color:'#9ca3af',font:{size:9},maxTicksLimit:8} },
-      y: { grid:{color:'rgba(0,0,0,0.04)',borderDash:[3,3]}, ticks:{color:'#9ca3af',font:{size:9},callback:v=>fmtChartVal(v)} }
+  // Shared tooltip formatter
+  const sharedTooltip = {
+    backgroundColor:'#fff',
+    titleColor:'#374151',
+    bodyColor:'#1a73e8',
+    borderColor:'#e5e7eb',
+    borderWidth:1,
+    padding:10,
+    cornerRadius:8,
+    displayColors:false,
+    titleFont:{size:11,weight:'600'},
+    bodyFont:{size:12,weight:'700'},
+    callbacks:{
+      title: items => {
+        const lbl = items[0]?.label || '';
+        // Convert MM-DD to readable e.g. "01 Jun 26"
+        const yr = new Date().getFullYear();
+        const d = new Date(`${yr}-${lbl}`);
+        return isNaN(d)?lbl:d.toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'2-digit'});
+      }
     }
   };
 
-  // Equity curve
+  const chartScales = {
+    x: { grid:{color:'rgba(0,0,0,0.04)',drawBorder:false}, ticks:{color:'#9ca3af',font:{size:9},maxTicksLimit:8}, border:{display:false} },
+    y: { grid:{color:'rgba(0,0,0,0.05)',borderDash:[4,4],drawBorder:false}, ticks:{color:'#9ca3af',font:{size:9},callback:v=>fmtChartVal(v)}, border:{display:false} }
+  };
+
+  // Equity curve — Zebu style
   if (acctChartEquity) acctChartEquity.destroy();
   const ctxEq = document.getElementById('acct-chart-equity')?.getContext('2d');
   if (ctxEq && equityData.length) {
+    const eqRounded = equityData.map(v=>Math.round(v));
     acctChartEquity = new Chart(ctxEq, {
       type:'line',
       data:{ labels:equityLabels, datasets:[{
-        data:equityData.map(v=>Math.round(v)), borderColor:'#1a73e8', borderWidth:2,
-        fill:true, backgroundColor:'rgba(26,115,232,0.08)',
-        tension:0.3
+        data:eqRounded,
+        borderColor:'#1a73e8', borderWidth:2.5,
+        fill:true,
+        backgroundColor: ctx2 => {
+          const g = ctx2.chart.ctx.createLinearGradient(0,0,0,ctx2.chart.height);
+          g.addColorStop(0,'rgba(26,115,232,0.18)'); g.addColorStop(1,'rgba(26,115,232,0.01)');
+          return g;
+        },
+        tension:0.4,
+        pointRadius:3, pointHoverRadius:6,
+        pointBackgroundColor:'#1a73e8', pointBorderColor:'#fff', pointBorderWidth:2,
+        pointHoverBackgroundColor:'#1a73e8', pointHoverBorderColor:'#fff', pointHoverBorderWidth:2
       }]},
-      options:{...chartDefaults,
-        plugins:{...chartDefaults.plugins,
-          annotation:{annotations:{zero:{type:'line',yMin:0,yMax:0,borderColor:'rgba(0,0,0,0.2)',borderWidth:1,borderDash:[4,4]}}}
-        }
+      options:{
+        responsive:true, maintainAspectRatio:true,
+        interaction:{mode:'index',intersect:false},
+        plugins:{
+          legend:{display:false},
+          datalabels:{display:false},
+          tooltip:{...sharedTooltip, callbacks:{
+            ...sharedTooltip.callbacks,
+            label: item => 'Equity: ' + (item.raw>=0?'+':'') + fmtChartVal(item.raw)
+          }},
+          annotation:{annotations:{zero:{type:'line',yMin:0,yMax:0,borderColor:'rgba(0,0,0,0.15)',borderWidth:1,borderDash:[5,5]}}}
+        },
+        scales: chartScales
       }
     });
   }
 
-  // Drawdown
+  // Drawdown — Zebu style
   if (acctChartDD) acctChartDD.destroy();
   const ctxDD = document.getElementById('acct-chart-drawdown')?.getContext('2d');
   if (ctxDD && ddData.length) {
+    const ddRounded = ddData.map(v=>Math.round(v));
     acctChartDD = new Chart(ctxDD, {
       type:'line',
       data:{ labels:equityLabels, datasets:[{
-        data:ddData.map(v=>Math.round(v)), borderColor:'#dc2626', borderWidth:2,
-        fill:true, backgroundColor:'rgba(220,38,38,0.08)',
-        tension:0.3
+        data:ddRounded,
+        borderColor:'#dc2626', borderWidth:2.5,
+        fill:true,
+        backgroundColor: ctx2 => {
+          const g = ctx2.chart.ctx.createLinearGradient(0,0,0,ctx2.chart.height);
+          g.addColorStop(0,'rgba(220,38,38,0.18)'); g.addColorStop(1,'rgba(220,38,38,0.01)');
+          return g;
+        },
+        tension:0.4,
+        pointRadius:3, pointHoverRadius:6,
+        pointBackgroundColor:'#dc2626', pointBorderColor:'#fff', pointBorderWidth:2,
+        pointHoverBackgroundColor:'#dc2626', pointHoverBorderColor:'#fff', pointHoverBorderWidth:2
       }]},
-      options:chartDefaults
+      options:{
+        responsive:true, maintainAspectRatio:true,
+        interaction:{mode:'index',intersect:false},
+        plugins:{
+          legend:{display:false},
+          datalabels:{display:false},
+          tooltip:{...sharedTooltip, bodyColor:'#dc2626', callbacks:{
+            ...sharedTooltip.callbacks,
+            label: item => 'Drawdown: ' + fmtChartVal(item.raw)
+          }}
+        },
+        scales: chartScales
+      }
     });
   }
 
@@ -3222,26 +3282,36 @@ function renderAcctMonthlyTopChart(tr) {
 function renderAcctCalHeatmap(tr) {
   const today = new Date();
   const yr = today.getFullYear();
-  const mo = today.getMonth(); // 0-based
+  const mo = today.getMonth();
   const ym = `${yr}-${String(mo+1).padStart(2,'0')}`;
   const monthName = today.toLocaleDateString('en-IN',{month:'long',year:'numeric'});
-  document.getElementById('acct-cal-title').textContent = `Current Month Heatmap — ${monthName}`;
+  document.getElementById('acct-cal-title').textContent = `Current Month P&L — ${monthName}`;
 
   const dayPnl = {};
   tr.forEach(t => { const pd=pnlDate(t); if(pd&&pd.startsWith(ym)) dayPnl[pd]=(dayPnl[pd]||0)+(t.pnl||0); });
 
   const dim = new Date(yr, mo+1, 0).getDate();
-  const firstDow = new Date(yr, mo, 1).getDay(); // 0=Sun
-  // Mon-start: shift so Mon=0
+  const firstDow = new Date(yr, mo, 1).getDay();
   const startOffset = firstDow===0 ? 6 : firstDow-1;
+  const todayStr = today.toISOString().slice(0,10);
+
+  function fmtC(v) {
+    if(v===null) return '—';
+    const a=Math.abs(v), s=v>=0?'+':'-';
+    if(a>=100000) return s+(a/100000).toFixed(1)+'L';
+    if(a>=1000)   return s+(a/1000).toFixed(1)+'K';
+    return s+Math.round(a);
+  }
 
   const days=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
-  let html = `<div style="overflow-x:auto;"><table style="border-collapse:separate;border-spacing:4px;width:100%;"><thead><tr>`;
-  days.forEach(d => { html+=`<th style="font-size:0.65rem;font-weight:700;color:var(--text2);padding:4px 2px;text-align:center;width:14.28%;">${d}</th>`; });
+  let html = `<div style="overflow-x:auto;"><table style="border-collapse:separate;border-spacing:5px;width:100%;"><thead><tr>`;
+  days.forEach((d,i) => {
+    const isWknd = i>=5;
+    html+=`<th style="font-size:0.65rem;font-weight:700;color:${isWknd?'#cbd5e1':'var(--text2)'};padding:4px 2px;text-align:center;width:14.28%;">${d}</th>`;
+  });
   html+=`</tr></thead><tbody><tr>`;
 
-  // Empty cells before month start
-  for(let i=0;i<startOffset;i++) html+=`<td></td>`;
+  for(let i=0;i<startOffset;i++) html+=`<td style="background:transparent;"></td>`;
 
   let col = startOffset;
   for(let day=1;day<=dim;day++){
@@ -3249,23 +3319,34 @@ function renderAcctCalHeatmap(tr) {
     const pnl=dayPnl[ds]??null;
     const dow=new Date(yr,mo,day).getDay();
     const isWeekend=(dow===0||dow===6);
-    let bg='#f1f5f9',color='#94a3b8',border='#e2e8f0';
-    if(pnl!==null&&pnl>0){bg='#dcfce7';color='#15803d';border='#86efac';}
-    else if(pnl!==null&&pnl<0){bg='#fee2e2';color='#dc2626';border='#fca5a5';}
-    else if(pnl===0&&!isWeekend){bg='#f8fafc';color='#64748b';border='#e2e8f0';}
-    const isToday=ds===today.toISOString().slice(0,10);
-    const todayBorder=isToday?'2px solid #1a73e8':'1px solid '+border;
-    function fmtC(v){if(v===null)return '';const a=Math.abs(v),s=v>=0?'+':'-';if(a>=100000)return s+(a/100000).toFixed(1)+'L';if(a>=1000)return s+(a/1000).toFixed(1)+'K';return s+a.toFixed(0);}
-    html+=`<td style="background:${bg};border:${todayBorder};border-radius:8px;padding:6px 4px;text-align:center;vertical-align:top;min-width:40px;">
-      <div style="font-size:0.72rem;font-weight:700;color:${isWeekend?'#94a3b8':color};">${day}</div>
-      <div style="font-size:0.65rem;font-weight:600;color:${color};margin-top:2px;">${isWeekend?'':fmtC(pnl)}</div>
+    const isToday=ds===todayStr;
+    const isOpen = pnl===0 && !isWeekend && ds in dayPnl;
+
+    let bg, pnlColor, border;
+    if(isWeekend){
+      bg='#f1f5f9'; pnlColor='#cbd5e1'; border='#e2e8f0';
+    } else if(pnl===null){
+      bg='#f8fafc'; pnlColor='#94a3b8'; border='#e9ecef';
+    } else if(pnl>0){
+      bg='#dcfce7'; pnlColor='#16a34a'; border='#86efac';
+    } else if(pnl<0){
+      bg='#fee2e2'; pnlColor='#dc2626'; border='#fca5a5';
+    } else {
+      bg='#f8fafc'; pnlColor='#64748b'; border='#e2e8f0';
+    }
+
+    const borderStyle = isToday ? '2px solid #1a73e8' : `1px solid ${border}`;
+    const pnlText = isWeekend ? '' : (pnl===null ? '' : fmtC(pnl));
+
+    html+=`<td style="background:${bg};border:${borderStyle};border-radius:8px;padding:5px 3px;text-align:center;vertical-align:middle;min-width:44px;height:48px;">
+      <div style="font-size:0.75rem;font-weight:700;color:#1e293b;">${day}</div>
+      <div style="font-size:0.65rem;font-weight:600;color:${pnlColor};margin-top:2px;white-space:nowrap;">${pnlText}</div>
     </td>`;
     col++;
     if(col%7===0&&day<dim) html+=`</tr><tr>`;
   }
-  // Fill remaining cells
   const rem=(7-(col%7))%7;
-  for(let i=0;i<rem;i++) html+=`<td></td>`;
+  for(let i=0;i<rem;i++) html+=`<td style="background:transparent;"></td>`;
   html+=`</tr></tbody></table></div>`;
   document.getElementById('acct-cal-heatmap').innerHTML=html;
 }
