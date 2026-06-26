@@ -2,6 +2,12 @@
 ==========================================================
   SKVK TRADING JOURNAL — VERSION HISTORY
 ==========================================================
+  v18.6 | 2026-06-26 | Fix: Basket/Strategy selection now re-renders ALL sections (monthly
+         |            | chart, calendar heatmap, Live Performance, Daily P&L table, Equity/DD,
+         |            | Monthly Returns, Heatmap) with filtered trades — not just the heatmap;
+         |            | renderDashFiltered() drives all content; renderDashboard() handles year
+         |            | tabs + Strategy P&L table (always full); renderDashLivePerf() extracted
+  ──────────────────────────────────────────────────────
   v18.5 | 2026-06-26 | Fix: Basket/Strategy selector moved to top-right of page header (was
          |            | incorrectly placed mid-page before heatmap); selector now always visible
   ──────────────────────────────────────────────────────
@@ -476,7 +482,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>SKVK Trading Journal v18.5</title>
+<title>SKVK Trading Journal v18.6</title>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -1411,7 +1417,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div class="login-logo">📋</div>
     <div class="login-title">
       SKVK Trading Journal
-      <span class="login-vbadge">v18.5</span>
+      <span class="login-vbadge">v18.6</span>
     </div>
     <div class="login-sub">Sign in with your authorised Google account to access the journal.</div>
     <button class="google-signin-btn" id="googleSignInBtn" onclick="signInWithGoogle()">
@@ -1442,7 +1448,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div class="brand">
       <span class="brand-dot"></span>
       SKVK Trading Journal
-      <span style="font-size:0.78rem;background:#1a73e8;color:#fff;padding:2px 8px;border-radius:8px;font-weight:700;margin-left:4px;">v18.5</span>
+      <span style="font-size:0.78rem;background:#1a73e8;color:#fff;padding:2px 8px;border-radius:8px;font-weight:700;margin-left:4px;">v18.6</span>
     </div>
     <div id="brand-subline">
       <div id="db-status">● connecting…</div>
@@ -1498,7 +1504,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
             style="accent-color:var(--blue);width:14px;height:14px;flex-shrink:0;">
           <div style="background:var(--blue);padding:8px 14px;border-radius:10px;box-shadow:0 2px 6px rgba(26,115,232,0.25);">
             <div style="font-size:0.65rem;font-weight:700;color:rgba(255,255,255,0.85);letter-spacing:0.05em;margin-bottom:4px;">🧺 BASKET</div>
-            <select id="dash-basket-select" onchange="renderDashHeatmap()"
+            <select id="dash-basket-select" onchange="renderDashFiltered()"
               style="padding:4px 8px;border:none;border-radius:6px;font-size:0.82rem;font-weight:600;outline:none;background:#fff;color:var(--blue);font-family:var(--font);cursor:pointer;min-width:150px;">
               <option value="__ALL__">All Baskets</option>
             </select>
@@ -1510,7 +1516,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
             style="accent-color:#6366f1;width:14px;height:14px;flex-shrink:0;">
           <div id="dash-algo-box" style="background:#6366f1;padding:8px 14px;border-radius:10px;box-shadow:0 2px 6px rgba(99,102,241,0.25);opacity:0.5;">
             <div style="font-size:0.65rem;font-weight:700;color:rgba(255,255,255,0.85);letter-spacing:0.05em;margin-bottom:4px;">📋 STRATEGY</div>
-            <select id="dash-algo-select" onchange="renderDashHeatmap()" disabled
+            <select id="dash-algo-select" onchange="renderDashFiltered()" disabled
               style="padding:4px 8px;border:none;border-radius:6px;font-size:0.82rem;font-weight:600;outline:none;background:#fff;color:#6366f1;font-family:var(--font);cursor:pointer;min-width:150px;">
               <option value="__ALL__">All Strategies</option>
             </select>
@@ -4226,28 +4232,54 @@ function renderDashboard() {
   const dateRangeEl = document.getElementById('dash-date-range');
   if (dateRangeEl) dateRangeEl.textContent = `01 Jan ${currentYear} – ${new Date().toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'})}`;
 
-  // Live Performance (full Account-wise stats)
+  // Year tabs and selectors built with ALL trades; filtered trades drive all content
+  populateDashSelectors();
+  renderDashFiltered(); // renders everything using current basket/strategy selection
+  renderDashTable(tr, mMap); // strategy P&L table always shows all trades
+}
+
+// Called when basket/strategy selection changes — re-renders all content sections
+function renderDashFiltered() {
+  const tr = getDashFilteredTrades();
+  const mMap = {};
+  for(let m=1;m<=12;m++){const k=`${currentYear}-${String(m).padStart(2,'0')}`;mMap[k]=0;}
+  tr.forEach(t=>{const ym=(pnlDate(t)||'').slice(0,7);if(ym&&ym.startsWith(currentYear))mMap[ym]=(mMap[ym]||0)+(t.pnl||0);});
+
+  // Re-render all sections with filtered trades
+  drawMonthly(mMap);
+  drawDashCalHeatmap(tr);
+  renderDashLivePerf(tr);
+  renderDashDailyTable(tr);
+  drawDashEquityDD(tr);
+  renderDashMonthlyReturns(tr);
+  renderDashCapitalGrid();
+  renderDashHeatmap();
+}
+
+// Render Live Performance stats for filtered trades
+function renderDashLivePerf(tr) {
+  const yearStart = `${currentYear}-01-01`;
+  const today = new Date().toISOString().slice(0,10);
   const dayPnl={};
   tr.forEach(t=>{const pd=pnlDate(t);if(pd&&pd>=yearStart)dayPnl[pd]=(dayPnl[pd]||0)+(t.pnl||0);});
   const sortedDays=Object.keys(dayPnl).sort();
+  const total=sortedDays.reduce((s,d)=>s+dayPnl[d],0);
   const winDays=sortedDays.filter(d=>dayPnl[d]>0).length;
   const wr=sortedDays.length?Math.round(winDays/sortedDays.length*100):0;
-  // Get total capital (from capitalData or capitalBasket)
-  const totalCap = Object.values(capitalData).reduce((s,v)=>s+(v||0),0) ||
+  const totalCap=Object.values(capitalData).reduce((s,v)=>s+(v||0),0)||
     Object.values(capitalBasket).reduce((s,b)=>s+Object.values(b||{}).reduce((a,v)=>a+(v||0),0),0);
-  const daysSince = Math.max(1, Math.round((new Date(today)-new Date(yearStart))/(86400000)));
-  const totalReturn = totalCap>0?(total/totalCap*100).toFixed(1):0;
-  const cagr = totalCap>0?((Math.pow(1+(total/totalCap),365/daysSince)-1)*100).toFixed(1):0;
-  const dailyRets = sortedDays.map(d=>totalCap>0?dayPnl[d]/totalCap:0);
-  const avgRet = dailyRets.length?dailyRets.reduce((s,v)=>s+v,0)/dailyRets.length:0;
-  const stdDev = dailyRets.length>1?Math.sqrt(dailyRets.reduce((s,v)=>s+Math.pow(v-avgRet,2),0)/dailyRets.length):0;
-  const sharpe = stdDev>0?(avgRet/stdDev*Math.sqrt(252)).toFixed(2):'—';
+  const daysSince=Math.max(1,Math.round((new Date(today)-new Date(yearStart))/86400000));
+  const totalReturn=totalCap>0?(total/totalCap*100).toFixed(1):0;
+  const cagr=totalCap>0?((Math.pow(1+(total/totalCap),365/daysSince)-1)*100).toFixed(1):0;
+  const dailyRets=sortedDays.map(d=>totalCap>0?dayPnl[d]/totalCap:0);
+  const avgRet=dailyRets.length?dailyRets.reduce((s,v)=>s+v,0)/dailyRets.length:0;
+  const stdDev=dailyRets.length>1?Math.sqrt(dailyRets.reduce((s,v)=>s+Math.pow(v-avgRet,2),0)/dailyRets.length):0;
+  const sharpe=stdDev>0?(avgRet/stdDev*Math.sqrt(252)).toFixed(2):'—';
   let peak=0,maxDD=0,cum2=0;
   sortedDays.forEach(d=>{cum2+=dayPnl[d];if(cum2>peak)peak=cum2;const dd=cum2-peak;if(dd<maxDD)maxDD=dd;});
   const profits=sortedDays.filter(d=>dayPnl[d]>0).reduce((s,d)=>s+dayPnl[d],0);
   const losses=Math.abs(sortedDays.filter(d=>dayPnl[d]<0).reduce((s,d)=>s+dayPnl[d],0));
   const pf=losses>0?(profits/losses).toFixed(2):profits>0?'∞':'—';
-
   const setEl=(id,txt,col)=>{const e=document.getElementById(id);if(e){e.textContent=txt;if(col)e.style.color=col;}};
   setEl('s-return',(totalReturn>=0?'+':'')+totalReturn+'%',totalReturn>=0?'var(--green)':'var(--red)');
   setEl('s-cagr',(cagr>=0?'+':'')+cagr+'% / yr',cagr>=0?'var(--green)':'var(--red)');
@@ -4258,21 +4290,10 @@ function renderDashboard() {
   setEl('s-pf',pf);
   setEl('s-trades',tr.filter(t=>{const pd=pnlDate(t);return pd&&pd>=yearStart;}).length);
   setEl('s-algos',totalCap>0?fmt(totalCap):'₹0');
-
-  drawMonthly(mMap);
-  drawDashCalHeatmap(tr);
-  renderDashDailyTable(tr);
-  drawDashEquityDD(tr);
-  renderDashMonthlyReturns(tr);
-  renderDashCapitalGrid();
-  renderDashHeatmap();
-  populateDashSelectors();
-  renderDashTable(tr, mMap);
 }
 
 function onDashSelMode() {
   const mode = document.querySelector('input[name="dash-sel-mode"]:checked')?.value || 'basket';
-  const basketBox = document.getElementById('dash-basket-select')?.closest('div');
   const algoBox = document.getElementById('dash-algo-box');
   const basketSel = document.getElementById('dash-basket-select');
   const algoSel = document.getElementById('dash-algo-select');
@@ -4280,16 +4301,12 @@ function onDashSelMode() {
     if (algoBox) algoBox.style.opacity = '0.5';
     if (algoSel) algoSel.disabled = true;
     if (basketSel) basketSel.disabled = false;
-    const bParent = basketSel?.closest('div[style*="opacity"]');
-    if (bParent) bParent.style.opacity = '1';
   } else {
     if (algoBox) algoBox.style.opacity = '1';
     if (algoSel) algoSel.disabled = false;
     if (basketSel) basketSel.disabled = true;
-    const bParent = basketSel?.parentElement;
-    if (bParent) bParent.style.opacity = '0.5';
   }
-  renderDashHeatmap();
+  renderDashFiltered();
 }
 
 function populateDashSelectors() {
