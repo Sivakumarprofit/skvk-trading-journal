@@ -2,9 +2,11 @@
 ==========================================================
   SKVK TRADING JOURNAL — VERSION HISTORY
 ==========================================================
-  v18.1 | 2026-06-26 | Fix: Monthly Returns, Capital Deployed, Daily P&L Heatmap sections broken
+  v18.2 | 2026-06-26 | Fix: Monthly Returns, Capital Deployed, Daily P&L Heatmap sections broken
          |            | (capital chart referenced old chartDefaults — fixed to chartScales);
-         |            | Weekly day tiles removed from Account wise page (redundant with calendar)
+         |            | Weekly day tiles removed from Account wise page (redundant with calendar);
+         |            | Fix: capital_v2 (per-account capital) now loaded from Firebase on startup —
+         |            | no longer requires App Settings tab visit; values persist across sessions
   ──────────────────────────────────────────────────────
   v18.0 | 2026-06-26 | Calendar heatmap: date fixed black, P&L green/red, weekends greyed, open=dash;
          |            | Monthly chart label → "Monthly P&L"; calendar label → "Current Month P&L";
@@ -457,7 +459,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>SKVK Trading Journal v18.1</title>
+<title>SKVK Trading Journal v18.2</title>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -1392,7 +1394,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div class="login-logo">📋</div>
     <div class="login-title">
       SKVK Trading Journal
-      <span class="login-vbadge">v18.1</span>
+      <span class="login-vbadge">v18.2</span>
     </div>
     <div class="login-sub">Sign in with your authorised Google account to access the journal.</div>
     <button class="google-signin-btn" id="googleSignInBtn" onclick="signInWithGoogle()">
@@ -1423,7 +1425,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div class="brand">
       <span class="brand-dot"></span>
       SKVK Trading Journal
-      <span style="font-size:0.78rem;background:#1a73e8;color:#fff;padding:2px 8px;border-radius:8px;font-weight:700;margin-left:4px;">v18.1</span>
+      <span style="font-size:0.78rem;background:#1a73e8;color:#fff;padding:2px 8px;border-radius:8px;font-weight:700;margin-left:4px;">v18.2</span>
     </div>
     <div id="brand-subline">
       <div id="db-status">● connecting…</div>
@@ -3556,6 +3558,10 @@ function startListeners() {
     capitalData = snap.val() || {};
     buildCapitalTable();
     renderDashboard();
+  });
+  db.ref('journal/capital_v2').on('value', snap => {
+    capitalDataAll = snap.val() || {};
+    buildCapitalTable();
   });
   db.ref('journal/nicknames').on('value', snap => {
     accountNicknames = snap.val() || {};
