@@ -2,6 +2,15 @@
 ==========================================================
   SKVK TRADING JOURNAL — VERSION HISTORY
 ==========================================================
+  v18.3 | 2026-06-26 | P&L Report-Strategy wise: full revamp inheriting Account wise design —
+         |            | block headings (Monthly P&L Data / Yearly P&L Data / Strategy P&L), monthly
+         |            | chart (current year Jan-Dec, K/L/Cr labels), current month calendar heatmap,
+         |            | Zebu-style equity+drawdown curves, Live Performance stats bar; Basket/Strategy
+         |            | radio toggle (default Basket); Strategy P&L table at bottom always shown;
+         |            | "System" renamed → "Strategy" everywhere; "Group" renamed → "Basket";
+         |            | "All System Names" → "Basket Allocation" with ⚠️ ERROR for unassigned strategies;
+         |            | capital_v2 Firebase listener added on startup (capital persists across sessions)
+  ──────────────────────────────────────────────────────
   v18.2 | 2026-06-26 | Fix: Monthly Returns, Capital Deployed, Daily P&L Heatmap sections broken
          |            | (capital chart referenced old chartDefaults — fixed to chartScales);
          |            | Weekly day tiles removed from Account wise page (redundant with calendar);
@@ -79,7 +88,7 @@
          |            | + Instrument match; real P&L from price diff × qty; OPEN legs flagged;
          |            | Journal: CntrN uses run_counter for Tradetron, computed for Quantleap;
          |            | Day N badge removed — CntrN pill only; Day column → Cntr;
-         |            | Nav: P&L Report → P&L Report-System wise; new P&L Report-Account wise tab;
+         |            | Nav: P&L Report → P&L Report — Strategy wise; new P&L Report-Account wise tab;
          |            | Account wise page: weekly tile cards (← → nav) + full year heatmap & stats
   ──────────────────────────────────────────────────────
   v16.4 | 2026-06-25 | Fix: Journal trades visible — removed display:none from tbody (was hiding
@@ -91,7 +100,7 @@
          |            | Last Updated: max-width 240→340px, font 0.65→0.7rem
   ──────────────────────────────────────────────────────
   v16.2 | 2026-06-25 | Daily Journal: default collapsed view; CntrN badge on algo-group headers;
-         |            | Nav reorder + renames: Daily Journal, System Statistics moved to 2nd,
+         |            | Nav reorder + renames: Daily Journal, Strategy Statistics moved to 2nd,
          |            | Upload Trade Reports, Compare Broker Execution, Manual Entry
   ──────────────────────────────────────────────────────
   v16.1 | 2026-06-25 | App Settings: moved Access Control card to bottom of page
@@ -112,7 +121,7 @@
   ──────────────────────────────────────────────────────
   v15.7 | 2026-06-22 | Merged Settings into App Settings tab — single unified tab;
          |            | Removed standalone Settings tab from nav; App Settings now contains
-         |            | System Names, Groups, Display Prefs, Nicknames, Capital, Firebase,
+         |            | Strategy Names, Groups, Display Prefs, Nicknames, Capital, Firebase,
          |            | Clear SM/Broker Data, One-Time Fixes, Data Management
   ──────────────────────────────────────────────────────
   v15.6 | 2026-06-22 | Fix: Nav tabs overflow — reduced padding (16px→11px), font (0.88→0.82rem),
@@ -130,14 +139,14 @@
          |            | date filter; purple pill + counter dropdown (latest auto-selected);
          |            | shows broker vs SM side-by-side for selected counter date only
   ──────────────────────────────────────────────────────
-  v15.2 | 2026-06-22 | System Statistics: Counter P&L table shows Strategy column when Group selected,
+  v15.2 | 2026-06-22 | Strategy Statistics: Counter P&L table shows Strategy column when Group selected,
          |            | Column order: Strategy (group only) → Symbol → Broker → Action → Entry → Exit → Qty → P&L
   ──────────────────────────────────────────────────────
-  v15.1 | 2026-06-22 | System Statistics: Strategy name shown as purple pill badge (Option A),
+  v15.1 | 2026-06-22 | Strategy Statistics: Strategy name shown as purple pill badge (Option A),
          |            | Counter grouped by date (one counter per date, no repeats for group or strategy),
          |            | Equity curve no longer re-renders on counter change (split render functions)
   ──────────────────────────────────────────────────────
-  v15.0 | 2026-06-22 | System Statistics: Strategy+Year dropdowns moved below heading on left,
+  v15.0 | 2026-06-22 | Strategy Statistics: Strategy+Year dropdowns moved below heading on left,
          |            | Counter moved into content area as dropdown (default=latest),
          |            | Added From/To date range (auto-fills from year, overridable),
          |            | Stats/Equity/Daily/Monthly use date range; counter P&L unaffected
@@ -145,11 +154,11 @@
   v14.9 | 2026-06-22 | Fix: Orphaned JS code after BOOT comment caused SyntaxError (return not in function),
          |            | Fix: showPage not defined error — script was broken before DOMContentLoaded
   ──────────────────────────────────────────────────────
-  v14.8 | 2026-06-22 | System Statistics: Empty state until strategy selected,
+  v14.8 | 2026-06-22 | Strategy Statistics: Empty state until strategy selected,
          |            | Counter pills at top (auto-selects latest), counter section shows selected run only,
          |            | Equity curve/stats/daily summary/month PNL always show full year for strategy
   ──────────────────────────────────────────────────────
-  v14.7 | 2026-06-22 | New tab: System Statistics — Group/Strategy dropdown, Counter P&L table,
+  v14.7 | 2026-06-22 | New tab: Strategy Statistics — Group/Strategy dropdown, Counter P&L table,
          |            | Equity Curve chart, 22-row statistics table, Daily Summary, Month Wise PNL,
          |            | All calculated fresh from Firebase trades; Sharpe/Sortino based on 6.5% rf rate
   ──────────────────────────────────────────────────────
@@ -251,7 +260,7 @@
          |            | Full row hover highlight in blue tint for readability,
          |            | Algo sort order: NF 1DTE→0DTE, BNF 1DTE→0DTE, SX 1DTE→0DTE, others
   ──────────────────────────────────────────────────────
-  v13.21| 2026-06-04 | Fix: Algo Management now shows groups and algos in Settings page,
+  v13.21| 2026-06-04 | Fix: Strategy Management now shows groups and algos in Settings page,
          |            | renderAlgoPage and renderGroupList render into both locations,
          |            | Settings page fully functional — no need to visit old Algo tab
   ──────────────────────────────────────────────────────
@@ -259,7 +268,7 @@
          |            | Cancelled trades shown in grey/muted style in journal,
          |            | Settings tab replaces Admin + Algo Settings (merged),
          |            | Settings: Display Preferences section with show/hide unentered trades,
-         |            | Settings: Algo Management section (moved from Algo Settings),
+         |            | Settings: Strategy Management section (moved from Algo Settings),
          |            | Settings: Data Management section (moved from Admin),
          |            | Display Unentered Trades defaults to Yes, saved to Firebase
   ──────────────────────────────────────────────────────
@@ -383,7 +392,7 @@
          |            | Group rows clickable to expand/collapse individual algo rows,
          |            | Expand All / Collapse All buttons in Reports header
   ──────────────────────────────────────────────────────
-  v11.1 | 2026-06-01 | Algo Groups: added Category field (free text),
+  v11.1 | 2026-06-01 | Baskets: added Category field (free text),
          |            | Reports table groups now organized under category headers,
          |            | Categories are fully user-configurable (e.g. SX 0DTE, NF 1DTE),
          |            | Uncategorized groups shown at bottom
@@ -459,7 +468,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>SKVK Trading Journal v18.2</title>
+<title>SKVK Trading Journal v18.3</title>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -1394,7 +1403,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div class="login-logo">📋</div>
     <div class="login-title">
       SKVK Trading Journal
-      <span class="login-vbadge">v18.2</span>
+      <span class="login-vbadge">v18.3</span>
     </div>
     <div class="login-sub">Sign in with your authorised Google account to access the journal.</div>
     <button class="google-signin-btn" id="googleSignInBtn" onclick="signInWithGoogle()">
@@ -1425,7 +1434,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div class="brand">
       <span class="brand-dot"></span>
       SKVK Trading Journal
-      <span style="font-size:0.78rem;background:#1a73e8;color:#fff;padding:2px 8px;border-radius:8px;font-weight:700;margin-left:4px;">v18.2</span>
+      <span style="font-size:0.78rem;background:#1a73e8;color:#fff;padding:2px 8px;border-radius:8px;font-weight:700;margin-left:4px;">v18.3</span>
     </div>
     <div id="brand-subline">
       <div id="db-status">● connecting…</div>
@@ -1437,7 +1446,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
   <nav class="nav-tabs">
     <button class="nav-tab active" onclick="showPage('journal')"     data-page="journal">📋 <span class="tl">Daily<br>Journal</span></button>
     <button class="nav-tab" onclick="showPage('sysstat')"            data-page="sysstat">📈 <span class="tl">System<br>Statistics</span></button>
-    <button class="nav-tab" onclick="showPage('dashboard')"          data-page="dashboard">📊 <span class="tl">P&L Report-<br>System wise</span></button>
+    <button class="nav-tab" onclick="showPage('dashboard')"          data-page="dashboard">📊 <span class="tl">P&L Report-<br>Strategy wise</span></button>
     <button class="nav-tab" onclick="showPage('acctreport')"         data-page="acctreport">👤 <span class="tl">P&L Report-<br>Account wise</span></button>
     <button class="nav-tab" onclick="showPage('upload')"             data-page="upload">⬆ <span class="tl">Upload Trade<br>Reports</span></button>
     <button class="nav-tab" onclick="showPage('stockmock')"          data-page="stockmock">🔬 <span class="tl">StockMock<br>Compare</span></button>
@@ -1463,75 +1472,102 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
 
 <!-- ══════════ DASHBOARD ══════════ -->
 <div id="page-dashboard" class="page">
-  <div class="page-header">
+
+  <!-- Page header -->
+  <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:20px;">
     <div>
-      <div class="page-title">P&L Report</div>
-      <div class="page-subtitle">Consolidated P&L · Strategy Performance · Strategy P&L</div>
-      <div id="dash-last-updated" style="margin-top:6px;font-size:0.75rem;color:var(--text3);"></div>
+      <div class="page-title">P&L Report — Strategy wise</div>
+      <div class="page-subtitle">Consolidated P&L · Basket & Strategy Performance</div>
+      <div id="dash-last-updated" style="margin-top:4px;font-size:0.72rem;color:var(--text3);"></div>
     </div>
     <div class="period-tabs" id="year-tabs"></div>
   </div>
 
-  <div class="stat-grid" id="stat-grid">
-    <div class="stat-card">
-      <div class="stat-card-icon">💰</div>
-      <div class="stat-label">Total P&L</div>
-      <div class="stat-value neutral" id="s-pnl">—</div>
-      <div class="stat-sub">All selected period</div>
-      <div class="stat-bar" id="s-pnl-bar" style="background:var(--border)"></div>
+  <!-- ── Live Performance stats ── -->
+  <div style="background:var(--bg);border:1.5px solid var(--border);border-radius:14px;padding:20px 24px;margin-bottom:24px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span style="font-size:1rem;">📈</span>
+        <span style="font-size:1rem;font-weight:800;font-family:var(--display);">Live Performance</span>
+      </div>
+      <span id="dash-date-range" style="font-size:0.75rem;background:#eef2ff;color:#3730a3;padding:4px 12px;border-radius:20px;font-weight:600;"></span>
     </div>
-    <div class="stat-card">
-      <div class="stat-card-icon">📈</div>
-      <div class="stat-label">Total Trades</div>
-      <div class="stat-value neutral" id="s-trades">—</div>
-      <div class="stat-sub">Executed legs</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-card-icon">🎯</div>
-      <div class="stat-label">Win Rate</div>
-      <div class="stat-value neutral" id="s-wr">—</div>
-      <div class="stat-sub">Legs with profit</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-card-icon">⚡</div>
-      <div class="stat-label">Active Algos</div>
-      <div class="stat-value neutral" id="s-algos">—</div>
-      <div class="stat-sub">Unique strategies</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-card-icon">🚀</div>
-      <div class="stat-label">Best Month</div>
-      <div class="stat-value positive" id="s-best">—</div>
-      <div class="stat-sub" id="s-best-lbl">—</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-card-icon">⚠️</div>
-      <div class="stat-label">Worst Month</div>
-      <div class="stat-value negative" id="s-worst">—</div>
-      <div class="stat-sub" id="s-worst-lbl">—</div>
+    <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:16px 24px;">
+      <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Total P&L</div><div id="s-pnl" style="font-size:1.1rem;font-weight:800;">—</div></div>
+      <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Total Trades</div><div id="s-trades" style="font-size:1.1rem;font-weight:800;">—</div></div>
+      <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Win Rate</div><div id="s-wr" style="font-size:1.1rem;font-weight:800;">—</div></div>
+      <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Active Strategies</div><div id="s-algos" style="font-size:1.1rem;font-weight:800;">—</div></div>
+      <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Best Month</div><div id="s-best" style="font-size:1.1rem;font-weight:800;color:var(--green);">—</div><div id="s-best-lbl" style="font-size:0.68rem;color:var(--text2);"></div></div>
+      <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Worst Month</div><div id="s-worst" style="font-size:1.1rem;font-weight:800;color:var(--red);">—</div><div id="s-worst-lbl" style="font-size:0.68rem;color:var(--text2);"></div></div>
     </div>
   </div>
 
-  <div class="charts-grid">
-    <div class="chart-card">
-      <h4>Monthly P&L (₹)</h4>
-      <canvas id="chart-monthly" style="max-height:230px;"></canvas>
+  <!-- ══ BLOCK 1: Monthly P&L Data ══ -->
+  <div style="border-top:3px solid var(--blue);padding-top:10px;margin-bottom:16px;">
+    <span style="font-size:1.05rem;font-weight:800;font-family:var(--display);color:var(--blue);">📅 Monthly P&L Data</span>
+  </div>
+
+  <!-- Monthly bar chart (current year Jan-Dec) -->
+  <div style="background:var(--bg);border:1.5px solid var(--border);border-radius:14px;padding:16px 20px;margin-bottom:18px;">
+    <div style="font-size:0.78rem;font-weight:700;color:var(--text1);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:10px;">Monthly P&L</div>
+    <canvas id="chart-monthly" style="max-height:200px;"></canvas>
+  </div>
+
+  <!-- Current Month P&L calendar -->
+  <div style="background:var(--bg);border:1.5px solid var(--border);border-radius:14px;padding:16px 20px;margin-bottom:28px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+      <div style="font-size:0.78rem;font-weight:700;color:var(--text1);letter-spacing:0.06em;text-transform:uppercase;" id="dash-cal-title">Current Month P&L</div>
+      <div style="display:flex;gap:5px;font-size:0.68rem;align-items:center;">
+        <span style="background:#16a34a;color:#fff;padding:2px 8px;border-radius:4px;">Profit</span>
+        <span style="background:#dc2626;color:#fff;padding:2px 8px;border-radius:4px;">Loss</span>
+        <span style="background:#f3f4f6;color:#9ca3af;padding:2px 8px;border-radius:4px;border:1px solid #e5e7eb;">No trade</span>
+      </div>
     </div>
-    <div class="chart-card">
-      <h4>Algo P&L Breakdown</h4>
-      <canvas id="chart-algo" style="max-height:230px;"></canvas>
+    <div id="dash-cal-heatmap"></div>
+  </div>
+
+  <!-- ══ BLOCK 2: Yearly P&L Data ══ -->
+  <div style="border-top:3px solid #6366f1;padding-top:10px;margin-bottom:16px;">
+    <span style="font-size:1.05rem;font-weight:800;font-family:var(--display);color:#6366f1;">📊 Yearly P&L Data</span>
+  </div>
+
+  <!-- Basket / Algo radio selector -->
+  <div style="background:var(--bg);border:1.5px solid var(--border);border-radius:14px;padding:16px 20px;margin-bottom:18px;display:flex;align-items:center;gap:24px;flex-wrap:wrap;">
+    <span style="font-size:0.82rem;font-weight:700;color:var(--text1);">View by:</span>
+    <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:0.85rem;font-weight:600;color:var(--text0);">
+      <input type="radio" name="dash-view-mode" value="basket" checked onchange="renderDashboard()"
+        style="accent-color:var(--blue);width:15px;height:15px;"> 🧺 Basket
+    </label>
+    <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:0.85rem;font-weight:600;color:var(--text0);">
+      <input type="radio" name="dash-view-mode" value="algo" onchange="renderDashboard()"
+        style="accent-color:var(--blue);width:15px;height:15px;"> 📋 Strategy (Algo)
+    </label>
+    <div style="margin-left:auto;">
+      <div class="period-tabs" id="month-filter-tabs"></div>
     </div>
   </div>
 
-  <div class="page-header" style="margin-top:4px;">
-    <div>
-      <div class="page-title" style="font-size:1rem;">Strategy P&L</div>
-      <div class="page-subtitle">P&L by Strategy × Month · Click rows to expand/collapse</div>
+  <!-- Equity & Drawdown charts -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:28px;">
+    <div style="background:var(--bg);border:1.5px solid var(--border);border-radius:14px;padding:16px 18px;">
+      <div style="font-size:0.72rem;font-weight:700;color:var(--text1);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:10px;">Equity Curve</div>
+      <canvas id="dash-chart-equity" style="max-height:180px;"></canvas>
     </div>
+    <div style="background:var(--bg);border:1.5px solid var(--border);border-radius:14px;padding:16px 18px;">
+      <div style="font-size:0.72rem;font-weight:700;color:var(--text1);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:10px;">Drawdown</div>
+      <canvas id="dash-chart-drawdown" style="max-height:180px;"></canvas>
+    </div>
+  </div>
+
+  <!-- Strategy P&L table (always at bottom) -->
+  <div style="border-top:3px solid #0d9488;padding-top:10px;margin-bottom:16px;">
+    <span style="font-size:1.05rem;font-weight:800;font-family:var(--display);color:#0d9488;">📋 Strategy P&L</span>
+  </div>
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:8px;">
+    <div style="font-size:0.75rem;color:var(--text2);">P&L by Strategy × Month · Click rows to expand/collapse</div>
     <div style="display:flex;align-items:center;gap:8px;">
       <button class="btn btn-ghost btn-sm" onclick="expandAllReport()">Expand All</button>
       <button class="btn btn-ghost btn-sm" onclick="collapseAllReport()">Collapse All</button>
-      <div class="period-tabs" id="month-filter-tabs"></div>
     </div>
   </div>
   <div class="table-wrap" id="dash-table">
@@ -1571,7 +1607,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
       <span style="font-size:0.82rem;font-weight:600;color:var(--text1);">Drill down:</span>
       <select id="heatmap-strategy" onchange="renderHeatmapDrilldown()"
         style="padding:6px 12px;border:1px solid var(--border);border-radius:8px;font-size:0.82rem;outline:none;background:#fff;min-width:280px;">
-        <option value="">— Select a Strategy or Group —</option>
+        <option value="">— Select a Strategy or Basket —</option>
       </select>
     </div>
     <div id="heatmap-drilldown" style="margin-top:12px;"></div>
@@ -1875,7 +1911,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
   <div class="page-header">
     <div>
       <div class="page-title">App Settings</div>
-      <div class="page-subtitle">System Names · Groups · Display · Nicknames · Capital · Data Management</div>
+      <div class="page-subtitle">Strategy Names · Groups · Display · Nicknames · Capital · Data Management</div>
     </div>
   </div>
 
@@ -1939,29 +1975,30 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
             <div style="font-size:0.72rem;color:var(--text2);margin-top:2px;">Create and manage system groups</div>
           </div>
         </div>
-        <button onclick="asOpenAddGroup()" class="btn btn-primary btn-sm">+ New Group</button>
+        <button onclick="asOpenAddGroup()" class="btn btn-primary btn-sm">+ New Basket</button>
       </div>
       <div id="as-group-list">
-        <div style="color:var(--text3);font-size:0.8rem;">No groups yet</div>
+        <div style="color:var(--text3);font-size:0.8rem;">No baskets yet</div>
       </div>
     </div>
 
-    <!-- ── All System Names ── -->
+    <!-- ── Basket Allocation ── -->
     <div style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:22px;box-shadow:var(--shadow-sm);">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
         <div style="display:flex;align-items:center;gap:10px;">
           <span style="font-size:1.3rem;">📋</span>
           <div>
-            <div style="font-size:0.95rem;font-weight:700;color:var(--text0);">All System Names</div>
-            <div style="font-size:0.72rem;color:var(--text2);margin-top:2px;">Edit, delete or reassign group for each system</div>
+            <div style="font-size:0.95rem;font-weight:700;color:var(--text0);">Basket Allocation</div>
+            <div style="font-size:0.72rem;color:var(--text2);margin-top:2px;">Edit, delete or reassign basket for each strategy · ⚠️ Unassigned strategies shown with error</div>
+            <div style="font-size:0.72rem;color:var(--text2);margin-top:2px;">Edit, delete or reassign basket for each strategy</div>
           </div>
         </div>
         <div style="display:flex;align-items:center;gap:8px;">
-          <input type="text" id="as-search" placeholder="Search systems…" oninput="asRenderSystems()"
+          <input type="text" id="as-search" placeholder="Search strategies…" oninput="asRenderSystems()"
             style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:0.82rem;outline:none;min-width:180px;">
-          <select id="as-filter-group" onchange="asRenderSystems()"
+          <select id="as-filter-basket" onchange="asRenderSystems()"
             style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:0.82rem;outline:none;background:var(--bg);color:var(--text0);">
-            <option value="">All Groups</option>
+            <option value="">All Baskets</option>
           </select>
         </div>
       </div>
@@ -2006,27 +2043,27 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
       </div>
     </div>
 
-    <!-- ── Algo Management ── -->
+    <!-- ── Strategy Management ── -->
     <div style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:22px;box-shadow:var(--shadow-sm);">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
         <span style="font-size:1.3rem;">📊</span>
-        <span style="font-size:0.95rem;font-weight:700;color:var(--text0);">Algo Management</span>
+        <span style="font-size:0.95rem;font-weight:700;color:var(--text0);">Strategy Management</span>
       </div>
       <div id="settings-algo-content">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
           <div>
-            <div style="font-size:0.85rem;font-weight:700;color:var(--text0);">Algo Groups</div>
-            <div style="font-size:0.72rem;color:var(--text2);margin-top:2px;">Group multiple algos · combined P&L in Reports</div>
+            <div style="font-size:0.85rem;font-weight:700;color:var(--text0);">Baskets</div>
+            <div style="font-size:0.72rem;color:var(--text2);margin-top:2px;">Basket multiple algos · combined P&L in Reports</div>
           </div>
-          <button class="btn btn-primary btn-sm" onclick="openAddGroupModal()">+ New Group</button>
+          <button class="btn btn-primary btn-sm" onclick="openAddGroupModal()">+ New Basket</button>
         </div>
         <div id="settings-group-list">
-          <div style="color:var(--text3);font-size:0.78rem;padding:6px 0;">No groups yet</div>
+          <div style="color:var(--text3);font-size:0.78rem;padding:6px 0;">No baskets yet</div>
         </div>
         <hr style="border:none;border-top:1px solid var(--border);margin:16px 0;">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
           <div>
-            <div style="font-size:0.85rem;font-weight:700;color:var(--text0);">Individual Algos</div>
+            <div style="font-size:0.85rem;font-weight:700;color:var(--text0);">Individual Strategies</div>
             <div style="font-size:0.72rem;color:var(--text2);margin-top:2px;">Auto-created on upload · edit metadata here</div>
           </div>
           <button class="btn btn-primary btn-sm" onclick="openAddAlgoModal()">+ Add Algo</button>
@@ -2304,7 +2341,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
   <!-- Empty state -->
   <div id="sm-empty-state" style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 20px;color:var(--text3);">
     <div style="font-size:3rem;margin-bottom:16px;">🔬</div>
-    <div style="font-size:1.1rem;font-weight:700;color:var(--text1);margin-bottom:6px;">Select a Strategy or Group</div>
+    <div style="font-size:1.1rem;font-weight:700;color:var(--text1);margin-bottom:6px;">Select a Strategy or Basket</div>
     <div style="font-size:0.85rem;">Choose from the dropdown above to compare broker vs StockMock</div>
   </div>
 
@@ -2427,26 +2464,26 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     </div>
     <button class="btn btn-primary" onclick="openAddAlgoModal()">+ Add Algo</button>
   </div>
-  <!-- Algo Groups Section -->
+  <!-- Baskets Section -->
   <div style="margin-bottom:28px;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
       <div>
-        <div style="font-size:0.9rem;font-weight:700;color:var(--text0);">Algo Groups</div>
-        <div style="font-size:0.75rem;color:var(--text2);margin-top:2px;">Group multiple algos together · combined P&L shown in Reports</div>
+        <div style="font-size:0.9rem;font-weight:700;color:var(--text0);">Baskets</div>
+        <div style="font-size:0.75rem;color:var(--text2);margin-top:2px;">Basket multiple algos together · combined P&L shown in Reports</div>
       </div>
-      <button class="btn btn-primary btn-sm" onclick="openAddGroupModal()">+ New Group</button>
+      <button class="btn btn-primary btn-sm" onclick="openAddGroupModal()">+ New Basket</button>
     </div>
     <div id="group-list">
-      <div style="color:var(--text3);font-size:0.78rem;padding:10px 0;">No groups yet — create one to combine algo P&L in Reports</div>
+      <div style="color:var(--text3);font-size:0.78rem;padding:10px 0;">No baskets yet — create one to combine algo P&L in Reports</div>
     </div>
   </div>
 
   <hr style="border:none;border-top:1px solid var(--border);margin-bottom:24px;">
 
-  <!-- Individual Algos -->
+  <!-- Individual Strategies -->
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
     <div>
-      <div style="font-size:0.9rem;font-weight:700;color:var(--text0);">Individual Algos</div>
+      <div style="font-size:0.9rem;font-weight:700;color:var(--text0);">Individual Strategies</div>
       <div style="font-size:0.75rem;color:var(--text2);margin-top:2px;">Auto-created on upload · edit metadata here</div>
     </div>
     <button class="btn btn-primary btn-sm" onclick="openAddAlgoModal()">+ Add Algo</button>
@@ -2514,7 +2551,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
 <!-- ══════════ SYSTEM STATISTICS ══════════ -->
 <div id="page-sysstat" class="page">
   <div style="margin-bottom:20px;">
-    <div class="page-title">System Statistics</div>
+    <div class="page-title">Strategy Statistics</div>
     <div class="page-subtitle" style="margin-bottom:14px;">Performance analytics per strategy or group · Calculated from broker trades</div>
     <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
       <select id="sysstat-select" onchange="onSysStatStratChange()" style="padding:7px 12px;border:1px solid var(--border);border-radius:8px;background:var(--bg2);color:var(--text0);font-size:0.85rem;min-width:280px;">
@@ -2533,7 +2570,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
   <!-- Empty state -->
   <div id="sysstat-empty" style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:80px 20px;color:var(--text3);">
     <div style="font-size:3rem;margin-bottom:16px;">📊</div>
-    <div style="font-size:1.1rem;font-weight:700;color:var(--text1);margin-bottom:6px;">Select a Strategy or Group</div>
+    <div style="font-size:1.1rem;font-weight:700;color:var(--text1);margin-bottom:6px;">Select a Strategy or Basket</div>
     <div style="font-size:0.85rem;">Choose from the dropdown above to view performance statistics</div>
   </div>
 
@@ -2623,7 +2660,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
 <div class="modal-overlay" id="modal-group">
   <div class="modal">
     <button class="modal-close" onclick="closeModal('modal-group')">✕</button>
-    <h2 id="modal-group-title">Create Algo Group</h2>
+    <h2 id="modal-group-title">Create Basket</h2>
     <div class="form-grid" style="grid-template-columns:1fr 1fr;">
       <div class="form-group" style="grid-column:1/-1">
         <label class="form-label">Group Name *</label>
@@ -4115,21 +4152,25 @@ let ci=0; function nextColor(){return COLORS[ci++%COLORS.length];}
 // ════════════════════════════════════════════════════
 //  DASHBOARD
 // ════════════════════════════════════════════════════
+let dashChartEquity = null, dashChartDD = null;
+
 function renderDashboard() {
   const tr = allTrades.filter(t=>!t.archived && (pnlDate(t)||t.entry_date||'').startsWith(currentYear));
-  const total = tr.filter(t=>!t.archived).reduce((s,t)=>s+(t.pnl||0),0);
+  const total = tr.reduce((s,t)=>s+(t.pnl||0),0);
   const wr = tr.length ? Math.round(tr.filter(t=>(t.pnl||0)>0).length/tr.length*100) : 0;
 
-  // Monthly
+  // Monthly map (current year Jan-Dec)
   const mMap={};
-  tr.forEach(t=>{ const ym=(pnlDate(t)||'').slice(0,7); if(ym) mMap[ym]=(mMap[ym]||0)+(t.pnl||0); });
+  for(let m=1;m<=12;m++){const k=`${currentYear}-${String(m).padStart(2,'0')}`;mMap[k]=0;}
+  tr.forEach(t=>{ const ym=(pnlDate(t)||'').slice(0,7); if(ym&&ym.startsWith(currentYear)) mMap[ym]=(mMap[ym]||0)+(t.pnl||0); });
   const months=Object.keys(mMap).sort();
-  const bestM = months.reduce((b,m)=>(mMap[m]||0)>(mMap[b]||0)?m:b, months[0]);
-  const worstM= months.reduce((b,m)=>(mMap[m]||0)<(mMap[b]||0)?m:b, months[0]);
+  const nonZeroMonths = months.filter(m=>mMap[m]!==0);
+  const bestM = nonZeroMonths.length ? nonZeroMonths.reduce((b,m)=>(mMap[m]||0)>(mMap[b]||0)?m:b, nonZeroMonths[0]) : null;
+  const worstM= nonZeroMonths.length ? nonZeroMonths.reduce((b,m)=>(mMap[m]||0)<(mMap[b]||0)?m:b, nonZeroMonths[0]) : null;
 
   // Stats
   el('s-pnl').textContent = fmt(total);
-  el('s-pnl').className = 'stat-value '+(total>=0?'positive':'negative');
+  el('s-pnl').style.color = total>=0?'var(--green)':'var(--red)';
   el('s-trades').textContent = tr.length;
   el('s-wr').textContent = wr+'%';
   el('s-algos').textContent = new Set(tr.map(t=>t.algo_name)).size;
@@ -4138,6 +4179,10 @@ function renderDashboard() {
   el('s-worst').textContent = worstM?fmt(mMap[worstM]):'—';
   el('s-worst-lbl').textContent = worstM?fmtMonth(worstM):'—';
 
+  // Date range badge
+  const dateRangeEl = document.getElementById('dash-date-range');
+  if (dateRangeEl) dateRangeEl.textContent = `01 Jan ${currentYear} – ${new Date().toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'})}`;
+
   // Year tabs
   const years=[...new Set(allTrades.map(t=>(t.entry_date||'').slice(0,4)).filter(Boolean))];
   if(!years.includes(currentYear)) years.push(currentYear);
@@ -4145,26 +4190,142 @@ function renderDashboard() {
     `<div class="period-tab ${y===currentYear?'active':''}" onclick="setYear('${y}')">${y}</div>`).join('');
 
   drawMonthly(mMap);
-  drawAlgo(tr);
+  drawDashCalHeatmap(tr);
+  drawDashEquityDD(tr);
   renderDashTable(tr, mMap);
 }
 
 function setYear(y){ currentYear=y; renderDashboard(); }
 
+function fmtKLCr(v) {
+  if (!v&&v!==0) return '';
+  const abs=Math.abs(Math.round(v)), sign=v>=0?'+':'-';
+  if (abs>=10000000) return sign+(abs/10000000).toFixed(2)+'Cr';
+  if (abs>=100000)   return sign+(abs/100000).toFixed(2)+'L';
+  if (abs>=1000)     return sign+(abs/1000).toFixed(2)+'K';
+  return (v>=0?'+':'-')+abs;
+}
+
 function drawMonthly(mMap) {
   const keys=Object.keys(mMap).sort();
   const vals=keys.map(k=>mMap[k]);
-  const ctx=el('chart-monthly').getContext('2d');
+  const ctx=el('chart-monthly')?.getContext('2d');
+  if (!ctx) return;
   if(mChart) mChart.destroy();
   mChart=new Chart(ctx,{
     type:'bar',
-    data:{labels:keys.map(fmtMonth),datasets:[{data:vals,backgroundColor:vals.map(v=>v>=0?'rgba(26,158,92,0.75)':'rgba(217,48,37,0.75)'),borderRadius:5,borderSkipped:false}]},
-    options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{display:false}},
+    data:{labels:keys.map(fmtMonth),datasets:[{
+      data:vals,
+      backgroundColor:vals.map(v=>v>0?'rgba(26,158,92,0.75)':v<0?'rgba(217,48,37,0.75)':'rgba(156,163,175,0.35)'),
+      borderRadius:5,borderSkipped:false
+    }]},
+    options:{responsive:true,maintainAspectRatio:true,
+      plugins:{
+        legend:{display:false},
+        datalabels:{
+          display: ctx2=>ctx2.dataset.data[ctx2.dataIndex]!==0,
+          anchor: ctx2=>ctx2.dataset.data[ctx2.dataIndex]>=0?'end':'start',
+          align:  ctx2=>ctx2.dataset.data[ctx2.dataIndex]>=0?'top':'bottom',
+          color:  ctx2=>ctx2.dataset.data[ctx2.dataIndex]>=0?'#15803d':'#dc2626',
+          font:{size:9,weight:'700'},
+          formatter: v=>fmtKLCr(v)
+        }
+      },
       scales:{
-        x:{grid:{color:'rgba(0,0,0,0.04)'},ticks:{color:'#6b7280',font:{size:11}}},
-        y:{grid:{color:'rgba(0,0,0,0.04)'},ticks:{color:'#6b7280',font:{size:11},callback:v=>fmt(v)}}
+        x:{grid:{color:'rgba(0,0,0,0.04)'},ticks:{color:'#6b7280',font:{size:10},autoSkip:false,maxRotation:45}},
+        y:{grid:{color:'rgba(0,0,0,0.04)'},ticks:{color:'#6b7280',font:{size:10},callback:v=>fmtKLCr(v)}}
       }}
   });
+}
+
+function drawDashCalHeatmap(tr) {
+  const today = new Date();
+  const yr = today.getFullYear();
+  const mo = today.getMonth();
+  const ym = `${yr}-${String(mo+1).padStart(2,'0')}`;
+  const monthName = today.toLocaleDateString('en-IN',{month:'long',year:'numeric'});
+  const titleEl = document.getElementById('dash-cal-title');
+  if (titleEl) titleEl.textContent = `Current Month P&L — ${monthName}`;
+  const container = document.getElementById('dash-cal-heatmap');
+  if (!container) return;
+
+  const dayPnl = {};
+  tr.forEach(t => { const pd=pnlDate(t); if(pd&&pd.startsWith(ym)) dayPnl[pd]=(dayPnl[pd]||0)+(t.pnl||0); });
+
+  const dim = new Date(yr, mo+1, 0).getDate();
+  const firstDow = new Date(yr, mo, 1).getDay();
+  const startOffset = firstDow===0 ? 6 : firstDow-1;
+  const todayStr = today.toISOString().slice(0,10);
+
+  function fmtC(v){if(v===null)return '—';const a=Math.abs(v),s=v>=0?'+':'-';if(a>=100000)return s+(a/100000).toFixed(1)+'L';if(a>=1000)return s+(a/1000).toFixed(1)+'K';return s+Math.round(a);}
+
+  const days=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  let html=`<div style="overflow-x:auto;"><table style="border-collapse:separate;border-spacing:5px;width:100%;"><thead><tr>`;
+  days.forEach((d,i)=>{ html+=`<th style="font-size:0.65rem;font-weight:700;color:${i>=5?'#cbd5e1':'var(--text2)'};padding:4px 2px;text-align:center;width:14.28%;">${d}</th>`; });
+  html+=`</tr></thead><tbody><tr>`;
+  for(let i=0;i<startOffset;i++) html+=`<td style="background:transparent;"></td>`;
+  let col=startOffset;
+  for(let day=1;day<=dim;day++){
+    const ds=`${ym}-${String(day).padStart(2,'0')}`;
+    const pnl=dayPnl[ds]??null;
+    const dow=new Date(yr,mo,day).getDay();
+    const isWeekend=(dow===0||dow===6);
+    const isToday=ds===todayStr;
+    let bg,pnlColor,border;
+    if(isWeekend){bg='#f1f5f9';pnlColor='#cbd5e1';border='#e2e8f0';}
+    else if(pnl===null){bg='#f8fafc';pnlColor='#94a3b8';border='#e9ecef';}
+    else if(pnl>0){bg='#dcfce7';pnlColor='#16a34a';border='#86efac';}
+    else if(pnl<0){bg='#fee2e2';pnlColor='#dc2626';border='#fca5a5';}
+    else{bg='#f8fafc';pnlColor='#64748b';border='#e2e8f0';}
+    html+=`<td style="background:${bg};border:${isToday?'2px solid #1a73e8':'1px solid '+border};border-radius:8px;padding:5px 3px;text-align:center;vertical-align:middle;min-width:44px;height:48px;">
+      <div style="font-size:0.75rem;font-weight:700;color:#1e293b;">${day}</div>
+      <div style="font-size:0.65rem;font-weight:600;color:${pnlColor};margin-top:2px;white-space:nowrap;">${isWeekend?'':fmtC(pnl)}</div>
+    </td>`;
+    col++;
+    if(col%7===0&&day<dim) html+=`</tr><tr>`;
+  }
+  const rem=(7-(col%7))%7;
+  for(let i=0;i<rem;i++) html+=`<td style="background:transparent;"></td>`;
+  html+=`</tr></tbody></table></div>`;
+  container.innerHTML=html;
+}
+
+function drawDashEquityDD(tr) {
+  const yearStart=`${currentYear}-01-01`;
+  const dayPnl={};
+  tr.forEach(t=>{const pd=pnlDate(t);if(pd&&pd>=yearStart)dayPnl[pd]=(dayPnl[pd]||0)+(t.pnl||0);});
+  const sortedDays=Object.keys(dayPnl).sort();
+  let cum=0,peak=0;
+  const eqLabels=[],eqData=[],ddData=[];
+  sortedDays.forEach(d=>{
+    cum+=dayPnl[d]; if(cum>peak)peak=cum;
+    eqLabels.push(d.slice(5)); eqData.push(Math.round(cum)); ddData.push(Math.round(cum-peak));
+  });
+
+  function fmtV(v){const abs=Math.abs(Math.round(v)),sign=v>=0?'':'-';if(abs>=100000)return sign+(abs/100000).toFixed(2)+'L';if(abs>=1000)return sign+(abs/1000).toFixed(2)+'K';return (v>=0?'+':'-')+abs;}
+
+  const sharedScales={
+    x:{grid:{color:'rgba(0,0,0,0.04)',drawBorder:false},ticks:{color:'#9ca3af',font:{size:9},maxTicksLimit:8},border:{display:false}},
+    y:{grid:{color:'rgba(0,0,0,0.05)',borderDash:[4,4],drawBorder:false},ticks:{color:'#9ca3af',font:{size:9},callback:v=>fmtV(v)},border:{display:false}}
+  };
+
+  if(dashChartEquity) dashChartEquity.destroy();
+  const ctxEq=document.getElementById('dash-chart-equity')?.getContext('2d');
+  if(ctxEq&&eqData.length){
+    dashChartEquity=new Chart(ctxEq,{type:'line',data:{labels:eqLabels,datasets:[{data:eqData,borderColor:'#1a73e8',borderWidth:2.5,fill:true,backgroundColor:ctx2=>{const g=ctx2.chart.ctx.createLinearGradient(0,0,0,ctx2.chart.height);g.addColorStop(0,'rgba(26,115,232,0.18)');g.addColorStop(1,'rgba(26,115,232,0.01)');return g;},tension:0.4,pointRadius:3,pointHoverRadius:6,pointBackgroundColor:'#1a73e8',pointBorderColor:'#fff',pointBorderWidth:2}]},
+      options:{responsive:true,maintainAspectRatio:true,interaction:{mode:'index',intersect:false},
+        plugins:{legend:{display:false},datalabels:{display:false},tooltip:{backgroundColor:'#fff',titleColor:'#374151',bodyColor:'#1a73e8',borderColor:'#e5e7eb',borderWidth:1,padding:10,cornerRadius:8,displayColors:false,callbacks:{title:items=>{const lbl=items[0]?.label||'';const d=new Date(`${currentYear}-${lbl}`);return isNaN(d)?lbl:d.toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'2-digit'});},label:item=>'Equity: '+(item.raw>=0?'+':'')+fmtV(item.raw)}}},
+        scales:sharedScales}});
+  }
+
+  if(dashChartDD) dashChartDD.destroy();
+  const ctxDD=document.getElementById('dash-chart-drawdown')?.getContext('2d');
+  if(ctxDD&&ddData.length){
+    dashChartDD=new Chart(ctxDD,{type:'line',data:{labels:eqLabels,datasets:[{data:ddData,borderColor:'#dc2626',borderWidth:2.5,fill:true,backgroundColor:ctx2=>{const g=ctx2.chart.ctx.createLinearGradient(0,0,0,ctx2.chart.height);g.addColorStop(0,'rgba(220,38,38,0.18)');g.addColorStop(1,'rgba(220,38,38,0.01)');return g;},tension:0.4,pointRadius:3,pointHoverRadius:6,pointBackgroundColor:'#dc2626',pointBorderColor:'#fff',pointBorderWidth:2}]},
+      options:{responsive:true,maintainAspectRatio:true,interaction:{mode:'index',intersect:false},
+        plugins:{legend:{display:false},datalabels:{display:false},tooltip:{backgroundColor:'#fff',titleColor:'#374151',bodyColor:'#dc2626',borderColor:'#e5e7eb',borderWidth:1,padding:10,cornerRadius:8,displayColors:false,callbacks:{title:items=>{const lbl=items[0]?.label||'';const d=new Date(`${currentYear}-${lbl}`);return isNaN(d)?lbl:d.toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'2-digit'});},label:item=>'Drawdown: '+fmtV(item.raw)}}},
+        scales:sharedScales}});
+  }
 }
 
 function drawAlgo(tr) {
@@ -4187,6 +4348,7 @@ function drawAlgo(tr) {
 }
 
 function renderDashTable(tr, mMap) {
+  const viewMode = document.querySelector('input[name="dash-view-mode"]:checked')?.value || 'basket';
   const algos=[...new Set(tr.map(t=>t.algo_name))].sort();
   const months=Object.keys(mMap).sort();
   if(!months.length){ el('dash-table').innerHTML='<div class="empty-state"><span class="eicon">📊</span><h3>No data for this period</h3></div>'; return; }
@@ -4208,7 +4370,32 @@ function renderDashTable(tr, mMap) {
       <th style="padding:10px 14px;text-align:right;">Total</th>
     </tr></thead><tbody>`;
 
-  // ── Group rows organized by Category — collapsible ──
+  // ── Algo mode: show only individual strategy rows (no basket grouping) ──
+  if (viewMode === 'algo') {
+    const algoM2={};
+    tr.forEach(t=>{ const ym=(pnlDate(t)||'').slice(0,7); if(!ym) return; if(!algoM2[t.algo_name])algoM2[t.algo_name]={}; algoM2[t.algo_name][ym]=(algoM2[t.algo_name][ym]||0)+(t.pnl||0); });
+    for(const a of algos){
+      const am=algoM2[a]||{}; const tot=Object.values(am).reduce((s,v)=>s+v,0);
+      const cap=getGlobalCapital(months[0]);
+      h+=`<tr style="border-bottom:1px solid var(--border);">
+        <td style="padding:8px 14px;font-size:0.82rem;font-weight:600;color:var(--text0);">${algoMeta[a]?.display_name||a}</td>
+        ${months.map(m=>{const v=am[m]??null;const pct=v!==null&&cap?(v/cap*100).toFixed(1)+'%':'';return`<td style="padding:8px 14px;text-align:right;font-size:0.8rem;font-weight:600;color:${v===null?'var(--text3)':v>=0?'#1a6e3c':'#b91c1c'};">${v===null?'—':fmt(v)+(pct?` <span style="font-size:0.68rem;opacity:0.75;">(${pct})</span>`:'')}</td>`;}).join('')}
+        <td style="padding:8px 14px;text-align:right;font-weight:700;color:${tot>=0?'#1a6e3c':'#b91c1c'};">${fmt(tot)}</td>
+      </tr>`;
+    }
+    // Grand total
+    const grandTot=algos.reduce((s,a)=>s+Object.values(algoM2[a]||{}).reduce((x,v)=>x+v,0),0);
+    h+=`<tr style="border-top:2px solid var(--border);background:var(--bg2);font-weight:800;">
+      <td style="padding:10px 14px;">Grand Total</td>
+      ${months.map(m=>{const v=tr.reduce((s,t)=>{const ym=(pnlDate(t)||'').slice(0,7);return ym===m?s+(t.pnl||0):s;},0);return`<td style="padding:10px 14px;text-align:right;color:${v>=0?'#1a6e3c':'#b91c1c'};">${fmt(v)}</td>`;}).join('')}
+      <td style="padding:10px 14px;text-align:right;color:${grandTot>=0?'#1a6e3c':'#b91c1c'};">${fmt(grandTot)}</td>
+    </tr>`;
+    h+=`</tbody></table>`;
+    el('dash-table').innerHTML=h;
+    return;
+  }
+
+  // ── Basket mode: Group rows organized by Category — collapsible ──
   const groups = Object.values(algoGroups);
   const algoInGroup = new Set();
 
@@ -4237,7 +4424,7 @@ function renderDashTable(tr, mMap) {
         <div style="display:flex;align-items:center;gap:8px;">
           <span class="collapse-arrow open" id="catarr_${catId}"></span>
           <span style="font-size:0.75rem;font-weight:800;color:var(--text0);letter-spacing:0.04em;text-transform:uppercase;">📂 ${catLabel}</span>
-          <span style="font-size:0.68rem;color:var(--text2);">${catGroups.length} group(s)</span>
+          <span style="font-size:0.68rem;color:var(--text2);">${catGroups.length} basket(s)</span>
         </div>
       </td>
       ${months.map(()=>`<td style="background:var(--bg3);border-top:2px solid var(--border2);border-bottom:1px solid var(--border2);"></td>`).join('')}
@@ -4284,11 +4471,11 @@ function renderDashTable(tr, mMap) {
     h+=`<tr><td colspan="${months.length+2}" style="padding:2px;background:var(--border);"></td></tr>`;
   }
 
-  // ── Ungrouped algos ──
-  const ungrouped = algos.filter(a => !algoInGroup.has(a));
-  if (ungrouped.length) {
-    h+=`<tr><td colspan="${months.length+2}" style="padding:6px 14px;font-size:0.67rem;font-weight:700;color:var(--text3);letter-spacing:0.07em;text-transform:uppercase;background:var(--bg2);">Ungrouped Algos</td></tr>`;
-    for(const a of ungrouped){
+  // ── Unassigned algos ──
+  const unassigned = algos.filter(a => !algoInGroup.has(a));
+  if (unassigned.length) {
+    h+=`<tr><td colspan="${months.length+2}" style="padding:6px 14px;font-size:0.67rem;font-weight:700;color:var(--text3);letter-spacing:0.07em;text-transform:uppercase;background:var(--bg2);">Unassigned Algos</td></tr>`;
+    for(const a of unassigned){
       const tot=Object.values(algoM[a]||{}).reduce((s,v)=>s+v,0);
       h+=`<tr><td style="padding:8px 14px;overflow:hidden;text-overflow:ellipsis;font-weight:500;color:var(--text0)" title="${a}">${a}</td>`;
       h+=months.map(m=>{ const v=algoM[a]?.[m]??null; return v===null?`<td style="${colStyle}color:var(--text3)">—</td>`:`<td style="${colStyle}">${fmtRpt(v,m)}</td>`; }).join('');
@@ -4324,7 +4511,7 @@ function renderHeatmap(){
   const sel=document.getElementById('heatmap-strategy');
   if(sel){
     const cur=sel.value;
-    sel.innerHTML='<option value="">— Select a Strategy or Group —</option>';
+    sel.innerHTML='<option value="">— Select a Strategy or Basket —</option>';
     // Add groups
     const groups=Object.values(algoGroups);
     if(groups.length){
@@ -6204,7 +6391,7 @@ function listenGroups() {
 
 function renderGroupList() {
   const groups = Object.values(algoGroups);
-  const emptyHtml = `<div style="color:var(--text3);font-size:0.78rem;padding:10px 0;">No groups yet — create one to combine algo P&L in Reports</div>`;
+  const emptyHtml = `<div style="color:var(--text3);font-size:0.78rem;padding:10px 0;">No baskets yet — create one to combine algo P&L in Reports</div>`;
   const html = !groups.length ? emptyHtml : groups.map(g => `
     <div class="group-card">
       <div class="group-header">
@@ -6239,7 +6426,7 @@ function openAddGroupModal() {
   el('g-color').value = '#1a73e8';
   el('g-category').value = '';
   el('g-notes').value = '';
-  el('modal-group-title').textContent = 'Create Algo Group';
+  el('modal-group-title').textContent = 'Create Basket';
   buildGroupAlgoCheckboxes(null);
   openModal('modal-group');
 }
@@ -7408,16 +7595,16 @@ function asPopulateGroupDropdowns() {
   const groups = Object.values(algoGroups).sort((a,b)=>(a.name||'').localeCompare(b.name||''));
   const opts = '<option value="">— no group —</option>' + groups.map(g=>`<option value="${g.name}">${g.name}</option>`).join('');
   const selAdd    = document.getElementById('as-new-group');
-  const selFilter = document.getElementById('as-filter-group');
+  const selFilter = document.getElementById('as-filter-basket');
   if (selAdd)    selAdd.innerHTML = opts;
-  if (selFilter) selFilter.innerHTML = '<option value="">All Groups</option>' + groups.map(g=>`<option value="${g.name}">${g.name}</option>`).join('');
+  if (selFilter) selFilter.innerHTML = '<option value="">All Baskets</option>' + groups.map(g=>`<option value="${g.name}">${g.name}</option>`).join('');
 }
 
 function asRenderGroups() {
   const list = document.getElementById('as-group-list');
   if (!list) return;
   const groups = Object.values(algoGroups).sort((a,b)=>(a.name||'').localeCompare(b.name||''));
-  if (!groups.length) { list.innerHTML = '<div style="color:var(--text3);font-size:0.8rem;">No groups yet — create one below</div>'; return; }
+  if (!groups.length) { list.innerHTML = '<div style="color:var(--text3);font-size:0.8rem;">No baskets yet — create one below</div>'; return; }
   list.innerHTML = groups.map(g => {
     const color = g.color || '#1a73e8';
     const members = (g.algos || []).length;
@@ -7438,7 +7625,7 @@ function asRenderSystems() {
   const list = document.getElementById('as-system-list');
   if (!list) return;
   const search = (document.getElementById('as-search')?.value || '').toLowerCase();
-  const filterGroup = document.getElementById('as-filter-group')?.value || '';
+  const filterGroup = document.getElementById('as-filter-basket')?.value || '';
 
   let algos = Object.values(algoMeta).sort((a,b)=>(a.name||'').localeCompare(b.name||''));
   if (search) algos = algos.filter(a => (a.name||'').toLowerCase().includes(search) || (a.display_name||'').toLowerCase().includes(search));
@@ -7448,22 +7635,30 @@ function asRenderSystems() {
     algos = algos.filter(a => members.has(a.name));
   }
 
-  if (!algos.length) { list.innerHTML = '<div style="color:var(--text3);font-size:0.8rem;padding:10px 0;">No systems found</div>'; return; }
+  if (!algos.length) { list.innerHTML = '<div style="color:var(--text3);font-size:0.8rem;padding:10px 0;">No strategies found</div>'; return; }
 
   const groupLookup = {};
   Object.values(algoGroups).forEach(g => { (g.algos||[]).forEach(n => { groupLookup[n] = g.name; }); });
 
-  const groupOpts = '<option value="">— no group —</option>' +
+  const unassignedCount = algos.filter(a => !groupLookup[a.name]).length;
+  const warningBanner = unassignedCount > 0
+    ? `<div style="background:#fef2f2;border:2px solid #dc2626;border-radius:10px;padding:12px 16px;margin-bottom:14px;display:flex;align-items:center;gap:12px;">
+        <span style="font-size:2rem;">⚠️</span>
+        <div><div style="font-weight:700;color:#dc2626;font-size:0.9rem;">${unassignedCount} strategy${unassignedCount>1?'ies':''} not assigned to any Basket!</div>
+        <div style="font-size:0.75rem;color:#b91c1c;margin-top:2px;">Assign each strategy to a basket using the dropdown below.</div></div>
+       </div>` : '';
+
+  const groupOpts = '<option value="">— no basket —</option>' +
     Object.values(algoGroups).sort((a,b)=>(a.name||'').localeCompare(b.name||'')).map(g=>`<option value="${g.name}">${g.name}</option>`).join('');
 
-  list.innerHTML = `
+  list.innerHTML = warningBanner + `
     <table style="width:100%;border-collapse:collapse;font-size:0.82rem;">
       <thead>
         <tr style="background:var(--bg2);">
-          <th style="padding:8px 10px;text-align:left;font-weight:600;color:var(--text1);border-bottom:1px solid var(--border);">System Name</th>
+          <th style="padding:8px 10px;text-align:left;font-weight:600;color:var(--text1);border-bottom:1px solid var(--border);">Strategy Name</th>
           <th style="padding:8px 10px;text-align:left;font-weight:600;color:var(--text1);border-bottom:1px solid var(--border);">Underlying</th>
           <th style="padding:8px 10px;text-align:left;font-weight:600;color:var(--text1);border-bottom:1px solid var(--border);">Type</th>
-          <th style="padding:8px 10px;text-align:left;font-weight:600;color:var(--text1);border-bottom:1px solid var(--border);">Group</th>
+          <th style="padding:8px 10px;text-align:left;font-weight:600;color:var(--text1);border-bottom:1px solid var(--border);">Basket</th>
           <th style="padding:8px 10px;text-align:center;font-weight:600;color:var(--text1);border-bottom:1px solid var(--border);">Color</th>
           <th style="padding:8px 10px;text-align:center;font-weight:600;color:var(--text1);border-bottom:1px solid var(--border);">Actions</th>
         </tr>
@@ -7471,11 +7666,14 @@ function asRenderSystems() {
       <tbody>
         ${algos.map((a,i) => {
           const grp = groupLookup[a.name] || '';
+          const isUnassigned = !grp;
           const gopts = groupOpts.replace(`value="${grp}"`, `value="${grp}" selected`);
           return `
-          <tr style="border-bottom:1px solid var(--border);${i%2===1?'background:var(--bg2);':''}">
+          <tr style="border-bottom:1px solid var(--border);${isUnassigned?'background:#fff5f5;':''}">
             <td style="padding:8px 10px;">
-              <div style="font-weight:600;color:var(--text0);">${a.name}</div>
+              ${isUnassigned ? '<span style="font-size:1.2rem;margin-right:6px;" title="Not assigned to any basket">⚠️</span>' : ''}
+              <span style="font-weight:600;color:${isUnassigned?'#dc2626':'var(--text0)'};">${a.name}</span>
+              ${isUnassigned ? '<span style="background:#dc2626;color:#fff;font-size:0.6rem;font-weight:700;padding:1px 6px;border-radius:4px;margin-left:6px;">ERROR</span>' : ''}
               ${a.display_name && a.display_name !== a.name ? `<div style="font-size:0.7rem;color:var(--text2);">${a.display_name}</div>` : ''}
             </td>
             <td style="padding:8px 10px;">
@@ -7575,7 +7773,7 @@ async function asDeleteSystem(name) {
 function asOpenAddGroup() {
   // Reuse existing openAddGroupModal from Settings page
   if (typeof openAddGroupModal === 'function') openAddGroupModal();
-  else toast('Use Settings → Algo Groups to add groups', 'info');
+  else toast('Use Settings → Baskets to add groups', 'info');
 }
 
 async function asEditGroup(name) {
