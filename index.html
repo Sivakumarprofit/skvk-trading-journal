@@ -2,6 +2,17 @@
 ==========================================================
   SKVK TRADING JOURNAL — VERSION HISTORY
 ==========================================================
+  v19.2 | 2026-06-28 | Basket↔Group convert buttons: each Basket row gets "Convert to Group"
+         |            | (moves to journal/algo_groups, parent basket = NA); each Group row gets
+         |            | "Convert to Basket" (moves to journal/groups, group stays NA);
+         |            | Account Wise tab now defaults to __ALL__ on open;
+         |            | Capital Deployed Account Wise made standalone (always-visible Save button,
+         |            | tile grid inputs); __ALL__ view now editable (saves as __ALL__ key under
+         |            | journal/capital_v2/__ALL__/{YYYY-MM}); iifl removed from junk filter so
+         |            | IIFL accounts appear in Account Wise dropdown; monthly bar chart top
+         |            | padding fixed (layout.padding.top:28) so labels don't clip on tall bars
+         |            | (applied to both Basket Level and Account Wise monthly charts)
+  ──────────────────────────────────────────────────────
   v19.1 | 2026-06-26 | Deep fix for initial load blank journal: root cause was nicknames
          |            | Firebase path sometimes not existing, so .on('value') never fires,
          |            | blocking _maybeInitialRender forever; fix: removed nicknames from
@@ -533,7 +544,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>SKVK Trading Journal v19.1</title>
+<title>SKVK Trading Journal v19.2</title>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -1468,7 +1479,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div class="login-logo">📋</div>
     <div class="login-title">
       SKVK Trading Journal
-      <span class="login-vbadge">v19.1</span>
+      <span class="login-vbadge">v19.2</span>
     </div>
     <div class="login-sub">Sign in with your authorised Google account to access the journal.</div>
     <button class="google-signin-btn" id="googleSignInBtn" onclick="signInWithGoogle()">
@@ -1499,7 +1510,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div class="brand">
       <span class="brand-dot"></span>
       SKVK Trading Journal
-      <span style="font-size:0.78rem;background:#1a73e8;color:#fff;padding:2px 8px;border-radius:8px;font-weight:700;margin-left:4px;">v19.1</span>
+      <span style="font-size:0.78rem;background:#1a73e8;color:#fff;padding:2px 8px;border-radius:8px;font-weight:700;margin-left:4px;">v19.2</span>
     </div>
     <div id="brand-subline">
       <div id="db-status">● connecting…</div>
@@ -1868,9 +1879,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div id="acct-capital-section" style="background:var(--bg);border:1.5px solid var(--border);border-radius:14px;padding:20px 24px;margin-bottom:28px;">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
         <div style="font-size:0.95rem;font-weight:800;font-family:var(--display);">💰 Capital Deployed</div>
-        <div id="acct-cap-edit-btn" style="display:none;">
-          <button onclick="saveAcctCapital()" class="btn btn-primary btn-sm">💾 Save Capital</button>
-        </div>
+        <button onclick="saveAcctCapital()" class="btn btn-primary btn-sm">💾 Save Capital</button>
       </div>
       <div id="acct-capital-grid"></div>
     </div>
@@ -2897,13 +2906,15 @@ let acctDailyRows = [];
 const ACCT_PAGE_SIZE = 20;
 
 function initAcctReport() {
-  const junk = new Set(['tradetron','quantleap','quantiply','zebu','upstox','iifl','']);
+  const junk = new Set(['tradetron','quantleap','quantiply','zebu','upstox','']);
   const accounts = [...new Set(allTrades.map(t=>t.client_id||'').filter(id=>id&&!junk.has(id.toLowerCase())))].sort();
   const sel = document.getElementById('acct-select');
   if (!sel) return;
   sel.innerHTML = '<option value="">— Select account —</option><option value="__ALL__">All Accounts</option>' +
     accounts.map(a=>`<option value="${a}">${getClientLabel(a)}</option>`).join('');
-  if (currentAcct) { sel.value = currentAcct; renderAcctReport(); }
+  if (!currentAcct) currentAcct = '__ALL__';
+  sel.value = currentAcct;
+  renderAcctReport();
 }
 
 function renderAcctReport() {
@@ -3396,6 +3407,7 @@ function renderAcctMonthlyTopChart(tr) {
       borderRadius:5, borderSkipped:false
     }]},
     options:{ responsive:true, maintainAspectRatio:true,
+      layout:{padding:{top:28}},
       plugins:{
         legend:{display:false},
         datalabels:{
@@ -3516,48 +3528,27 @@ function acctCapInlineEdit() {
 function renderAcctCapitalGrid() {
   const grid = document.getElementById('acct-capital-grid');
   if (!grid) return;
-  const isAll = currentAcct === '__ALL__';
-  const editBtn = document.getElementById('acct-cap-edit-btn');
-  if (editBtn) editBtn.style.display = isAll ? 'none' : '';
-
   const year = new Date().getFullYear();
   const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-
-  if (isAll) {
-    // Read-only: show sum per month for current year
-    let html = `<div style="display:flex;gap:10px;flex-wrap:wrap;">`;
-    months.forEach((m,i) => {
-      const ym = `${year}-${String(i+1).padStart(2,'0')}`;
-      const total = getCapital('__ALL__', ym);
-      html += `<div style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;min-width:80px;text-align:center;">
-        <div style="font-size:0.65rem;font-weight:700;color:var(--text2);">${m} ${year}</div>
-        <div style="font-size:0.82rem;font-weight:700;color:var(--text0);margin-top:3px;">${total>0?fmt(total):'—'}</div>
-      </div>`;
-    });
-    html += '</div>';
-    grid.innerHTML = html;
-  } else {
-    // Editable: show input per month for current year
-    const acctCap = capitalDataAll[currentAcct]||{};
-    let html = `<div style="display:flex;gap:10px;flex-wrap:wrap;">`;
-    months.forEach((m,i) => {
-      const ym = `${year}-${String(i+1).padStart(2,'0')}`;
-      const val = acctCap[ym]||'';
-      html += `<div style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:8px 10px;min-width:90px;text-align:center;">
-        <div style="font-size:0.65rem;font-weight:700;color:var(--text2);margin-bottom:4px;">${m} ${year}</div>
-        <input type="number" id="acct-cap-${ym}" value="${val}" placeholder="—"
-          style="width:100%;padding:3px 5px;border:1px solid var(--border);border-radius:5px;font-size:0.78rem;text-align:right;outline:none;background:#fff;"
-          onfocus="this.style.borderColor='var(--blue)'"
-          onblur="this.style.borderColor='var(--border)'">
-      </div>`;
-    });
-    html += '</div>';
-    grid.innerHTML = html;
-  }
+  const acctCap = capitalDataAll[currentAcct] || {};
+  let html = `<div style="display:flex;gap:10px;flex-wrap:wrap;">`;
+  months.forEach((m,i) => {
+    const ym = `${year}-${String(i+1).padStart(2,'0')}`;
+    const val = acctCap[ym] || '';
+    html += `<div style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:8px 10px;min-width:90px;text-align:center;">
+      <div style="font-size:0.65rem;font-weight:700;color:var(--text2);margin-bottom:4px;">${m} ${year}</div>
+      <input type="number" id="acct-cap-${ym}" value="${val}" placeholder="—"
+        style="width:100%;padding:3px 5px;border:1px solid var(--border);border-radius:5px;font-size:0.78rem;text-align:right;outline:none;background:#fff;"
+        onfocus="this.style.borderColor='var(--blue)'"
+        onblur="this.style.borderColor='var(--border)'">
+    </div>`;
+  });
+  html += '</div>';
+  grid.innerHTML = html;
 }
 
 async function saveAcctCapital() {
-  if (!currentAcct || currentAcct==='__ALL__') return;
+  if (!currentAcct) return;
   const year = new Date().getFullYear();
   const newData = {};
   for (let m=1;m<=12;m++) {
@@ -3568,8 +3559,9 @@ async function saveAcctCapital() {
   if (!capitalDataAll[currentAcct]) capitalDataAll[currentAcct]={};
   Object.assign(capitalDataAll[currentAcct], newData);
   if (db) await db.ref('journal/capital_v2/'+currentAcct).update(newData);
-  toast('✓ Capital saved for '+getClientLabel(currentAcct), 'success');
-  renderAcctReport(); // refresh charts with new capital
+  const label = currentAcct === '__ALL__' ? 'All Accounts' : getClientLabel(currentAcct);
+  toast('✓ Capital saved for '+label, 'success');
+  renderAcctReport();
 }
 
 function renderAcctMonthlyReturns(tr) {
@@ -4584,6 +4576,7 @@ function drawMonthly(mMap) {
       borderRadius:5,borderSkipped:false
     }]},
     options:{responsive:true,maintainAspectRatio:true,
+      layout:{padding:{top:28}},
       plugins:{
         legend:{display:false},
         datalabels:{
@@ -5609,7 +5602,7 @@ function buildCapitalTable() {
   for (let y = 2026; y <= 2036; y++) years.push(y);
 
   // Account selector for capital table
-  const junk = new Set(['tradetron','quantleap','quantiply','zebu','upstox','iifl','']);
+  const junk = new Set(['tradetron','quantleap','quantiply','zebu','upstox','']);
   const accounts = [...new Set(allTrades.map(t=>t.client_id||'').filter(id=>id&&!junk.has(id.toLowerCase())))].sort();
   const curAcct = document.getElementById('cap-acct-select')?.value || accounts[0] || '';
   const acctData = curAcct ? (capitalDataAll[curAcct]||{}) : capitalData;
@@ -6579,7 +6572,7 @@ function selectASP(asp) {
     // Populate account dropdown from known client_ids
     const acctSel = document.getElementById('tradetron-acct-select');
     if (acctSel) {
-      const junk = new Set(['tradetron','quantleap','quantiply','zebu','upstox','iifl','']);
+      const junk = new Set(['tradetron','quantleap','quantiply','zebu','upstox','']);
       const accounts = [...new Set(allTrades.map(t=>t.client_id||'').filter(id=>id&&!junk.has(id.toLowerCase())))].sort();
       acctSel.innerHTML = '<option value="">— choose account —</option>' +
         accounts.map(a=>`<option value="${a}">${getClientLabel(a)}</option>`).join('');
@@ -6896,6 +6889,7 @@ function agRenderGroups() {
           <div style="font-size:0.72rem;color:var(--text2);">${members} strategy${members!==1?'s':''}</div>
         </div>
         <button onclick="agEditGroup('${g.name}')" class="btn btn-ghost btn-sm">✏️ Edit</button>
+        <button onclick="agConvertToBasket('${g.name}')" class="btn btn-ghost btn-sm" style="color:#1a73e8;border-color:#1a73e8;" title="Convert this Group to a Basket">⇄ To Basket</button>
         <button onclick="agDeleteGroup('${g.name}')" class="btn btn-sm" style="background:var(--red-lt);color:var(--red);border:none;">🗑</button>
       </div>`;
   }).join('');
@@ -7769,6 +7763,7 @@ function asRenderGroups() {
           <div style="font-size:0.72rem;color:var(--text2);">${members} system${members!==1?'s':''}</div>
         </div>
         <button onclick="asEditGroup('${g.name}')" class="btn btn-ghost btn-sm">✏️ Edit</button>
+        <button onclick="asConvertToGroup('${g.name}')" class="btn btn-ghost btn-sm" style="color:#0d9488;border-color:#0d9488;" title="Convert this Basket to a Group">⇄ To Group</button>
         <button onclick="asDeleteGroup('${g.name}')" class="btn btn-sm" style="background:var(--red-lt);color:var(--red);border:none;">🗑</button>
       </div>`;
   }).join('');
@@ -7974,6 +7969,54 @@ async function asDeleteGroup(name) {
   asRenderSystems();
   asPopulateGroupDropdowns();
   toast(`Group "${name}" deleted`, 'info');
+}
+
+async function asConvertToGroup(name) {
+  if (!confirm(`Convert Basket "${name}" to a Group?\nIt will be removed from Baskets and added to Groups (parent basket = NA).`)) return;
+  const basket = algoGroups[safeKey(name)] || Object.values(algoGroups).find(x=>x.name===name) || {};
+  const gk = safeKey(name);
+  // Add to algo_groups (Group) with same algos + color
+  const newGroup = {
+    name: name,
+    color: basket.color || '#0d9488',
+    algos: basket.algos || [],
+    created_at: basket.created_at || new Date().toISOString()
+  };
+  algoGroupsData[gk] = newGroup;
+  if (db) await db.ref('journal/algo_groups/' + gk).set(newGroup);
+  // Remove from groups (Basket)
+  const bk = Object.keys(algoGroups).find(k=>algoGroups[k].name===name) || gk;
+  delete algoGroups[bk];
+  if (db) await db.ref('journal/groups/' + bk).remove();
+  asRenderGroups();
+  agRenderGroups();
+  asRenderSystems();
+  asPopulateGroupDropdowns();
+  toast(`"${name}" converted to Group`, 'success');
+}
+
+async function agConvertToBasket(name) {
+  if (!confirm(`Convert Group "${name}" to a Basket?\nIt will be removed from Groups and added to Baskets (parent group = NA).`)) return;
+  const grp = algoGroupsData[safeKey(name)] || Object.values(algoGroupsData).find(x=>x.name===name) || {};
+  const gk = safeKey(name);
+  // Add to groups (Basket) with same algos + color
+  const newBasket = {
+    name: name,
+    color: grp.color || '#1a73e8',
+    algos: grp.algos || [],
+    created_at: grp.created_at || new Date().toISOString()
+  };
+  algoGroups[gk] = newBasket;
+  if (db) await db.ref('journal/groups/' + gk).set(newBasket);
+  // Remove from algo_groups (Group)
+  const bk = Object.keys(algoGroupsData).find(k=>algoGroupsData[k].name===name) || gk;
+  delete algoGroupsData[bk];
+  if (db) await db.ref('journal/algo_groups/' + bk).remove();
+  agRenderGroups();
+  asRenderGroups();
+  asRenderSystems();
+  asPopulateGroupDropdowns();
+  toast(`"${name}" converted to Basket`, 'success');
 }
 
 // ════════════════════════════════════════════════════
