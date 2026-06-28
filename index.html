@@ -2,6 +2,21 @@
 ==========================================================
   SKVK TRADING JOURNAL — VERSION HISTORY
 ==========================================================
+  v19.5 | 2026-06-28 | Account Nicknames: Client ID now editable — each row has an editable
+         |            | Client ID field (✏️ Edit button per row); on rename, confirmation dialog
+         |            | shows trade count affected; renames journal/trades client_id in Firebase
+         |            | for all matching trades, migrates journal/capital_v2/oldId → newId,
+         |            | updates journal/nicknames key; acctNo column removed (Client ID itself
+         |            | is the editable account number now); layout simplified to 3 columns:
+         |            | Client ID (editable) | Nickname | Preview
+  ──────────────────────────────────────────────────────
+  v19.4 | 2026-06-28 | Account Nicknames: added Account Number field per account (acctNo);
+         |            | Firebase structure upgraded: { cid: { nick, acctNo } } with full
+         |            | backward compat for old string format; acctNo shown in settings section
+         |            | as extra info; getClientLabel unchanged (nick + cid in dropdowns);
+         |            | Capital Deployed Basket Level fix: specific basket falls back to global
+         |            | capitalData average when no basket-specific capital exists
+  ──────────────────────────────────────────────────────
   v19.3 | 2026-06-28 | Capital Deployed in Live Performance tile fixed: now shows average of
          |            | entered months for currentYear (instead of summing all months all time);
          |            | fix applied to both Basket Level (all baskets + specific basket) and
@@ -554,7 +569,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>SKVK Trading Journal v19.3</title>
+<title>SKVK Trading Journal v19.5</title>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -1489,7 +1504,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div class="login-logo">📋</div>
     <div class="login-title">
       SKVK Trading Journal
-      <span class="login-vbadge">v19.3</span>
+      <span class="login-vbadge">v19.5</span>
     </div>
     <div class="login-sub">Sign in with your authorised Google account to access the journal.</div>
     <button class="google-signin-btn" id="googleSignInBtn" onclick="signInWithGoogle()">
@@ -1520,7 +1535,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div class="brand">
       <span class="brand-dot"></span>
       SKVK Trading Journal
-      <span style="font-size:0.78rem;background:#1a73e8;color:#fff;padding:2px 8px;border-radius:8px;font-weight:700;margin-left:4px;">v19.3</span>
+      <span style="font-size:0.78rem;background:#1a73e8;color:#fff;padding:2px 8px;border-radius:8px;font-weight:700;margin-left:4px;">v19.5</span>
     </div>
     <div id="brand-subline">
       <div id="db-status">● connecting…</div>
@@ -3734,7 +3749,12 @@ function startListeners() {
     capitalBasket = snap.val() || {};
   });
   db.ref('journal/nicknames').on('value', snap => {
-    accountNicknames = snap.val() || {};
+    const raw = snap.val() || {};
+    // Backward compat: migrate old string format { cid: 'nick' } to new { cid: { nick } }
+    accountNicknames = {};
+    Object.entries(raw).forEach(([cid, val]) => {
+      accountNicknames[cid] = typeof val === 'string' ? { nick: val } : { nick: val?.nick || '' };
+    });
     buildClientIdTabs();
     buildNicknameList();
     if (_initialRenderDone) refreshAll();
@@ -4364,10 +4384,17 @@ function renderDashLivePerf(tr) {
         totalCap = allBasketMonths.length > 0 ? allBasketMonths.reduce((s,v)=>s+v,0) / allBasketMonths.length : 0;
       }
     } else {
-      // Specific basket — average of entered months in currentYear
+      // Specific basket — average of entered months in currentYear from capitalBasket
+      // Fall back to global capitalData if basket-specific not set
       const bCap = capitalBasket[basketVal] || {};
       const bMonths = Object.keys(bCap).filter(m => m.startsWith(currentYear) && bCap[m] > 0);
-      totalCap = bMonths.length > 0 ? bMonths.reduce((s,m) => s + bCap[m], 0) / bMonths.length : 0;
+      if (bMonths.length > 0) {
+        totalCap = bMonths.reduce((s,m) => s + bCap[m], 0) / bMonths.length;
+      } else {
+        // Fallback: use global capitalData average for currentYear
+        const yearMonths = Object.keys(capitalData).filter(m => m.startsWith(currentYear) && capitalData[m] > 0);
+        totalCap = yearMonths.length > 0 ? yearMonths.reduce((s,m) => s + capitalData[m], 0) / yearMonths.length : 0;
+      }
     }
   }
 
@@ -4948,7 +4975,7 @@ function renderBrokerTable(tr, months) {
   tr.forEach(t => {
     const b = (t.broker||'Unknown').toUpperCase();
     const cid = t.client_id || '';
-    const nick = accountNicknames[cid];
+    const nick = getNick(cid);
     const label = nick ? `${b} · ${nick} (${cid})` : (cid ? `${b} · ${cid}` : b);
     const m = (t.entry_date||'').slice(0,7);
     if (!brokerMap[label]) brokerMap[label] = {};
@@ -5403,37 +5430,62 @@ function generateCapitalMonths() {
 // ════════════════════════════════════════════════════
 //  ACCOUNT NICKNAMES
 // ════════════════════════════════════════════════════
-let accountNicknames = {}; // { 'Z71621': 'Sivakumar' }
+let accountNicknames = {}; // { 'Z71621': { nick: 'ZEBU_DEVIKA' } } — also supports legacy string format
 
 let manualAccounts = {}; // { 'IIFL Capital': true } — accounts added manually (no trades yet)
+
+// Helper: get nick string (handles legacy string or object format)
+function getNick(cid) {
+  const e = accountNicknames[cid];
+  if (!e) return '';
+  return typeof e === 'string' ? e : (e.nick || '');
+}
 
 function buildNicknameList() {
   const container = document.getElementById('nickname-list');
   if (!container) return;
-  // Merge trade-derived IDs + manually added IDs
-  const tradeIds = [...new Set(allTrades.map(t => t.client_id).filter(Boolean))];
+  const tradeIds  = [...new Set(allTrades.map(t => t.client_id).filter(Boolean))];
   const manualIds = Object.keys(manualAccounts);
   const clientIds = [...new Set([...tradeIds, ...manualIds, ...Object.keys(accountNicknames)])].sort();
 
   let html = '';
   if (clientIds.length) {
-    html += clientIds.map(cid => `
-      <div style="display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid var(--border);">
-        <span style="font-size:0.82rem;font-weight:600;color:var(--text2);min-width:80px;">${cid}</span>
-        <span style="color:var(--text3);font-size:0.8rem;">→</span>
-        <input type="text" id="nick-${cid}" value="${accountNicknames[cid]||''}" placeholder="Enter nickname…"
-          style="flex:1;padding:5px 10px;border:1px solid var(--border);border-radius:6px;font-size:0.82rem;outline:none;"
+    html += `<div style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:10px;padding:6px 0;border-bottom:2px solid var(--border);margin-bottom:4px;">
+      <span style="font-size:0.7rem;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.05em;">Client ID <span style="font-weight:400;color:var(--text3);">(editable)</span></span>
+      <span style="font-size:0.7rem;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.05em;">Nickname</span>
+      <span style="font-size:0.7rem;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.05em;">Preview</span>
+      <span></span>
+    </div>`;
+    html += clientIds.map(cid => {
+      const nick    = getNick(cid);
+      const preview = nick ? `${nick} (${cid})` : cid;
+      const isManual = !tradeIds.includes(cid);
+      const tradeCount = allTrades.filter(t => t.client_id === cid).length;
+      return `
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:10px;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);">
+        <div style="display:flex;align-items:center;gap:6px;">
+          <input type="text" id="cid-${cid}" value="${cid}" placeholder="Client ID"
+            style="flex:1;padding:5px 10px;border:1px solid var(--border);border-radius:6px;font-size:0.82rem;outline:none;font-weight:600;"
+            onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--border)'">
+          <button onclick="renameClientId('${cid}')" class="btn btn-ghost btn-sm" style="white-space:nowrap;padding:4px 8px;" title="${tradeCount} trade(s) will be updated">✏️</button>
+        </div>
+        <input type="text" id="nick-${cid}" value="${nick}" placeholder="Nickname…"
+          style="padding:5px 10px;border:1px solid var(--border);border-radius:6px;font-size:0.82rem;outline:none;"
           onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--border)'">
-        <span style="font-size:0.72rem;color:var(--text3);">Tab shows: <strong>${accountNicknames[cid]||cid} (${cid})</strong></span>
-        ${!tradeIds.includes(cid) ? `<button onclick="removeManualAccount('${cid}')" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:0.85rem;" title="Remove manual account">✕</button>` : ''}
-      </div>`).join('');
+        <span style="font-size:0.78rem;color:var(--text2);">${preview}</span>
+        <div style="display:flex;gap:4px;">
+          ${isManual ? `<button onclick="removeManualAccount('${cid}')" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:0.85rem;padding:0;" title="Remove">✕</button>` : '<span style="width:20px;"></span>'}
+        </div>
+      </div>`;
+    }).join('');
   } else {
     html = `<div style="color:var(--text3);font-size:0.8rem;margin-bottom:10px;">Upload trades first — client IDs will appear here automatically</div>`;
   }
 
   // Add Account form
   html += `<div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border);display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-    <input type="text" id="manual-acct-id" placeholder="Account ID (e.g. IIFL Capital)"
+    <span style="font-size:0.78rem;font-weight:600;color:var(--text2);">Add manually:</span>
+    <input type="text" id="manual-acct-id" placeholder="Client ID (e.g. 1234567890)"
       style="padding:5px 10px;border:1px solid var(--border);border-radius:6px;font-size:0.82rem;outline:none;min-width:160px;"
       onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--border)'">
     <input type="text" id="manual-acct-nick" placeholder="Nickname (e.g. IIFL_SIVA)"
@@ -5444,40 +5496,95 @@ function buildNicknameList() {
   container.innerHTML = html;
 }
 
+async function renameClientId(oldId) {
+  const newIdEl = document.getElementById('cid-' + oldId);
+  const newId   = newIdEl?.value?.trim();
+  if (!newId) { toast('Client ID cannot be empty', 'warning'); return; }
+  if (newId === oldId) { toast('No change — Client ID is the same', 'info'); return; }
+
+  const affected = allTrades.filter(t => t.client_id === oldId);
+  const confirmMsg = `Rename Client ID:\n"${oldId}" → "${newId}"\n\n${affected.length} trade(s) will be updated in Firebase.\nCapital data will also be migrated.\n\nProceed?`;
+  if (!confirm(confirmMsg)) { newIdEl.value = oldId; return; }
+
+  toast('⏳ Renaming — please wait…', 'info');
+
+  try {
+    // 1. Update all matching trades in Firebase
+    const updates = {};
+    affected.forEach(t => {
+      if (t.hash) updates['journal/trades/' + t.hash + '/client_id'] = newId;
+    });
+    if (Object.keys(updates).length && db) await db.ref().update(updates);
+
+    // 2. Migrate capital_v2: copy oldId data to newId, then remove oldId
+    if (db) {
+      const capSnap = await db.ref('journal/capital_v2/' + oldId).get();
+      if (capSnap.exists()) {
+        await db.ref('journal/capital_v2/' + newId).set(capSnap.val());
+        await db.ref('journal/capital_v2/' + oldId).remove();
+        if (capitalDataAll[oldId]) {
+          capitalDataAll[newId] = capitalDataAll[oldId];
+          delete capitalDataAll[oldId];
+        }
+      }
+    }
+
+    // 3. Migrate nickname entry
+    const nickEntry = accountNicknames[oldId] || { nick: '' };
+    delete accountNicknames[oldId];
+    accountNicknames[newId] = nickEntry;
+    if (db) {
+      await db.ref('journal/nicknames/' + oldId).remove();
+      await db.ref('journal/nicknames/' + newId).set(nickEntry);
+    }
+
+    // 4. Migrate manualAccounts if present
+    if (manualAccounts[oldId]) {
+      manualAccounts[newId] = true;
+      delete manualAccounts[oldId];
+    }
+
+    toast(`✓ Renamed "${oldId}" → "${newId}" · ${affected.length} trade(s) updated`, 'success');
+  } catch(e) {
+    toast('❌ Rename failed: ' + e.message, 'error');
+  }
+}
+
 async function addManualAccount() {
-  const idEl = document.getElementById('manual-acct-id');
+  const idEl   = document.getElementById('manual-acct-id');
   const nickEl = document.getElementById('manual-acct-nick');
-  const id = idEl?.value?.trim();
-  const nick = nickEl?.value?.trim();
-  if (!id) { toast('Enter an Account ID', 'warning'); return; }
+  const id     = idEl?.value?.trim();
+  const nick   = nickEl?.value?.trim();
+  if (!id) { toast('Enter a Client ID', 'warning'); return; }
   manualAccounts[id] = true;
-  if (nick) accountNicknames[id] = nick;
-  if (db) await db.ref('journal/nicknames').set(accountNicknames);
-  if (idEl) idEl.value = '';
+  accountNicknames[id] = { nick: nick || '' };
+  if (db) await db.ref('journal/nicknames/' + id).set(accountNicknames[id]);
+  if (idEl)   idEl.value   = '';
   if (nickEl) nickEl.value = '';
   buildNicknameList();
-  initAcctReport(); // refresh dropdown
+  initAcctReport();
   toast(`✓ Account "${id}" added`, 'success');
 }
 
 async function removeManualAccount(cid) {
   delete manualAccounts[cid];
   delete accountNicknames[cid];
-  if (db) await db.ref('journal/nicknames').set(accountNicknames);
+  if (db) await db.ref('journal/nicknames/' + cid).remove();
   buildNicknameList();
   initAcctReport();
   toast(`Account "${cid}" removed`, 'info');
 }
 
 async function saveNicknames() {
-  const tradeIds = [...new Set(allTrades.map(t => t.client_id).filter(Boolean))];
+  const tradeIds  = [...new Set(allTrades.map(t => t.client_id).filter(Boolean))];
   const manualIds = Object.keys(manualAccounts);
   const clientIds = [...new Set([...tradeIds, ...manualIds, ...Object.keys(accountNicknames)])];
-  const newData = {};
+  const newData   = {};
   clientIds.forEach(cid => {
-    const inp = document.getElementById('nick-' + cid);
-    if (inp && inp.value.trim()) newData[cid] = inp.value.trim();
-    else if (accountNicknames[cid]) newData[cid] = accountNicknames[cid]; // preserve existing
+    const nickInp = document.getElementById('nick-' + cid);
+    const nick    = nickInp?.value?.trim() || getNick(cid);
+    if (nick) newData[cid] = { nick };
+    else if (accountNicknames[cid]) newData[cid] = accountNicknames[cid];
   });
   accountNicknames = newData;
   if (db) await db.ref('journal/nicknames').set(newData);
@@ -5487,7 +5594,7 @@ async function saveNicknames() {
 }
 
 function getClientLabel(cid) {
-  const nick = accountNicknames[cid];
+  const nick = getNick(cid);
   return nick ? `${nick} (${cid})` : cid;
 }
 
