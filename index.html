@@ -2,6 +2,16 @@
 ==========================================================
   SKVK TRADING JOURNAL — VERSION HISTORY
 ==========================================================
+  v19.3 | 2026-06-28 | Capital Deployed in Live Performance tile fixed: now shows average of
+         |            | entered months for currentYear (instead of summing all months all time);
+         |            | fix applied to both Basket Level (all baskets + specific basket) and
+         |            | Account Wise (all accounts + specific account); manual account add in
+         |            | Account Nicknames: "+ Add Account" button lets user enter Account ID +
+         |            | Nickname voluntarily (stored in journal/nicknames); manual accounts appear
+         |            | in Account Wise dropdown and Tradetron upload selector;
+         |            | Nav/page renamed: "P&L Report-Basket Level" → "Analytics-Basket";
+         |            | "P&L Report-Account wise" → "Analytics-Account wise"
+  ──────────────────────────────────────────────────────
   v19.2 | 2026-06-28 | Basket↔Group convert buttons: each Basket row gets "Convert to Group"
          |            | (moves to journal/algo_groups, parent basket = NA); each Group row gets
          |            | "Convert to Basket" (moves to journal/groups, group stays NA);
@@ -544,7 +554,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>SKVK Trading Journal v19.2</title>
+<title>SKVK Trading Journal v19.3</title>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -1479,7 +1489,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div class="login-logo">📋</div>
     <div class="login-title">
       SKVK Trading Journal
-      <span class="login-vbadge">v19.2</span>
+      <span class="login-vbadge">v19.3</span>
     </div>
     <div class="login-sub">Sign in with your authorised Google account to access the journal.</div>
     <button class="google-signin-btn" id="googleSignInBtn" onclick="signInWithGoogle()">
@@ -1510,7 +1520,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div class="brand">
       <span class="brand-dot"></span>
       SKVK Trading Journal
-      <span style="font-size:0.78rem;background:#1a73e8;color:#fff;padding:2px 8px;border-radius:8px;font-weight:700;margin-left:4px;">v19.2</span>
+      <span style="font-size:0.78rem;background:#1a73e8;color:#fff;padding:2px 8px;border-radius:8px;font-weight:700;margin-left:4px;">v19.3</span>
     </div>
     <div id="brand-subline">
       <div id="db-status">● connecting…</div>
@@ -1521,8 +1531,8 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
   <!-- Nav tabs -->
   <nav class="nav-tabs">
     <button class="nav-tab active" onclick="showPage('journal')"     data-page="journal">📋 <span class="tl">Daily<br>Journal</span></button>
-    <button class="nav-tab" onclick="showPage('dashboard')"          data-page="dashboard">📊 <span class="tl">P&L Report-<br>Basket Level</span></button>
-    <button class="nav-tab" onclick="showPage('acctreport')"         data-page="acctreport">👤 <span class="tl">P&L Report-<br>Account wise</span></button>
+    <button class="nav-tab" onclick="showPage('dashboard')"          data-page="dashboard">📊 <span class="tl">Analytics-<br>Basket</span></button>
+    <button class="nav-tab" onclick="showPage('acctreport')"         data-page="acctreport">👤 <span class="tl">Analytics-<br>Account wise</span></button>
     <button class="nav-tab" onclick="showPage('upload')"             data-page="upload">⬆ <span class="tl">Upload Trade<br>Reports</span></button>
     <button class="nav-tab" onclick="showPage('stockmock')"          data-page="stockmock">🔬 <span class="tl">StockMock<br>Compare</span></button>
     <button class="nav-tab" onclick="showPage('compare')"            data-page="compare">⚖️ <span class="tl">Compare Broker<br>Execution</span></button>
@@ -1551,7 +1561,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
   <!-- Page header -->
   <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:20px;">
     <div>
-      <div class="page-title">P&L Report — Basket Level</div>
+      <div class="page-title">Analytics — Basket</div>
       <div class="page-subtitle">Consolidated P&L · Basket, Group & Strategy Performance</div>
       <div id="dash-last-updated" style="margin-top:4px;font-size:0.72rem;color:var(--text3);"></div>
     </div>
@@ -1745,7 +1755,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
 
   <!-- ── Header: Title ── -->
   <div style="margin-bottom:18px;">
-    <div class="page-title">P&L Report — Account wise</div>
+    <div class="page-title">Analytics — Account wise</div>
     <div class="page-subtitle">Select one or more accounts to view combined performance analytics</div>
   </div>
 
@@ -2907,7 +2917,9 @@ const ACCT_PAGE_SIZE = 20;
 
 function initAcctReport() {
   const junk = new Set(['tradetron','quantleap','quantiply','zebu','upstox','']);
-  const accounts = [...new Set(allTrades.map(t=>t.client_id||'').filter(id=>id&&!junk.has(id.toLowerCase())))].sort();
+  const tradeAccounts = [...new Set(allTrades.map(t=>t.client_id||'').filter(id=>id&&!junk.has(id.toLowerCase())))];
+  const manualIds = Object.keys(manualAccounts);
+  const accounts = [...new Set([...tradeAccounts, ...manualIds])].sort();
   const sel = document.getElementById('acct-select');
   if (!sel) return;
   sel.innerHTML = '<option value="">— Select account —</option><option value="__ALL__">All Accounts</option>' +
@@ -3009,17 +3021,21 @@ function renderAcctLivePerf(tr) {
   const winDays  = sortedDays.filter(d=>dayPnl[d]>0).length;
   const totalDays= sortedDays.length;
 
-  // Capital (sum for ALL or per account)
-  const allMonths = [...new Set(Object.keys(capitalData))].sort();
+  // Capital (average of entered months in current year)
+  const yearStr = String(year);
   let totalCap = 0;
   if (currentAcct === '__ALL__') {
-    // Sum all capital entries
-    totalCap = Object.keys(capitalDataAll).reduce((s,cid)=>s+Object.values(capitalDataAll[cid]||{}).reduce((a,v)=>a+(v||0),0),0);
+    // Average across all accounts × all months in current year that have values
+    const allVals = [];
+    Object.values(capitalDataAll).forEach(acctData => {
+      Object.entries(acctData||{}).forEach(([m,v]) => { if (m.startsWith(yearStr) && v > 0) allVals.push(v); });
+    });
+    totalCap = allVals.length > 0 ? allVals.reduce((s,v)=>s+v,0) / allVals.length : 0;
   } else {
-    // Use latest month's capital for this account
-    const acctCap = capitalDataAll[currentAcct]||{};
-    const latestM = Object.keys(acctCap).filter(m=>acctCap[m]>0).sort().pop();
-    totalCap = latestM ? acctCap[latestM] : 0;
+    // Specific account — average of entered months in current year
+    const acctCap = capitalDataAll[currentAcct] || {};
+    const acctVals = Object.entries(acctCap).filter(([m,v]) => m.startsWith(yearStr) && v > 0).map(([,v])=>v);
+    totalCap = acctVals.length > 0 ? acctVals.reduce((s,v)=>s+v,0) / acctVals.length : 0;
   }
 
   // Days since year start
@@ -4332,10 +4348,28 @@ function renderDashLivePerf(tr) {
 
   // Capital only meaningful at Basket level
   const hasCapital = (mode === 'basket');
-  const totalCap = hasCapital
-    ? (Object.values(capitalData).reduce((s,v)=>s+(v||0),0)||
-       Object.values(capitalBasket).reduce((s,b)=>s+Object.values(b||{}).reduce((a,v)=>a+(v||0),0),0))
-    : 0;
+  let totalCap = 0;
+  if (hasCapital) {
+    const basketVal = document.getElementById('dash-basket-select')?.value || '__ALL__';
+    if (basketVal === '__ALL__') {
+      // Use capitalData (global) for current year — average of entered months
+      const yearMonths = Object.keys(capitalData).filter(m => m.startsWith(currentYear) && capitalData[m] > 0);
+      totalCap = yearMonths.length > 0 ? yearMonths.reduce((s,m) => s + capitalData[m], 0) / yearMonths.length : 0;
+      // Fallback to capitalBasket sum average if capitalData empty
+      if (!totalCap) {
+        const allBasketMonths = [];
+        Object.values(capitalBasket).forEach(b => {
+          Object.entries(b||{}).forEach(([m,v]) => { if (m.startsWith(currentYear) && v > 0) allBasketMonths.push(v); });
+        });
+        totalCap = allBasketMonths.length > 0 ? allBasketMonths.reduce((s,v)=>s+v,0) / allBasketMonths.length : 0;
+      }
+    } else {
+      // Specific basket — average of entered months in currentYear
+      const bCap = capitalBasket[basketVal] || {};
+      const bMonths = Object.keys(bCap).filter(m => m.startsWith(currentYear) && bCap[m] > 0);
+      totalCap = bMonths.length > 0 ? bMonths.reduce((s,m) => s + bCap[m], 0) / bMonths.length : 0;
+    }
+  }
 
   const daysSince=Math.max(1,Math.round((new Date(today)-new Date(yearStart))/86400000));
   const totalReturn=totalCap>0?(total/totalCap*100).toFixed(1):0;
@@ -5371,36 +5405,84 @@ function generateCapitalMonths() {
 // ════════════════════════════════════════════════════
 let accountNicknames = {}; // { 'Z71621': 'Sivakumar' }
 
+let manualAccounts = {}; // { 'IIFL Capital': true } — accounts added manually (no trades yet)
+
 function buildNicknameList() {
   const container = document.getElementById('nickname-list');
   if (!container) return;
-  const clientIds = [...new Set(allTrades.map(t => t.client_id).filter(Boolean))].sort();
-  if (!clientIds.length) {
-    container.innerHTML = `<div style="color:var(--text3);font-size:0.8rem;">Upload trades first — client IDs will appear here automatically</div>`;
-    return;
+  // Merge trade-derived IDs + manually added IDs
+  const tradeIds = [...new Set(allTrades.map(t => t.client_id).filter(Boolean))];
+  const manualIds = Object.keys(manualAccounts);
+  const clientIds = [...new Set([...tradeIds, ...manualIds, ...Object.keys(accountNicknames)])].sort();
+
+  let html = '';
+  if (clientIds.length) {
+    html += clientIds.map(cid => `
+      <div style="display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid var(--border);">
+        <span style="font-size:0.82rem;font-weight:600;color:var(--text2);min-width:80px;">${cid}</span>
+        <span style="color:var(--text3);font-size:0.8rem;">→</span>
+        <input type="text" id="nick-${cid}" value="${accountNicknames[cid]||''}" placeholder="Enter nickname…"
+          style="flex:1;padding:5px 10px;border:1px solid var(--border);border-radius:6px;font-size:0.82rem;outline:none;"
+          onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--border)'">
+        <span style="font-size:0.72rem;color:var(--text3);">Tab shows: <strong>${accountNicknames[cid]||cid} (${cid})</strong></span>
+        ${!tradeIds.includes(cid) ? `<button onclick="removeManualAccount('${cid}')" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:0.85rem;" title="Remove manual account">✕</button>` : ''}
+      </div>`).join('');
+  } else {
+    html = `<div style="color:var(--text3);font-size:0.8rem;margin-bottom:10px;">Upload trades first — client IDs will appear here automatically</div>`;
   }
-  container.innerHTML = clientIds.map(cid => `
-    <div style="display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid var(--border);">
-      <span style="font-size:0.82rem;font-weight:600;color:var(--text2);min-width:80px;">${cid}</span>
-      <span style="color:var(--text3);font-size:0.8rem;">→</span>
-      <input type="text" id="nick-${cid}" value="${accountNicknames[cid]||''}" placeholder="Enter nickname…"
-        style="flex:1;padding:5px 10px;border:1px solid var(--border);border-radius:6px;font-size:0.82rem;outline:none;"
-        onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--border)'">
-      <span style="font-size:0.72rem;color:var(--text3);">Tab shows: <strong>${accountNicknames[cid]||cid} (${cid})</strong></span>
-    </div>`).join('');
+
+  // Add Account form
+  html += `<div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border);display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+    <input type="text" id="manual-acct-id" placeholder="Account ID (e.g. IIFL Capital)"
+      style="padding:5px 10px;border:1px solid var(--border);border-radius:6px;font-size:0.82rem;outline:none;min-width:160px;"
+      onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--border)'">
+    <input type="text" id="manual-acct-nick" placeholder="Nickname (e.g. IIFL_SIVA)"
+      style="padding:5px 10px;border:1px solid var(--border);border-radius:6px;font-size:0.82rem;outline:none;min-width:160px;"
+      onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--border)'">
+    <button onclick="addManualAccount()" class="btn btn-ghost btn-sm">+ Add Account</button>
+  </div>`;
+  container.innerHTML = html;
+}
+
+async function addManualAccount() {
+  const idEl = document.getElementById('manual-acct-id');
+  const nickEl = document.getElementById('manual-acct-nick');
+  const id = idEl?.value?.trim();
+  const nick = nickEl?.value?.trim();
+  if (!id) { toast('Enter an Account ID', 'warning'); return; }
+  manualAccounts[id] = true;
+  if (nick) accountNicknames[id] = nick;
+  if (db) await db.ref('journal/nicknames').set(accountNicknames);
+  if (idEl) idEl.value = '';
+  if (nickEl) nickEl.value = '';
+  buildNicknameList();
+  initAcctReport(); // refresh dropdown
+  toast(`✓ Account "${id}" added`, 'success');
+}
+
+async function removeManualAccount(cid) {
+  delete manualAccounts[cid];
+  delete accountNicknames[cid];
+  if (db) await db.ref('journal/nicknames').set(accountNicknames);
+  buildNicknameList();
+  initAcctReport();
+  toast(`Account "${cid}" removed`, 'info');
 }
 
 async function saveNicknames() {
-  const clientIds = [...new Set(allTrades.map(t => t.client_id).filter(Boolean))].sort();
+  const tradeIds = [...new Set(allTrades.map(t => t.client_id).filter(Boolean))];
+  const manualIds = Object.keys(manualAccounts);
+  const clientIds = [...new Set([...tradeIds, ...manualIds, ...Object.keys(accountNicknames)])];
   const newData = {};
   clientIds.forEach(cid => {
     const inp = document.getElementById('nick-' + cid);
     if (inp && inp.value.trim()) newData[cid] = inp.value.trim();
+    else if (accountNicknames[cid]) newData[cid] = accountNicknames[cid]; // preserve existing
   });
   accountNicknames = newData;
   if (db) await db.ref('journal/nicknames').set(newData);
-  buildClientIdTabs(); // refresh tabs with new nicknames
-  buildNicknameList(); // refresh preview
+  buildClientIdTabs();
+  buildNicknameList();
   toast('✓ Nicknames saved', 'success');
 }
 
