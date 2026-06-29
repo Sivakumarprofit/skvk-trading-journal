@@ -2,6 +2,8 @@
 ==========================================================
   SKVK TRADING JOURNAL — VERSION HISTORY
 ==========================================================
+  v20.1 | 2026-06-29 | Fix: Zebu parser falls back to basket_name when strategy_name is blank;
+         |            | trades with no strategy but valid basket now imported correctly
   v20.0 | 2026-06-29 | Rename "Account Nicknames" → "Broker Account Settings";
          |            | IIFL Capital preview/label now shows "IIFL Capital (nick)" not "nick (IIFL Capital)";
          |            | Tradetron upload unaffected (dropdown already maps account correctly)
@@ -581,7 +583,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>SKVK Trading Journal v20.0</title>
+<title>SKVK Trading Journal v20.1</title>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -1516,7 +1518,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div class="login-logo">📋</div>
     <div class="login-title">
       SKVK Trading Journal
-      <span class="login-vbadge">v20.0</span>
+      <span class="login-vbadge">v20.1</span>
     </div>
     <div class="login-sub">Sign in with your authorised Google account to access the journal.</div>
     <button class="google-signin-btn" id="googleSignInBtn" onclick="signInWithGoogle()">
@@ -1547,7 +1549,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div class="brand">
       <span class="brand-dot"></span>
       SKVK Trading Journal
-      <span style="font-size:0.78rem;background:#1a73e8;color:#fff;padding:2px 8px;border-radius:8px;font-weight:700;margin-left:4px;">v20.0</span>
+      <span style="font-size:0.78rem;background:#1a73e8;color:#fff;padding:2px 8px;border-radius:8px;font-weight:700;margin-left:4px;">v20.1</span>
     </div>
     <div id="brand-subline">
       <div id="db-status">● connecting…</div>
@@ -4084,7 +4086,9 @@ function parseQuantiply(csv) {
 function parseZebu(csv) {
   const { data } = Papa.parse(csv, { header:true, skipEmptyLines:true, trimHeaders:true });
   return data.filter(r => {
-    if (!r.strategy_name?.trim() || r.strategy_name==='NaN') return false;
+    // Use strategy_name if available, fall back to basket_name for trades with no strategy assigned
+    const algoName = (r.strategy_name||'').trim() || (r.basket_name||'').trim();
+    if (!algoName || algoName === 'NaN') return false;
     if (r.entry_status==='TRIGGER_PENDING') return false;
     // Skip any trade Zebu hasn't marked as fully closed yet (open/running positions)
     if (r.position_status !== 'CLOSED') return false;
@@ -4099,7 +4103,7 @@ function parseZebu(csv) {
     source:       'zebu',
     broker:       (r.broker||'zebu').toLowerCase(),
     client_id:    r.client_id||'',
-    algo_name:    r.strategy_name.trim(),
+    algo_name:    algoName,
     underlying:   r.underlying||'',
     symbol:       r.symbol||'',
     option_type:  optType(r.symbol||''),
