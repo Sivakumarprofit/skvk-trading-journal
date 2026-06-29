@@ -591,7 +591,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>SKVK Trading Journal v20.3</title>
+<title>SKVK Trading Journal v20.4</title>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -1526,7 +1526,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div class="login-logo">📋</div>
     <div class="login-title">
       SKVK Trading Journal
-      <span class="login-vbadge">v20.3</span>
+      <span class="login-vbadge">v20.4</span>
     </div>
     <div class="login-sub">Sign in with your authorised Google account to access the journal.</div>
     <button class="google-signin-btn" id="googleSignInBtn" onclick="signInWithGoogle()">
@@ -1557,7 +1557,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div class="brand">
       <span class="brand-dot"></span>
       SKVK Trading Journal
-      <span style="font-size:0.78rem;background:#1a73e8;color:#fff;padding:2px 8px;border-radius:8px;font-weight:700;margin-left:4px;">v20.3</span>
+      <span style="font-size:0.78rem;background:#1a73e8;color:#fff;padding:2px 8px;border-radius:8px;font-weight:700;margin-left:4px;">v20.4</span>
     </div>
     <div id="brand-subline">
       <div id="db-status">● connecting…</div>
@@ -3675,9 +3675,9 @@ function onAcctMonthModeChange() {
   const sel = document.getElementById('acct-month-select');
   if (sel) sel.style.display = mode === 'select' ? 'block' : 'none';
   if (mode === 'select') populateMonthSelect('acct-month-select');
-  renderSysStat();
+  renderAcctReport();
 }
-function onAcctMonthSelectChange() { renderSysStat(); }
+function onAcctMonthSelectChange() { renderAcctReport(); }
 
 // Compute and render monthly performance tiles
 function renderMonthlyPerfTiles(tr, ym, prefixId, labelId) {
