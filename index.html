@@ -2,6 +2,8 @@
 ==========================================================
   SKVK TRADING JOURNAL — VERSION HISTORY
 ==========================================================
+  v19.8 | 2026-06-29 | Fix: parseTradetron skips entire run_counter if any leg is still open;
+         |            | Only fully closed counters imported — matches Zebu closed-only rule
   v19.7 | 2026-06-29 | Fix: Zebu parser now skips open/running trades (position_status != CLOSED);
          |            | Only fully closed trades are imported — matches Zebu Analytics behavior
   v19.6 | 2026-06-29 | Fix: Zebu re-upload dedup now uses position_id as stable key;
@@ -574,7 +576,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>SKVK Trading Journal v19.7</title>
+<title>SKVK Trading Journal v19.8</title>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -1509,7 +1511,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div class="login-logo">📋</div>
     <div class="login-title">
       SKVK Trading Journal
-      <span class="login-vbadge">v19.7</span>
+      <span class="login-vbadge">v19.8</span>
     </div>
     <div class="login-sub">Sign in with your authorised Google account to access the journal.</div>
     <button class="google-signin-btn" id="googleSignInBtn" onclick="signInWithGoogle()">
@@ -1540,7 +1542,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div class="brand">
       <span class="brand-dot"></span>
       SKVK Trading Journal
-      <span style="font-size:0.78rem;background:#1a73e8;color:#fff;padding:2px 8px;border-radius:8px;font-weight:700;margin-left:4px;">v19.7</span>
+      <span style="font-size:0.78rem;background:#1a73e8;color:#fff;padding:2px 8px;border-radius:8px;font-weight:700;margin-left:4px;">v19.8</span>
     </div>
     <div id="brand-subline">
       <div id="db-status">● connecting…</div>
@@ -4179,7 +4181,10 @@ function parseTradetron(csv, algoName) {
   const paired = [];
 
   // Now parse individual legs for Journal display (entry/exit pairing unchanged)
+  // Skip any run_counter that is still open — only fully closed counters are imported
+  // (same rule as Zebu: only closed trades enter the journal)
   Object.keys(byCounter).forEach(rc => {
+    if (counterOpen[rc]) return; // entire counter still has open legs — skip it
     const rcRows     = byCounter[rc];
     const rcEntries  = rcRows.filter(r => (r.condition_type||'').toLowerCase() === 'entry');
     const rcRegExits = rcRows.filter(r => (r.condition_type||'').toLowerCase() === 'exit');
@@ -4257,7 +4262,7 @@ function parseTradetron(csv, algoName) {
         run_counter:  runCounter,
         leg_id:       entry.leg_id || '',
         is_re_entry:  false,
-        status:       counterOpen[rc] ? 'OPEN' : 'ACTIVE',
+        status:       'ACTIVE',
         created_at:   new Date().toISOString()
       });
     });
