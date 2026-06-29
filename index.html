@@ -2,6 +2,11 @@
 ==========================================================
   SKVK TRADING JOURNAL — VERSION HISTORY
 ==========================================================
+  v20.0 | 2026-06-29 | Rename "Account Nicknames" → "Broker Account Settings";
+         |            | IIFL Capital preview/label now shows "IIFL Capital (nick)" not "nick (IIFL Capital)";
+         |            | Tradetron upload unaffected (dropdown already maps account correctly)
+  v19.9 | 2026-06-29 | Fix: Tradetron upload account dropdown now populated from nicknames
+         |            | instead of existing trades — all configured accounts always visible
   v19.8 | 2026-06-29 | Fix: parseTradetron skips entire run_counter if any leg is still open;
          |            | Only fully closed counters imported — matches Zebu closed-only rule
   v19.7 | 2026-06-29 | Fix: Zebu parser now skips open/running trades (position_status != CLOSED);
@@ -576,7 +581,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>SKVK Trading Journal v19.8</title>
+<title>SKVK Trading Journal v20.0</title>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -1511,7 +1516,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div class="login-logo">📋</div>
     <div class="login-title">
       SKVK Trading Journal
-      <span class="login-vbadge">v19.8</span>
+      <span class="login-vbadge">v20.0</span>
     </div>
     <div class="login-sub">Sign in with your authorised Google account to access the journal.</div>
     <button class="google-signin-btn" id="googleSignInBtn" onclick="signInWithGoogle()">
@@ -1542,7 +1547,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div class="brand">
       <span class="brand-dot"></span>
       SKVK Trading Journal
-      <span style="font-size:0.78rem;background:#1a73e8;color:#fff;padding:2px 8px;border-radius:8px;font-weight:700;margin-left:4px;">v19.8</span>
+      <span style="font-size:0.78rem;background:#1a73e8;color:#fff;padding:2px 8px;border-radius:8px;font-weight:700;margin-left:4px;">v20.0</span>
     </div>
     <div id="brand-subline">
       <div id="db-status">● connecting…</div>
@@ -2209,14 +2214,14 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
       </div>
     </div>
 
-    <!-- ── Account Nicknames ── -->
+    <!-- ── Broker Account Settings ── -->
     <div style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:22px;box-shadow:var(--shadow-sm);">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
         <div style="display:flex;align-items:center;gap:10px;">
           <span style="font-size:1.3rem;">🏷️</span>
           <div>
-            <div style="font-size:0.95rem;font-weight:700;color:var(--text0);">Account Nicknames</div>
-            <div style="font-size:0.72rem;color:var(--text2);margin-top:2px;">Friendly names for client IDs — shown in Journal tabs</div>
+            <div style="font-size:0.95rem;font-weight:700;color:var(--text0);">Broker Account Settings</div>
+            <div style="font-size:0.72rem;color:var(--text2);margin-top:2px;">Manage broker accounts and nicknames — shown across Journal tabs</div>
           </div>
         </div>
         <button class="btn btn-primary btn-sm" onclick="saveNicknames()">💾 Save</button>
@@ -5483,7 +5488,8 @@ function buildNicknameList() {
     </div>`;
     html += clientIds.map(cid => {
       const nick    = getNick(cid);
-      const preview = nick ? `${nick} (${cid})` : cid;
+      const isBrokerName = /^[A-Za-z]/.test(cid) && !/^[A-Z]\d/.test(cid);
+      const preview = nick ? (isBrokerName ? `${cid} (${nick})` : `${nick} (${cid})`) : cid;
       const isManual = !tradeIds.includes(cid);
       const tradeCount = allTrades.filter(t => t.client_id === cid).length;
       return `
@@ -5620,7 +5626,11 @@ async function saveNicknames() {
 
 function getClientLabel(cid) {
   const nick = getNick(cid);
-  return nick ? `${nick} (${cid})` : cid;
+  if (!nick) return cid;
+  // For broker-named client IDs (e.g. "IIFL Capital"), show: "IIFL Capital (nick)"
+  // For account-number IDs (e.g. "Z71621"), show: "nick (Z71621)"
+  const isBrokerName = /^[A-Za-z]/.test(cid) && !/^[A-Z]\d/.test(cid);
+  return isBrokerName ? `${cid} (${nick})` : `${nick} (${cid})`;
 }
 
 // ════════════════════════════════════════════════════
@@ -6783,11 +6793,16 @@ function selectASP(asp) {
       sel.innerHTML = '<option value="">— choose algo —</option>' +
         names.map(n => `<option value="${n}">${algoMeta[n]?.display_name || n}</option>`).join('');
     }
-    // Populate account dropdown from known client_ids
+    // Populate account dropdown from nicknames — all configured accounts always visible
     const acctSel = document.getElementById('tradetron-acct-select');
     if (acctSel) {
+      // Use all client IDs from accountNicknames so newly configured accounts show up
+      // even if no trades have been uploaded for them yet
+      const fromNicknames = Object.keys(accountNicknames).sort();
+      // Also include any client_ids from existing trades not yet in nicknames
       const junk = new Set(['tradetron','quantleap','quantiply','zebu','upstox','']);
-      const accounts = [...new Set(allTrades.map(t=>t.client_id||'').filter(id=>id&&!junk.has(id.toLowerCase())))].sort();
+      const fromTrades = [...new Set(allTrades.map(t=>t.client_id||'').filter(id=>id&&!junk.has(id.toLowerCase())))];
+      const accounts = [...new Set([...fromNicknames, ...fromTrades])].sort();
       acctSel.innerHTML = '<option value="">— choose account —</option>' +
         accounts.map(a=>`<option value="${a}">${getClientLabel(a)}</option>`).join('');
     }
