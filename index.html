@@ -3,7 +3,8 @@
   SKVK TRADING JOURNAL — VERSION HISTORY
 ==========================================================
   v20.1 | 2026-06-29 | Fix: Zebu parser falls back to basket_name when strategy_name is blank;
-         |            | trades with no strategy but valid basket now imported correctly
+         |            | Fixed scoping bug — algoName now correctly available in map (was undefined);
+         |            | Rewrote parseZebu as for-loop to avoid filter/map scope issue
   v20.0 | 2026-06-29 | Rename "Account Nicknames" → "Broker Account Settings";
          |            | IIFL Capital preview/label now shows "IIFL Capital (nick)" not "nick (IIFL Capital)";
          |            | Tradetron upload unaffected (dropdown already maps account correctly)
@@ -583,7 +584,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>SKVK Trading Journal v20.1</title>
+<title>SKVK Trading Journal v20.2</title>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -1518,7 +1519,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div class="login-logo">📋</div>
     <div class="login-title">
       SKVK Trading Journal
-      <span class="login-vbadge">v20.1</span>
+      <span class="login-vbadge">v20.2</span>
     </div>
     <div class="login-sub">Sign in with your authorised Google account to access the journal.</div>
     <button class="google-signin-btn" id="googleSignInBtn" onclick="signInWithGoogle()">
@@ -1549,7 +1550,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div class="brand">
       <span class="brand-dot"></span>
       SKVK Trading Journal
-      <span style="font-size:0.78rem;background:#1a73e8;color:#fff;padding:2px 8px;border-radius:8px;font-weight:700;margin-left:4px;">v20.1</span>
+      <span style="font-size:0.78rem;background:#1a73e8;color:#fff;padding:2px 8px;border-radius:8px;font-weight:700;margin-left:4px;">v20.2</span>
     </div>
     <div id="brand-subline">
       <div id="db-status">● connecting…</div>
@@ -4085,44 +4086,46 @@ function parseQuantiply(csv) {
 
 function parseZebu(csv) {
   const { data } = Papa.parse(csv, { header:true, skipEmptyLines:true, trimHeaders:true });
-  return data.filter(r => {
+  const results = [];
+  for (const r of data) {
     // Use strategy_name if available, fall back to basket_name for trades with no strategy assigned
     const algoName = (r.strategy_name||'').trim() || (r.basket_name||'').trim();
-    if (!algoName || algoName === 'NaN') return false;
-    if (r.entry_status==='TRIGGER_PENDING') return false;
+    if (!algoName || algoName === 'NaN') continue;
+    if (r.entry_status==='TRIGGER_PENDING') continue;
     // Skip any trade Zebu hasn't marked as fully closed yet (open/running positions)
-    if (r.position_status !== 'CLOSED') return false;
+    if (r.position_status !== 'CLOSED') continue;
     // Skip CANCELLED rows that never actually executed (no entry_filled_at, zero pnl, zero exit price)
-    // These are open/pending legs downloaded mid-day or EOD-cancelled with no real trade data
     const hasEntry = r.entry_filled_at && r.entry_filled_at.trim() !== '';
     const hasPnl   = parseFloat((r.pnl||'0').toString().replace(/,/g,'')) !== 0;
     const hasExit  = parseFloat((r.exit_average_price||'0').toString().replace(/,/g,'')) !== 0;
-    if (r.entry_status==='CANCELLED' && !hasEntry && !hasPnl && !hasExit) return false;
-    return true;
-  }).map(r => ({
-    source:       'zebu',
-    broker:       (r.broker||'zebu').toLowerCase(),
-    client_id:    r.client_id||'',
-    algo_name:    algoName,
-    underlying:   r.underlying||'',
-    symbol:       r.symbol||'',
-    option_type:  optType(r.symbol||''),
-    action:       (r.action||'').toUpperCase(),
-    quantity:     parseFloat((r.quantity||'0').toString().replace(/,/g,''))||0,
-    entry_date:   normDate(r.execution_date||''),
-    entry_time:   isoTime(r.entry_filled_at||''),
-    entry_price:  parseFloat((r.average_entry_price||'0').toString().replace(/,/g,''))||0,
-    exit_date:    normDate(r.closed_date||''),
-    exit_time:    '',
-    exit_price:   parseFloat((r.exit_average_price||'0').toString().replace(/,/g,''))||0,
-    exit_reason:  normExit(r.exit_type||''),
-    pnl:          parseFloat((r.pnl||'0').toString().replace(/,/g,''))||0,
-    expiry_date:  normDate(r.expiry_date||''),
-    is_re_entry:  false,
-    position_id:  r.position_id||'',
-    status:       r.entry_status==='CANCELLED' ? 'CANCELLED' : 'ACTIVE',
-    created_at:   new Date().toISOString()
-  })).filter(t => t.entry_date);
+    if (r.entry_status==='CANCELLED' && !hasEntry && !hasPnl && !hasExit) continue;
+    const t = {
+      source:       'zebu',
+      broker:       (r.broker||'zebu').toLowerCase(),
+      client_id:    r.client_id||'',
+      algo_name:    algoName,
+      underlying:   r.underlying||'',
+      symbol:       r.symbol||'',
+      option_type:  optType(r.symbol||''),
+      action:       (r.action||'').toUpperCase(),
+      quantity:     parseFloat((r.quantity||'0').toString().replace(/,/g,''))||0,
+      entry_date:   normDate(r.execution_date||''),
+      entry_time:   isoTime(r.entry_filled_at||''),
+      entry_price:  parseFloat((r.average_entry_price||'0').toString().replace(/,/g,''))||0,
+      exit_date:    normDate(r.closed_date||''),
+      exit_time:    '',
+      exit_price:   parseFloat((r.exit_average_price||'0').toString().replace(/,/g,''))||0,
+      exit_reason:  normExit(r.exit_type||''),
+      pnl:          parseFloat((r.pnl||'0').toString().replace(/,/g,''))||0,
+      expiry_date:  normDate(r.expiry_date||''),
+      is_re_entry:  false,
+      position_id:  r.position_id||'',
+      status:       r.entry_status==='CANCELLED' ? 'CANCELLED' : 'ACTIVE',
+      created_at:   new Date().toISOString()
+    };
+    if (t.entry_date) results.push(t);
+  }
+  return results;
 }
 
 // ════════════════════════════════════════════════════
