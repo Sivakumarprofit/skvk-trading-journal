@@ -2,6 +2,13 @@
 ==========================================================
   SKVK TRADING JOURNAL — VERSION HISTORY
 ==========================================================
+  v20.3 | 2026-06-29 | Remove "Uploaded by" radio — use Firebase Auth display name silently;
+         |            | Remove "Algo Name AUTO/MANUAL" radio — always AUTO;
+         |            | Tradetron: rename "Select Algo" → "Select Basket/Group/Strategy", populate from all 3 tiers;
+         |            | Month selector (Current Month / Select Month) on both Analytics tabs;
+         |            | Monthly Live Performance tiles on both Analytics tabs;
+         |            | Remove "One-Time Fixes" section from App Settings;
+         |            | Fix "Current Year" label showing raw JS instead of actual year
   v20.1 | 2026-06-29 | Fix: Zebu parser falls back to basket_name when strategy_name is blank;
          |            | Fixed scoping bug — algoName now correctly available in map (was undefined);
          |            | Rewrote parseZebu as for-loop to avoid filter/map scope issue
@@ -584,7 +591,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>SKVK Trading Journal v20.2</title>
+<title>SKVK Trading Journal v20.3</title>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -1519,7 +1526,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div class="login-logo">📋</div>
     <div class="login-title">
       SKVK Trading Journal
-      <span class="login-vbadge">v20.2</span>
+      <span class="login-vbadge">v20.3</span>
     </div>
     <div class="login-sub">Sign in with your authorised Google account to access the journal.</div>
     <button class="google-signin-btn" id="googleSignInBtn" onclick="signInWithGoogle()">
@@ -1550,7 +1557,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div class="brand">
       <span class="brand-dot"></span>
       SKVK Trading Journal
-      <span style="font-size:0.78rem;background:#1a73e8;color:#fff;padding:2px 8px;border-radius:8px;font-weight:700;margin-left:4px;">v20.2</span>
+      <span style="font-size:0.78rem;background:#1a73e8;color:#fff;padding:2px 8px;border-radius:8px;font-weight:700;margin-left:4px;">v20.3</span>
     </div>
     <div id="brand-subline">
       <div id="db-status">● connecting…</div>
@@ -1644,6 +1651,18 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <span style="font-size:1.05rem;font-weight:800;font-family:var(--display);color:var(--blue);">📅 Monthly P&L Data</span>
   </div>
 
+  <!-- Month selector -->
+  <div style="display:flex;align-items:center;gap:16px;margin-bottom:16px;flex-wrap:wrap;">
+    <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:0.85rem;font-weight:600;color:var(--text0);">
+      <input type="radio" name="dash-month-mode" value="current" checked onchange="onDashMonthModeChange()" style="accent-color:var(--blue);width:14px;height:14px;"> Current Month
+    </label>
+    <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:0.85rem;font-weight:600;color:var(--text0);">
+      <input type="radio" name="dash-month-mode" value="select" onchange="onDashMonthModeChange()" style="accent-color:var(--blue);width:14px;height:14px;"> Select Month
+    </label>
+    <select id="dash-month-select" style="display:none;padding:5px 10px;border:1.5px solid var(--blue);border-radius:6px;font-size:0.82rem;outline:none;" onchange="onDashMonthSelectChange()">
+    </select>
+  </div>
+
   <!-- Monthly bar chart (current year Jan-Dec) -->
   <div style="background:var(--bg);border:1.5px solid var(--border);border-radius:14px;padding:16px 20px;margin-bottom:18px;">
     <div style="font-size:0.78rem;font-weight:700;color:var(--text1);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:10px;">Monthly P&L</div>
@@ -1663,7 +1682,28 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div id="dash-cal-heatmap"></div>
   </div>
 
-  <!-- ══ BLOCK 2: Yearly P&L Data ══ -->
+  <!-- Monthly Live Performance tiles (Basket tab) -->
+  <div id="dash-monthly-perf-wrap" style="background:var(--bg);border:1.5px solid var(--border);border-radius:14px;padding:20px 24px;margin-bottom:28px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span style="font-size:1rem;">📈</span>
+        <span style="font-size:1rem;font-weight:800;font-family:var(--display);">Monthly Performance</span>
+      </div>
+      <span id="dash-monthly-perf-label" style="font-size:0.75rem;background:#eef2ff;color:#3730a3;padding:4px 12px;border-radius:20px;font-weight:600;"></span>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:16px 24px;">
+      <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Net P&L</div><div id="dash-mp-pnl" style="font-size:1.1rem;font-weight:800;">—</div></div>
+      <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Win Rate</div><div id="dash-mp-wr" style="font-size:1.1rem;font-weight:800;">—</div></div>
+      <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Profit Factor</div><div id="dash-mp-pf" style="font-size:1.1rem;font-weight:800;">—</div></div>
+      <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Total Trades</div><div id="dash-mp-trades" style="font-size:1.1rem;font-weight:800;">—</div></div>
+      <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Max Drawdown</div><div id="dash-mp-dd" style="font-size:1.1rem;font-weight:800;color:var(--red);">—</div></div>
+      <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Winning Days</div><div id="dash-mp-wdays" style="font-size:1.1rem;font-weight:800;color:var(--green);">—</div></div>
+      <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Losing Days</div><div id="dash-mp-ldays" style="font-size:1.1rem;font-weight:800;color:var(--red);">—</div></div>
+      <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Best Day</div><div id="dash-mp-best" style="font-size:1.1rem;font-weight:800;color:var(--green);">—</div></div>
+      <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Worst Day</div><div id="dash-mp-worst" style="font-size:1.1rem;font-weight:800;color:var(--red);">—</div></div>
+      <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Avg Daily P&L</div><div id="dash-mp-avg" style="font-size:1.1rem;font-weight:800;">—</div></div>
+    </div>
+  </div>
   <div style="border-top:3px solid #6366f1;padding-top:10px;margin-bottom:16px;">
     <span style="font-size:1.05rem;font-weight:800;font-family:var(--display);color:#6366f1;">📊 Yearly P&L Data</span>
   </div>
@@ -1806,6 +1846,18 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
       <span style="font-size:1.05rem;font-weight:800;font-family:var(--display);color:var(--blue);">📅 Monthly P&L Data</span>
     </div>
 
+    <!-- Month selector -->
+    <div style="display:flex;align-items:center;gap:16px;margin-bottom:16px;flex-wrap:wrap;">
+      <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:0.85rem;font-weight:600;color:var(--text0);">
+        <input type="radio" name="acct-month-mode" value="current" checked onchange="onAcctMonthModeChange()" style="accent-color:var(--blue);width:14px;height:14px;"> Current Month
+      </label>
+      <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:0.85rem;font-weight:600;color:var(--text0);">
+        <input type="radio" name="acct-month-mode" value="select" onchange="onAcctMonthModeChange()" style="accent-color:var(--blue);width:14px;height:14px;"> Select Month
+      </label>
+      <select id="acct-month-select" style="display:none;padding:5px 10px;border:1.5px solid var(--blue);border-radius:6px;font-size:0.82rem;outline:none;" onchange="onAcctMonthSelectChange()">
+      </select>
+    </div>
+
     <!-- 12-month bar chart -->
     <div id="acct-monthly-chart-wrap" style="background:var(--bg);border:1.5px solid var(--border);border-radius:14px;padding:16px 20px;margin-bottom:18px;">
       <div style="font-size:0.78rem;font-weight:700;color:var(--text1);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:10px;">Monthly P&L</div>
@@ -1823,6 +1875,29 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
         </div>
       </div>
       <div id="acct-cal-heatmap"></div>
+    </div>
+
+    <!-- Monthly Live Performance tiles (Account wise tab) -->
+    <div id="acct-monthly-perf-wrap" style="background:var(--bg);border:1.5px solid var(--border);border-radius:14px;padding:20px 24px;margin-top:18px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:1rem;">📈</span>
+          <span style="font-size:1rem;font-weight:800;font-family:var(--display);">Monthly Performance</span>
+        </div>
+        <span id="acct-monthly-perf-label" style="font-size:0.75rem;background:#eef2ff;color:#3730a3;padding:4px 12px;border-radius:20px;font-weight:600;"></span>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:16px 24px;">
+        <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Net P&L</div><div id="acct-mp-pnl" style="font-size:1.1rem;font-weight:800;">—</div></div>
+        <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Win Rate</div><div id="acct-mp-wr" style="font-size:1.1rem;font-weight:800;">—</div></div>
+        <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Profit Factor</div><div id="acct-mp-pf" style="font-size:1.1rem;font-weight:800;">—</div></div>
+        <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Total Trades</div><div id="acct-mp-trades" style="font-size:1.1rem;font-weight:800;">—</div></div>
+        <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Max Drawdown</div><div id="acct-mp-dd" style="font-size:1.1rem;font-weight:800;color:var(--red);">—</div></div>
+        <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Winning Days</div><div id="acct-mp-wdays" style="font-size:1.1rem;font-weight:800;color:var(--green);">—</div></div>
+        <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Losing Days</div><div id="acct-mp-ldays" style="font-size:1.1rem;font-weight:800;color:var(--red);">—</div></div>
+        <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Best Day</div><div id="acct-mp-best" style="font-size:1.1rem;font-weight:800;color:var(--green);">—</div></div>
+        <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Worst Day</div><div id="acct-mp-worst" style="font-size:1.1rem;font-weight:800;color:var(--red);">—</div></div>
+        <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Avg Daily P&L</div><div id="acct-mp-avg" style="font-size:1.1rem;font-weight:800;">—</div></div>
+      </div>
     </div>
   </div>
 
@@ -1976,36 +2051,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     </div>
   </div>
 
-  <!-- Uploaded By -->
-  <div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:14px 20px;margin-bottom:18px;display:flex;align-items:flex-start;gap:32px;flex-wrap:wrap;">
-    <div>
-      <div style="font-size:0.78rem;font-weight:600;color:var(--text1);margin-bottom:8px;">Uploaded by:</div>
-      <div style="display:flex;gap:16px;flex-wrap:wrap;">
-        <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:0.85rem;color:var(--text0);">
-          <input type="radio" name="uploader" value="SKVK User1" checked style="accent-color:var(--blue);width:14px;height:14px;cursor:pointer;"> SKVK User1
-        </label>
-        <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:0.85rem;color:var(--text0);">
-          <input type="radio" name="uploader" value="SKVK User2" style="accent-color:var(--blue);width:14px;height:14px;cursor:pointer;"> SKVK User2
-        </label>
-        <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:0.85rem;color:var(--text0);">
-          <input type="radio" name="uploader" value="Sivakumar" style="accent-color:var(--blue);width:14px;height:14px;cursor:pointer;"> Sivakumar
-        </label>
-      </div>
-    </div>
-    <div>
-      <div style="font-size:0.78rem;font-weight:600;color:var(--text1);margin-bottom:8px;">Algo Name (Quantleap):</div>
-      <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
-        <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:0.85rem;color:var(--text0);">
-          <input type="radio" name="algo-mode" value="auto" checked onchange="toggleAlgoMode()" style="accent-color:var(--blue);width:14px;height:14px;cursor:pointer;"> AUTO (from report)
-        </label>
-        <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:0.85rem;color:var(--text0);">
-          <input type="radio" name="algo-mode" value="manual" onchange="toggleAlgoMode()" style="accent-color:var(--blue);width:14px;height:14px;cursor:pointer;"> MANUAL
-        </label>
-        <input type="text" id="manual-algo-name" placeholder="Enter algo name…"
-          style="display:none;padding:6px 10px;border:1.5px solid var(--blue);border-radius:6px;font-size:0.82rem;outline:none;min-width:200px;">
-      </div>
-    </div>
-  </div>
+
 
   <!-- ASP Selector Step -->
   <div style="background:var(--bg2);border:1.5px solid var(--blue);border-radius:12px;padding:20px 24px;margin-bottom:18px;">
@@ -2025,10 +2071,10 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div id="tradetron-algo-wrap" style="display:none;margin-top:16px;padding-top:14px;border-top:1px solid var(--border);">
       <div style="display:flex;gap:24px;flex-wrap:wrap;align-items:flex-start;">
         <div>
-          <div style="font-size:0.82rem;font-weight:600;color:var(--text1);margin-bottom:8px;">Select Algo for this upload:</div>
+          <div style="font-size:0.82rem;font-weight:600;color:var(--text1);margin-bottom:8px;">Select Basket / Group / Strategy:</div>
           <select id="tradetron-algo-select"
             style="padding:7px 12px;border:1.5px solid var(--blue);border-radius:7px;font-size:0.85rem;min-width:280px;outline:none;background:var(--bg);color:var(--text0);">
-            <option value="">— choose algo —</option>
+            <option value="">— choose Basket / Group / Strategy —</option>
           </select>
         </div>
         <div>
@@ -2332,7 +2378,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
         <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:0.83rem;font-weight:600;color:var(--text1);">
           <input type="radio" name="brk-clear-mode" value="year" checked onchange="toggleBrkClearMode()"
             style="accent-color:var(--blue);width:14px;height:14px;">
-          Current Year (' + new Date().getFullYear() + ')
+          Current Year (2026)
         </label>
         <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:0.83rem;font-weight:600;color:var(--text1);">
           <input type="radio" name="brk-clear-mode" value="range" onchange="toggleBrkClearMode()"
@@ -2362,28 +2408,6 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
         <button id="brk-clear-btn" onclick="executeBrokerClear()" class="btn btn-sm" style="background:var(--red);color:#fff;display:none;">🗑 Delete</button>
       </div>
       <div id="brk-clear-preview" style="font-size:0.78rem;color:var(--text2);"></div>
-    </div>
-
-    <!-- ── One-Time Fixes ── -->
-    <div style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:22px;box-shadow:var(--shadow-sm);">
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
-        <span style="font-size:1.3rem;">🔧</span>
-        <div>
-          <div style="font-size:0.95rem;font-weight:700;color:var(--text0);">One-Time Fixes</div>
-          <div style="font-size:0.72rem;color:var(--text2);margin-top:2px;">Migration tools — run once, then ignore</div>
-        </div>
-      </div>
-      <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border:1px solid var(--border);border-radius:8px;margin-bottom:8px;">
-        <div>
-          <div style="font-size:0.82rem;font-weight:600;color:var(--text0);">Fix Strike / Option Type in Broker Trades</div>
-          <div style="font-size:0.72rem;color:var(--text2);margin-top:2px;">Re-decodes symbols like NIFTY2660923150PE → strike 23150 (old parser grabbed 923150). Scans all trades and updates Firebase.</div>
-        </div>
-        <button onclick="migrateStrikeData()" id="migrate-strike-btn"
-          style="background:var(--blue);color:#fff;border:none;border-radius:8px;padding:8px 18px;font-size:0.82rem;font-weight:600;cursor:pointer;white-space:nowrap;margin-left:16px;">
-          🔧 Run Fix
-        </button>
-      </div>
-      <div id="migrate-strike-status" style="font-size:0.78rem;color:var(--text2);padding:4px 0;"></div>
     </div>
 
     <!-- ── Data Management / Master Reset ── -->
@@ -3474,12 +3498,15 @@ function renderAcctMonthlyTopChart(tr) {
 
 // Current-month calendar heatmap
 function renderAcctCalHeatmap(tr) {
-  const today = new Date();
-  const yr = today.getFullYear();
-  const mo = today.getMonth();
-  const ym = `${yr}-${String(mo+1).padStart(2,'0')}`;
-  const monthName = today.toLocaleDateString('en-IN',{month:'long',year:'numeric'});
-  document.getElementById('acct-cal-title').textContent = `Current Month P&L — ${monthName}`;
+  const ym = getSelectedYM('acct-month-mode', 'acct-month-select');
+  const [yr, mo1] = ym.split('-').map(Number);
+  const mo = mo1 - 1;
+  const monthName = new Date(yr, mo, 1).toLocaleDateString('en-IN',{month:'long',year:'numeric'});
+  const titleEl = document.getElementById('acct-cal-title');
+  if (titleEl) titleEl.textContent = `Monthly P&L — ${monthName}`;
+
+  // Render monthly perf tiles
+  renderMonthlyPerfTiles(tr, ym, 'acct-mp', 'acct-monthly-perf-label');
 
   const dayPnl = {};
   tr.forEach(t => { const pd=pnlDate(t); if(pd&&pd.startsWith(ym)) dayPnl[pd]=(dayPnl[pd]||0)+(t.pnl||0); });
@@ -3487,7 +3514,7 @@ function renderAcctCalHeatmap(tr) {
   const dim = new Date(yr, mo+1, 0).getDate();
   const firstDow = new Date(yr, mo, 1).getDay();
   const startOffset = firstDow===0 ? 6 : firstDow-1;
-  const todayStr = today.toISOString().slice(0,10);
+  const todayStr = new Date().toISOString().slice(0,10);
 
   function fmtC(v) {
     if(v===null) return '—';
@@ -3608,6 +3635,93 @@ async function saveAcctCapital() {
   const label = currentAcct === '__ALL__' ? 'All Accounts' : getClientLabel(currentAcct);
   toast('✓ Capital saved for '+label, 'success');
   renderAcctReport();
+}
+
+// ── Month selector helpers ──────────────────────────────────────
+const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+function populateMonthSelect(selId) {
+  const sel = document.getElementById(selId);
+  if (!sel) return;
+  const yr = new Date().getFullYear();
+  const curM = new Date().getMonth(); // 0-based
+  sel.innerHTML = MONTH_NAMES.map((m,i) =>
+    `<option value="${yr}-${String(i+1).padStart(2,'0')}" ${i===curM?'selected':''}>${m} ${yr}</option>`
+  ).join('');
+}
+
+function getSelectedYM(radioName, selId) {
+  const mode = document.querySelector(`input[name="${radioName}"]:checked`)?.value || 'current';
+  if (mode === 'current') {
+    const today = new Date();
+    return `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}`;
+  }
+  return document.getElementById(selId)?.value || '';
+}
+
+// Basket tab month selector handlers
+function onDashMonthModeChange() {
+  const mode = document.querySelector('input[name="dash-month-mode"]:checked')?.value;
+  const sel = document.getElementById('dash-month-select');
+  if (sel) sel.style.display = mode === 'select' ? 'block' : 'none';
+  if (mode === 'select') populateMonthSelect('dash-month-select');
+  renderDashboard();
+}
+function onDashMonthSelectChange() { renderDashboard(); }
+
+// Account wise tab month selector handlers
+function onAcctMonthModeChange() {
+  const mode = document.querySelector('input[name="acct-month-mode"]:checked')?.value;
+  const sel = document.getElementById('acct-month-select');
+  if (sel) sel.style.display = mode === 'select' ? 'block' : 'none';
+  if (mode === 'select') populateMonthSelect('acct-month-select');
+  renderSysStat();
+}
+function onAcctMonthSelectChange() { renderSysStat(); }
+
+// Compute and render monthly performance tiles
+function renderMonthlyPerfTiles(tr, ym, prefixId, labelId) {
+  const monthTrades = tr.filter(t => (pnlDate(t)||t.entry_date||'').startsWith(ym));
+  const yr = parseInt(ym.slice(0,4)), mo = parseInt(ym.slice(5,7))-1;
+  const mLabel = new Date(yr, mo, 1).toLocaleDateString('en-IN',{month:'long',year:'numeric'});
+  const labelEl = document.getElementById(labelId);
+  if (labelEl) labelEl.textContent = mLabel;
+
+  const fmt = v => { if(!v&&v!==0) return '—'; const a=Math.abs(v),s=v>=0?'+':'-'; if(a>=100000)return s+'₹'+(a/100000).toFixed(2)+'L'; if(a>=1000)return s+'₹'+(a/1000).toFixed(1)+'K'; return s+'₹'+Math.round(a); };
+  const col = v => v > 0 ? 'var(--green)' : v < 0 ? 'var(--red)' : 'var(--text0)';
+
+  // Aggregate by day
+  const dayPnl = {};
+  monthTrades.forEach(t => { const d=pnlDate(t)||t.entry_date; if(d) dayPnl[d]=(dayPnl[d]||0)+(t.pnl||0); });
+  const days = Object.values(dayPnl);
+  const winDays = days.filter(v=>v>0).length;
+  const lossDays = days.filter(v=>v<0).length;
+  const bestDay = days.length ? Math.max(...days) : null;
+  const worstDay = days.length ? Math.min(...days) : null;
+  const avgDay = days.length ? days.reduce((s,v)=>s+v,0)/days.length : null;
+
+  const totalPnl = monthTrades.reduce((s,t)=>s+(t.pnl||0),0);
+  const wins = monthTrades.filter(t=>(t.pnl||0)>0);
+  const losses = monthTrades.filter(t=>(t.pnl||0)<0);
+  const wr = monthTrades.length ? Math.round(wins.length/monthTrades.length*100) : null;
+  const grossWin = wins.reduce((s,t)=>s+(t.pnl||0),0);
+  const grossLoss = Math.abs(losses.reduce((s,t)=>s+(t.pnl||0),0));
+  const pf = grossLoss > 0 ? (grossWin/grossLoss).toFixed(2) : grossWin > 0 ? '∞' : '—';
+
+  // Max drawdown for month
+  let peak=0, dd=0; days.sort().forEach(v=>{ peak=Math.max(peak,v); dd=Math.min(dd,v-peak); });
+
+  const set = (id, val, color) => { const el=document.getElementById(id); if(el){el.textContent=val;if(color)el.style.color=color;} };
+  set(`${prefixId}-pnl`,  fmt(totalPnl), col(totalPnl));
+  set(`${prefixId}-wr`,   wr!==null ? wr+'%' : '—');
+  set(`${prefixId}-pf`,   pf);
+  set(`${prefixId}-trades`, monthTrades.length || '—');
+  set(`${prefixId}-dd`,   fmt(dd), 'var(--red)');
+  set(`${prefixId}-wdays`, winDays || '—', 'var(--green)');
+  set(`${prefixId}-ldays`, lossDays || '—', 'var(--red)');
+  set(`${prefixId}-best`,  bestDay!==null ? fmt(bestDay) : '—', 'var(--green)');
+  set(`${prefixId}-worst`, worstDay!==null ? fmt(worstDay) : '—', 'var(--red)');
+  set(`${prefixId}-avg`,   avgDay!==null ? fmt(avgDay) : '—', col(avgDay));
 }
 
 function renderAcctMonthlyReturns(tr) {
@@ -3914,7 +4028,7 @@ async function processFile(file) {
     }
 
     // Apply manual algo name if selected (Quantleap only)
-    const algoMode = document.querySelector('input[name="algo-mode"]:checked')?.value || 'auto';
+    const algoMode = 'auto';
     if (currentASP !== 'tradetron' && algoMode === 'manual') {
       const manualAlgo = document.getElementById('manual-algo-name')?.value?.trim();
       if (!manualAlgo) { toast('Please enter an algo name for Manual mode', 'error'); setProgress(false); return; }
@@ -3985,7 +4099,7 @@ async function processFile(file) {
     }
 
     const uploadKey = Date.now().toString();
-    const uploader = document.querySelector('input[name="uploader"]:checked')?.value || 'SKVK User1';
+    const uploader = (currentUser?.displayName || currentUser?.email || 'Unknown');
     const rec = { hash:fk, filename:file.name, uploaded_at:new Date().toISOString(), added, skipped, updated: updated||0, source: trades[0]?.source||'?', uploaded_by: uploader };
     if (db) await db.ref('journal/uploads/'+uploadKey).set(rec);
     uploads.push(rec);
@@ -4694,15 +4808,17 @@ function drawMonthly(mMap) {
 }
 
 function drawDashCalHeatmap(tr) {
-  const today = new Date();
-  const yr = today.getFullYear();
-  const mo = today.getMonth();
-  const ym = `${yr}-${String(mo+1).padStart(2,'0')}`;
-  const monthName = today.toLocaleDateString('en-IN',{month:'long',year:'numeric'});
+  const ym = getSelectedYM('dash-month-mode', 'dash-month-select');
+  const [yr, mo1] = ym.split('-').map(Number);
+  const mo = mo1 - 1;
+  const monthName = new Date(yr, mo, 1).toLocaleDateString('en-IN',{month:'long',year:'numeric'});
   const titleEl = document.getElementById('dash-cal-title');
-  if (titleEl) titleEl.textContent = `Current Month P&L — ${monthName}`;
+  if (titleEl) titleEl.textContent = `Monthly P&L — ${monthName}`;
   const container = document.getElementById('dash-cal-heatmap');
   if (!container) return;
+
+  // Render monthly perf tiles
+  renderMonthlyPerfTiles(tr, ym, 'dash-mp', 'dash-monthly-perf-label');
 
   const dayPnl = {};
   tr.forEach(t => { const pd=pnlDate(t); if(pd&&pd.startsWith(ym)) dayPnl[pd]=(dayPnl[pd]||0)+(t.pnl||0); });
@@ -4710,7 +4826,7 @@ function drawDashCalHeatmap(tr) {
   const dim = new Date(yr, mo+1, 0).getDate();
   const firstDow = new Date(yr, mo, 1).getDay();
   const startOffset = firstDow===0 ? 6 : firstDow-1;
-  const todayStr = today.toISOString().slice(0,10);
+  const todayStr = new Date().toISOString().slice(0,10);
 
   function fmtC(v){if(v===null)return '—';const a=Math.abs(v),s=v>=0?'+':'-';if(a>=100000)return s+(a/100000).toFixed(1)+'L';if(a>=1000)return s+(a/1000).toFixed(1)+'K';return s+Math.round(a);}
 
@@ -6793,12 +6909,17 @@ function selectASP(asp) {
     btnT.style.background = 'var(--blue)'; btnT.style.color = '#fff'; btnT.style.borderColor = 'var(--blue)';
     btnQ.style.background = 'var(--bg)';   btnQ.style.color = 'var(--text1)'; btnQ.style.borderColor = 'var(--border)';
     ttWrap.style.display = 'block';
-    // Populate algo dropdown from algoMeta
+    // Populate Basket/Group/Strategy dropdown from all 3 tiers
     const sel = document.getElementById('tradetron-algo-select');
     if (sel) {
-      const names = Object.keys(algoMeta).sort();
-      sel.innerHTML = '<option value="">— choose algo —</option>' +
-        names.map(n => `<option value="${n}">${algoMeta[n]?.display_name || n}</option>`).join('');
+      const baskets   = Object.keys(algoGroups).sort();
+      const groups    = Object.keys(algoGroupsData).sort();
+      const strategies= Object.keys(algoMeta).sort();
+      let opts = '<option value="">— choose Basket / Group / Strategy —</option>';
+      if (baskets.length)    opts += `<optgroup label="── Baskets ──">${baskets.map(k=>`<option value="${k}">${algoGroups[k]?.name||k}</option>`).join('')}</optgroup>`;
+      if (groups.length)     opts += `<optgroup label="── Groups ──">${groups.map(k=>`<option value="${k}">${algoGroupsData[k]?.name||k}</option>`).join('')}</optgroup>`;
+      if (strategies.length) opts += `<optgroup label="── Strategies ──">${strategies.map(k=>`<option value="${k}">${algoMeta[k]?.display_name||k}</option>`).join('')}</optgroup>`;
+      sel.innerHTML = opts;
     }
     // Populate account dropdown from nicknames — all configured accounts always visible
     const acctSel = document.getElementById('tradetron-acct-select');
