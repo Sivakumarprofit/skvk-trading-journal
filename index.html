@@ -2,6 +2,9 @@
 ==========================================================
   SKVK TRADING JOURNAL — VERSION HISTORY
 ==========================================================
+  v20.7 | 2026-06-30 | Added thin vertical divider lines between Row 2 nav tabs for better
+         |            | visual separation/distinguishability; dividers hidden adjacent to active tab.
+  ──────────────────────────────────────────────────────
   v20.6 | 2026-06-30 | Removed "Analytics — Capital Deployment" tab and all related code
          |            | (Tables 1/2/3a/3b, margin sync, basket/underlying/tradetype allocation,
          |            | month-end freeze) — capital allocation will instead be managed inside the
@@ -609,7 +612,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>SKVK Trading Journal v20.6</title>
+<title>SKVK Trading Journal v20.7</title>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -731,7 +734,7 @@ body {
 .nav-tabs::-webkit-scrollbar-track { background: var(--bg2); }
 .nav-tab {
   display: flex; align-items: center; justify-content: center; gap: 4px;
-  padding: 0 11px;
+  padding: 0 14px;
   font-size: 0.76rem; font-weight: 600;
   color: var(--text1);
   background: none; border: none; cursor: pointer;
@@ -739,9 +742,14 @@ body {
   white-space: nowrap; text-align: center; flex-shrink: 0;
   letter-spacing: 0.01em; line-height: 1.2;
 }
+.nav-tab:not(:last-child)::before {
+  content: ''; position: absolute; right: -1px; top: 9px; bottom: 9px;
+  width: 1px; background: var(--border);
+}
 .nav-tab:hover { color: var(--text0); background: var(--bg2); border-radius: 6px; }
 .nav-tab.active { color: #fff; font-weight: 700; background: var(--blue); border-radius: 7px; }
 .nav-tab.active::after { display: none; }
+.nav-tab.active::before, .nav-tab.active + .nav-tab::before { background: transparent; }
 .topbar-right { display: flex; align-items: center; flex-shrink: 0; padding: 0 4px; }
 /* ── SIGN-OUT POWER BUTTON ── */
 #loginScreen {
@@ -1542,7 +1550,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div class="login-logo">📋</div>
     <div class="login-title">
       SKVK Trading Journal
-      <span class="login-vbadge">v20.6</span>
+      <span class="login-vbadge">v20.7</span>
     </div>
     <div class="login-sub">Sign in with your authorised Google account to access the journal.</div>
     <button class="google-signin-btn" id="googleSignInBtn" onclick="signInWithGoogle()">
@@ -1574,7 +1582,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
       <div class="brand">
         <span class="brand-dot"></span>
         SKVK Trading Journal
-        <span style="font-size:0.78rem;background:#1a73e8;color:#fff;padding:2px 8px;border-radius:8px;font-weight:700;margin-left:4px;">v20.6</span>
+        <span style="font-size:0.78rem;background:#1a73e8;color:#fff;padding:2px 8px;border-radius:8px;font-weight:700;margin-left:4px;">v20.7</span>
       </div>
     </div>
     <div id="topbar-meta">
