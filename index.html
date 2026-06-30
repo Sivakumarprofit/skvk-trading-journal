@@ -2,6 +2,12 @@
 ==========================================================
   SKVK TRADING JOURNAL — VERSION HISTORY
 ==========================================================
+  v20.6 | 2026-06-30 | Removed "Analytics — Capital Deployment" tab and all related code
+         |            | (Tables 1/2/3a/3b, margin sync, basket/underlying/tradetype allocation,
+         |            | month-end freeze) — capital allocation will instead be managed inside the
+         |            | SKVK Margin Availability app itself. 2-row topbar and basket-capital-grid
+         |            | bug fix from v20.5 retained.
+  ──────────────────────────────────────────────────────
   v20.5 | 2026-06-29 | Topbar redesign: 2-row layout — Row 1: big brand title left + live dot,
          |            | db-status, last-updated right (smaller); Row 2: all nav tabs full-width;
          |            | New tab "Analytics — Capital Deployment" after "Analytics — Account wise";
@@ -603,7 +609,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>SKVK Trading Journal v20.5</title>
+<title>SKVK Trading Journal v20.6</title>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -1536,7 +1542,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div class="login-logo">📋</div>
     <div class="login-title">
       SKVK Trading Journal
-      <span class="login-vbadge">v20.5</span>
+      <span class="login-vbadge">v20.6</span>
     </div>
     <div class="login-sub">Sign in with your authorised Google account to access the journal.</div>
     <button class="google-signin-btn" id="googleSignInBtn" onclick="signInWithGoogle()">
@@ -1568,7 +1574,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
       <div class="brand">
         <span class="brand-dot"></span>
         SKVK Trading Journal
-        <span style="font-size:0.78rem;background:#1a73e8;color:#fff;padding:2px 8px;border-radius:8px;font-weight:700;margin-left:4px;">v20.5</span>
+        <span style="font-size:0.78rem;background:#1a73e8;color:#fff;padding:2px 8px;border-radius:8px;font-weight:700;margin-left:4px;">v20.6</span>
       </div>
     </div>
     <div id="topbar-meta">
@@ -1592,7 +1598,6 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
       <button class="nav-tab active" onclick="showPage('journal')"        data-page="journal">📋 Daily Journal</button>
       <button class="nav-tab" onclick="showPage('dashboard')"             data-page="dashboard">📊 Analytics — Basket</button>
       <button class="nav-tab" onclick="showPage('acctreport')"            data-page="acctreport">👤 Analytics — Account wise</button>
-      <button class="nav-tab" onclick="showPage('capdeployment')"         data-page="capdeployment">💰 Analytics — Capital Deployment</button>
       <button class="nav-tab" onclick="showPage('upload')"                data-page="upload">⬆ Upload Trade Reports</button>
       <button class="nav-tab" onclick="showPage('stockmock')"             data-page="stockmock">🔬 StockMock Compare</button>
       <button class="nav-tab" onclick="showPage('compare')"               data-page="compare">⚖️ Compare Broker Execution</button>
@@ -2054,110 +2059,6 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
       <p>Upload a CSV report or add trades manually to get started</p>
     </div>
   </div>
-</div>
-
-<!-- ══════════ ANALYTICS — CAPITAL DEPLOYMENT ══════════ -->
-<div id="page-capdeployment" class="page">
-  <div class="page-header">
-    <div>
-      <div class="page-title">Analytics — Capital Deployment</div>
-      <div class="page-subtitle">Account Capital · Basket Allocation · Underlying & Type Split</div>
-    </div>
-    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
-      <div id="cap-sync-status" style="font-size:0.72rem;color:var(--text3);"></div>
-      <button onclick="capForceSync()" style="background:var(--blue);color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:0.8rem;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;">
-        🔄 Force Sync Margin
-      </button>
-    </div>
-  </div>
-
-  <!-- ── TABLE 1: Account Capital ── -->
-  <div style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:24px;">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px;">
-      <div style="font-size:1rem;font-weight:800;color:var(--text0);display:flex;align-items:center;gap:8px;">
-        🏦 Table 1 — Account Capital
-      </div>
-      <div style="font-size:0.72rem;color:var(--text3);">Auto-synced at 10:00 AM daily from Margin Calculator · Override allowed</div>
-    </div>
-    <div style="overflow-x:auto;">
-      <table style="width:100%;border-collapse:collapse;font-size:0.82rem;">
-        <thead>
-          <tr style="background:#1e3a5f;color:#fff;">
-            <th style="padding:9px 12px;text-align:left;font-weight:700;border-radius:6px 0 0 0;">#</th>
-            <th style="padding:9px 12px;text-align:left;font-weight:700;">Broker Account</th>
-            <th style="padding:9px 12px;text-align:right;font-weight:700;">Last Synced</th>
-            <th style="padding:9px 12px;text-align:right;font-weight:700;">Total Margin (₹)</th>
-            <th style="padding:9px 12px;text-align:right;font-weight:700;">Deploy %</th>
-            <th style="padding:9px 12px;text-align:right;font-weight:700;border-radius:0 6px 0 0;">Capital for Trading (₹)</th>
-          </tr>
-        </thead>
-        <tbody id="cap-acct-tbody">
-          <tr><td colspan="6" style="text-align:center;padding:20px;color:var(--text3);font-style:italic;">Loading accounts…</td></tr>
-        </tbody>
-        <tfoot>
-          <tr style="background:var(--bg2);font-weight:700;border-top:2px solid var(--border);">
-            <td colspan="3" style="padding:9px 12px;color:var(--text2);">TOTAL</td>
-            <td style="padding:9px 12px;text-align:right;" id="cap-total-margin">—</td>
-            <td style="padding:9px 12px;text-align:right;">—</td>
-            <td style="padding:9px 12px;text-align:right;" id="cap-total-deploy">—</td>
-          </tr>
-        </tfoot>
-      </table>
-    </div>
-  </div>
-
-  <!-- ── TABLE 2: Account → Basket Allocation ── -->
-  <div style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:24px;">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px;">
-      <div style="font-size:1rem;font-weight:800;color:var(--text0);display:flex;align-items:center;gap:8px;">
-        🧺 Table 2 — Account → Basket Allocation (%)
-      </div>
-      <button onclick="saveAcctBasketAlloc()" style="background:var(--green);color:#fff;border:none;border-radius:8px;padding:7px 16px;font-size:0.78rem;font-weight:700;cursor:pointer;">💾 Save Allocation</button>
-    </div>
-    <div style="font-size:0.75rem;color:var(--text3);margin-bottom:10px;">Enter what % of each account's capital is allocated to each basket. Rows = accounts, Columns = baskets. Leave blank or 0 for NA.</div>
-    <div style="overflow-x:auto;">
-      <div id="cap-basket-alloc-wrap">
-        <div style="text-align:center;padding:20px;color:var(--text3);font-style:italic;">Loading…</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ── TABLE 3a: Basket → Underlying Split ── -->
-  <div style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:24px;">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px;">
-      <div style="font-size:1rem;font-weight:800;color:var(--text0);display:flex;align-items:center;gap:8px;">
-        📈 Table 3a — Basket → Underlying Allocation (%)
-      </div>
-      <button onclick="saveUnderlyingAlloc()" style="background:var(--green);color:#fff;border:none;border-radius:8px;padding:7px 16px;font-size:0.78rem;font-weight:700;cursor:pointer;">💾 Save</button>
-    </div>
-    <div style="font-size:0.75rem;color:var(--text3);margin-bottom:10px;">
-      Underlying headers are editable — click ✏️ to rename.
-    </div>
-    <div style="overflow-x:auto;">
-      <div id="cap-underlying-wrap">
-        <div style="text-align:center;padding:20px;color:var(--text3);font-style:italic;">Loading…</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ── TABLE 3b: Basket → Trade Type Split ── -->
-  <div style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:24px;">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px;">
-      <div style="font-size:1rem;font-weight:800;color:var(--text0);display:flex;align-items:center;gap:8px;">
-        🗂️ Table 3b — Basket → Trade Type Allocation (%)
-      </div>
-      <button onclick="saveTradeTypeAlloc()" style="background:var(--green);color:#fff;border:none;border-radius:8px;padding:7px 16px;font-size:0.78rem;font-weight:700;cursor:pointer;">💾 Save</button>
-    </div>
-    <div style="font-size:0.75rem;color:var(--text3);margin-bottom:10px;">
-      Trade type headers are editable — click ✏️ to rename.
-    </div>
-    <div style="overflow-x:auto;">
-      <div id="cap-tradetype-wrap">
-        <div style="text-align:center;padding:20px;color:var(--text3);font-style:italic;">Loading…</div>
-      </div>
-    </div>
-  </div>
-
 </div>
 
 <!-- ══════════ UPLOAD ══════════ -->
@@ -3948,8 +3849,6 @@ function startListeners() {
   listenGroups();
   listenAlgoGroups();
   listenMCX();
-  listenCapDeployment();
-  initMarginDb();
 
   // Gate: wait for trades + algos before first render
   // Nicknames excluded from gate — path may not exist, causing the listener to never fire
@@ -4048,7 +3947,6 @@ function showPage(name) {
   if (name === 'algos') { renderGroupList(); renderAlgoPage(); }
   if (name === 'compare') { populateCompareSelects(); }
   if (name === 'acctreport') { acctWeekOffset = 0; initAcctReport(); }
-  if (name === 'capdeployment') { renderCapDeployment(); }
 }
 
 // ════════════════════════════════════════════════════
@@ -8534,416 +8432,6 @@ function signInWithGoogle() {
         errEl.style.display = 'block';
       }
     });
-}
-
-// ══════════════════════════════════════════════════════
-// ANALYTICS — CAPITAL DEPLOYMENT
-// ══════════════════════════════════════════════════════
-
-// Firebase 2nd app for Margin Calculator (read-only)
-let marginDb = null;
-const MARGIN_CONFIG = {
-  apiKey:            "AIzaSyD8e6K0r4_placeholder_margin_key",  // Will read from margin app
-  databaseURL:       "https://skvk-margin-calculator-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId:         "skvk-margin-calculator",
-};
-
-// In-memory state for Capital Deployment
-let capMarginData   = {}; // { accountId: { totalMargin, deployPct, clientId, nickname, date, savedAt } }
-let capAcctOverride = {}; // { accountId: { deployPct } } — manual overrides stored in journal Firebase
-let acctBasketAlloc = {}; // { clientId: { basketName: pct } } — journal/acct_basket_alloc
-let underlyingAlloc = {}; // { basketName: { col0..col5: pct } } — journal/basket_underlying_alloc
-let underlyingNames = ['NIFTY','SENSEX','BANKNIFTY','MIDCAP','FINNIFTY','OTHERS']; // editable
-let tradeTypeAlloc  = {}; // { basketName: { col0..col5: pct } }
-let tradeTypeNames  = ['INTRA','POSITIONAL','ODTE','1DTE','SWING','OTHERS']; // editable
-let capSyncTimer    = null;
-let capLastSyncTs   = 0;
-
-// ── Init second Firebase app for Margin Calculator ──
-function initMarginDb() {
-  try {
-    if (firebase.apps.find(a => a.name === 'marginApp')) {
-      marginDb = firebase.app('marginApp').database();
-    } else {
-      const marginApp = firebase.initializeApp(MARGIN_CONFIG, 'marginApp');
-      marginDb = marginApp.database();
-    }
-  } catch(e) {
-    console.warn('Margin DB init failed:', e);
-  }
-}
-
-// ── Load stored alloc data from Journal Firebase ──
-function listenCapDeployment() {
-  if (!db) return;
-  db.ref('journal/acct_basket_alloc').on('value', snap => {
-    acctBasketAlloc = snap.val() || {};
-    if (document.getElementById('page-capdeployment')?.classList.contains('active')) renderCapDeployment();
-  });
-  db.ref('journal/basket_underlying_alloc').on('value', snap => {
-    const d = snap.val() || {};
-    underlyingAlloc = d.data || {};
-    if (d.names) underlyingNames = d.names;
-    if (document.getElementById('page-capdeployment')?.classList.contains('active')) renderCapDeployment();
-  });
-  db.ref('journal/basket_tradetype_alloc').on('value', snap => {
-    const d = snap.val() || {};
-    tradeTypeAlloc = d.data || {};
-    if (d.names) tradeTypeNames = d.names;
-    if (document.getElementById('page-capdeployment')?.classList.contains('active')) renderCapDeployment();
-  });
-  db.ref('journal/cap_acct_override').on('value', snap => {
-    capAcctOverride = snap.val() || {};
-  });
-  db.ref('journal/cap_sync_meta').once('value').then(snap => {
-    const meta = snap.val() || {};
-    capLastSyncTs = meta.lastSyncTs || 0;
-    if (meta.data) { capMarginData = meta.data; updateCapSyncStatus(); }
-  });
-  // Schedule 10 AM daily sync
-  scheduleCapSync();
-}
-
-function scheduleCapSync() {
-  if (capSyncTimer) clearInterval(capSyncTimer);
-  capSyncTimer = setInterval(() => {
-    const now = new Date();
-    if (now.getHours() === 10 && now.getMinutes() === 0) {
-      const today = now.toISOString().slice(0,10);
-      const lastDate = capLastSyncTs ? new Date(capLastSyncTs).toISOString().slice(0,10) : '';
-      if (lastDate !== today) capForceSync();
-    }
-  }, 60000); // check every minute
-}
-
-async function capForceSync() {
-  const statusEl = document.getElementById('cap-sync-status');
-  if (statusEl) statusEl.textContent = '🔄 Syncing…';
-  if (!marginDb) initMarginDb();
-  if (!marginDb) { if(statusEl) statusEl.textContent = '❌ Margin DB not connected'; return; }
-  try {
-    const snap = await marginDb.ref('margin/accounts_latest').once('value');
-    const raw = snap.val() || {};
-    capMarginData = {};
-    Object.entries(raw).forEach(([id, e]) => {
-      if (!e || !e.clientId) return;
-      const am = (parseFloat(e.cash)||0) + (parseFloat(e.collateralEquity)||0) + (parseFloat(e.collateralLiquid)||0);
-      capMarginData[e.clientId] = {
-        totalMargin: am,
-        deployPct:   e.deployPct !== undefined ? parseFloat(e.deployPct) : 0,
-        nickname:    e.nickname || id,
-        date:        e.date || '',
-        savedAt:     e.savedAt || Date.now(),
-        marginId:    id
-      };
-    });
-    capLastSyncTs = Date.now();
-    // Persist to journal Firebase so it survives reload
-    if (db) await db.ref('journal/cap_sync_meta').set({ lastSyncTs: capLastSyncTs, data: capMarginData });
-    updateCapSyncStatus();
-    renderCapDeployment();
-    toast('✓ Margin data synced', 'success');
-    // Auto-freeze if last trading day of month
-    checkMonthEndFreeze();
-  } catch(e) {
-    console.error('Margin sync error:', e);
-    if (statusEl) statusEl.textContent = '❌ Sync failed: ' + e.message;
-    toast('Margin sync failed: ' + e.message, 'error');
-  }
-}
-
-function updateCapSyncStatus() {
-  const el = document.getElementById('cap-sync-status');
-  if (!el) return;
-  if (!capLastSyncTs) { el.textContent = 'Never synced'; return; }
-  const d = new Date(capLastSyncTs);
-  el.textContent = 'Last synced: ' + d.toLocaleDateString('en-IN',{day:'2-digit',month:'short'}) + ' ' + d.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',hour12:true});
-}
-
-// ── Check if today is last trading day of month → freeze capital ──
-function checkMonthEndFreeze() {
-  const now = new Date();
-  const today = now.toISOString().slice(0,10);
-  const tomorrow = new Date(now); tomorrow.setDate(tomorrow.getDate()+1);
-  const isLastOfMonth = tomorrow.getMonth() !== now.getMonth();
-  // Skip weekends
-  const dayOfWeek = now.getDay();
-  if (isLastOfMonth && dayOfWeek !== 0 && dayOfWeek !== 6) {
-    freezeMonthCapital(today.slice(0,7));
-  }
-}
-
-async function freezeMonthCapital(ym) {
-  if (!db) return;
-  const updates = {};
-  Object.entries(capMarginData).forEach(([cid, d]) => {
-    const override = capAcctOverride[cid];
-    const deployPct = override?.deployPct !== undefined ? override.deployPct : d.deployPct;
-    const capital = Math.round(d.totalMargin * deployPct / 100);
-    updates[`journal/capital_v2/${cid}/${ym}`] = capital;
-  });
-  if (Object.keys(updates).length) {
-    await db.ref().update(updates);
-    toast('✓ Month-end capital frozen for ' + ym, 'success');
-  }
-}
-
-// ── Main render ──
-function renderCapDeployment() {
-  renderCapAcctTable();
-  renderCapBasketAllocTable();
-  renderCapUnderlyingTable();
-  renderCapTradeTypeTable();
-  updateCapSyncStatus();
-}
-
-function renderCapAcctTable() {
-  const tbody = document.getElementById('cap-acct-tbody');
-  if (!tbody) return;
-
-  // Merge synced margin data with nicknames
-  const allIds = [...new Set([...Object.keys(capMarginData), ...Object.keys(accountNicknames)])];
-  if (!allIds.length) {
-    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;color:var(--text3);font-style:italic;">No accounts found — click Force Sync to pull from Margin Calculator</td></tr>';
-    return;
-  }
-
-  let totalMargin = 0, totalDeploy = 0;
-  let html = '';
-  allIds.forEach((cid, i) => {
-    const d = capMarginData[cid] || {};
-    const override = capAcctOverride[cid] || {};
-    const nick = getClientLabel(cid);
-    const tm = d.totalMargin || 0;
-    const storedDeploy = override.deployPct !== undefined ? override.deployPct : (d.deployPct || 0);
-    const capital = Math.round(tm * storedDeploy / 100);
-    const dateStr = d.date || (d.savedAt ? new Date(d.savedAt).toLocaleDateString('en-IN',{day:'2-digit',month:'short'}) : '—');
-    totalMargin += tm; totalDeploy += capital;
-    html += `<tr style="border-bottom:1px solid var(--border);${i%2===1?'background:var(--bg2)':''}">
-      <td style="padding:8px 12px;color:var(--text3);font-size:0.75rem;">${i+1}</td>
-      <td style="padding:8px 12px;font-weight:600;color:var(--text0);">${nick}</td>
-      <td style="padding:8px 12px;text-align:right;font-size:0.78rem;color:var(--text2);">${dateStr}</td>
-      <td style="padding:8px 12px;text-align:right;font-weight:600;">${tm ? '₹'+Math.round(tm).toLocaleString('en-IN') : '<span style="color:var(--text3)">—</span>'}</td>
-      <td style="padding:8px 12px;text-align:right;">
-        <input type="number" id="cap-deploy-pct-${cid}" value="${storedDeploy}" min="0" max="100" step="0.5"
-          style="width:70px;padding:4px 6px;border:1px solid var(--border);border-radius:6px;font-size:0.8rem;text-align:right;outline:none;"
-          onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--border)'"
-          onchange="capUpdateRow('${cid}')"> %
-      </td>
-      <td style="padding:8px 12px;text-align:right;font-weight:700;color:var(--blue);" id="cap-capital-${cid}">
-        ${capital ? '₹'+capital.toLocaleString('en-IN') : '<span style="color:var(--text3)">—</span>'}
-      </td>
-    </tr>`;
-  });
-  tbody.innerHTML = html;
-  document.getElementById('cap-total-margin').textContent = totalMargin ? '₹'+Math.round(totalMargin).toLocaleString('en-IN') : '—';
-  document.getElementById('cap-total-deploy').textContent = totalDeploy ? '₹'+Math.round(totalDeploy).toLocaleString('en-IN') : '—';
-}
-
-async function capUpdateRow(cid) {
-  const inp = document.getElementById('cap-deploy-pct-'+cid);
-  if (!inp) return;
-  const pct = parseFloat(inp.value) || 0;
-  if (!capAcctOverride[cid]) capAcctOverride[cid] = {};
-  capAcctOverride[cid].deployPct = pct;
-  const tm = capMarginData[cid]?.totalMargin || 0;
-  const capital = Math.round(tm * pct / 100);
-  const capEl = document.getElementById('cap-capital-'+cid);
-  if (capEl) capEl.innerHTML = capital ? '₹'+capital.toLocaleString('en-IN') : '<span style="color:var(--text3)">—</span>';
-  if (db) await db.ref('journal/cap_acct_override/'+cid).update({ deployPct: pct });
-  // Also recalculate total
-  renderCapAcctTable();
-}
-
-function renderCapBasketAllocTable() {
-  const wrap = document.getElementById('cap-basket-alloc-wrap');
-  if (!wrap) return;
-  const baskets = Object.keys(algoData || {});
-  const allIds  = [...new Set([...Object.keys(capMarginData), ...Object.keys(accountNicknames)])];
-  if (!allIds.length || !baskets.length) {
-    wrap.innerHTML = '<div style="text-align:center;padding:16px;color:var(--text3);font-style:italic;">No accounts or baskets found</div>';
-    return;
-  }
-  const cols = baskets.slice(0,6); // max 6 baskets shown
-  let html = `<table style="width:100%;border-collapse:collapse;font-size:0.8rem;">
-    <thead><tr style="background:#1e3a5f;color:#fff;">
-      <th style="padding:8px 12px;text-align:left;font-weight:700;">Account</th>
-      ${cols.map(b=>`<th style="padding:8px 12px;text-align:center;font-weight:700;min-width:100px;">${b}</th>`).join('')}
-      <th style="padding:8px 12px;text-align:center;font-weight:700;color:#fbbf24;">Total %</th>
-    </tr></thead><tbody>`;
-  allIds.forEach((cid,i) => {
-    const nick = getClientLabel(cid);
-    let rowTotal = 0;
-    const cells = cols.map(b => {
-      const pct = (acctBasketAlloc[cid] && acctBasketAlloc[cid][b] !== undefined) ? acctBasketAlloc[cid][b] : 0;
-      rowTotal += pct;
-      return `<td style="padding:6px 8px;text-align:center;">
-        <input type="number" data-cid="${cid}" data-basket="${b}" value="${pct||''}" min="0" max="100" placeholder="NA"
-          style="width:70px;padding:4px 6px;border:1px solid var(--border);border-radius:6px;font-size:0.78rem;text-align:center;outline:none;"
-          onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--border)'"
-          class="basket-alloc-inp">
-      </td>`;
-    });
-    const totalColor = rowTotal > 100 ? 'var(--red)' : rowTotal === 100 ? 'var(--green)' : 'var(--text2)';
-    html += `<tr style="border-bottom:1px solid var(--border);${i%2===1?'background:var(--bg2)':''}">
-      <td style="padding:8px 12px;font-weight:600;">${nick}</td>
-      ${cells.join('')}
-      <td style="padding:8px 12px;text-align:center;font-weight:700;color:${totalColor};">${rowTotal||0}%</td>
-    </tr>`;
-  });
-  html += '</tbody></table>';
-  wrap.innerHTML = html;
-}
-
-async function saveAcctBasketAlloc() {
-  const inputs = document.querySelectorAll('.basket-alloc-inp');
-  const updates = {};
-  inputs.forEach(inp => {
-    const cid = inp.dataset.cid, basket = inp.dataset.basket;
-    const val = parseFloat(inp.value) || 0;
-    if (!updates[cid]) updates[cid] = {};
-    updates[cid][basket] = val;
-  });
-  Object.assign(acctBasketAlloc, updates);
-  if (db) {
-    const dbUpdates = {};
-    Object.entries(updates).forEach(([cid,bmap]) => {
-      Object.entries(bmap).forEach(([b,pct]) => { dbUpdates[`journal/acct_basket_alloc/${cid}/${b}`] = pct; });
-    });
-    await db.ref().update(dbUpdates);
-  }
-  toast('✓ Basket allocation saved', 'success');
-  renderCapBasketAllocTable();
-  // Also freeze basket capital in journal/capital_basket
-  freezeBasketCapital();
-}
-
-function freezeBasketCapital() {
-  const ym = new Date().toISOString().slice(0,7);
-  const basketCap = {};
-  Object.entries(acctBasketAlloc).forEach(([cid, bmap]) => {
-    const d = capMarginData[cid] || {};
-    const override = capAcctOverride[cid] || {};
-    const deployPct = override.deployPct !== undefined ? override.deployPct : (d.deployPct || 0);
-    const capital = (d.totalMargin || 0) * deployPct / 100;
-    Object.entries(bmap).forEach(([basket, pct]) => {
-      if (!basketCap[basket]) basketCap[basket] = 0;
-      basketCap[basket] += capital * pct / 100;
-    });
-  });
-  if (!db) return;
-  const dbUpdates = {};
-  Object.entries(basketCap).forEach(([basket, amt]) => {
-    dbUpdates[`journal/capital_basket/${basket}/${ym}`] = Math.round(amt);
-    if (!capitalBasket[basket]) capitalBasket[basket] = {};
-    capitalBasket[basket][ym] = Math.round(amt);
-  });
-  if (Object.keys(dbUpdates).length) db.ref().update(dbUpdates);
-}
-
-function renderCapUnderlyingTable() {
-  const wrap = document.getElementById('cap-underlying-wrap');
-  if (!wrap) return;
-  const baskets = Object.keys(algoData || {});
-  if (!baskets.length) { wrap.innerHTML = '<div style="text-align:center;padding:16px;color:var(--text3);">No baskets configured</div>'; return; }
-  _renderAllocMatrix(wrap, baskets, underlyingNames, underlyingAlloc, 'und', 'cap-und-names');
-}
-
-function renderCapTradeTypeTable() {
-  const wrap = document.getElementById('cap-tradetype-wrap');
-  if (!wrap) return;
-  const baskets = Object.keys(algoData || {});
-  if (!baskets.length) { wrap.innerHTML = '<div style="text-align:center;padding:16px;color:var(--text3);">No baskets configured</div>'; return; }
-  _renderAllocMatrix(wrap, baskets, tradeTypeNames, tradeTypeAlloc, 'tt', 'cap-tt-names');
-}
-
-function _renderAllocMatrix(wrap, baskets, colNames, dataStore, prefix, namesId) {
-  let html = `<table style="width:100%;border-collapse:collapse;font-size:0.8rem;">
-    <thead><tr style="background:#1e3a5f;color:#fff;">
-      <th style="padding:8px 12px;text-align:left;font-weight:700;">Basket</th>
-      ${colNames.map((n,ci)=>`<th style="padding:8px 12px;text-align:center;min-width:95px;">
-        <span id="${namesId}-${ci}" style="font-weight:700;cursor:pointer;" onclick="editAllocHeader('${namesId}',${ci},'${prefix}')">${n} ✏️</span>
-      </th>`).join('')}
-      <th style="padding:8px 12px;text-align:center;font-weight:700;color:#fbbf24;">Total %</th>
-    </tr></thead><tbody>`;
-  baskets.forEach((b,i) => {
-    const rowData = dataStore[b] || {};
-    let rowTotal = 0;
-    const cells = colNames.map((_,ci) => {
-      const val = rowData[`col${ci}`] !== undefined ? rowData[`col${ci}`] : 0;
-      rowTotal += val;
-      return `<td style="padding:6px 8px;text-align:center;">
-        <input type="number" data-basket="${b}" data-col="${ci}" data-prefix="${prefix}" value="${val||''}" min="0" max="100" placeholder="NA"
-          style="width:70px;padding:4px 6px;border:1px solid var(--border);border-radius:6px;font-size:0.78rem;text-align:center;outline:none;"
-          onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--border)'"
-          class="${prefix}-alloc-inp">
-      </td>`;
-    });
-    const totalColor = rowTotal > 100 ? 'var(--red)' : rowTotal === 100 ? 'var(--green)' : 'var(--text2)';
-    html += `<tr style="border-bottom:1px solid var(--border);${i%2===1?'background:var(--bg2)':''}">
-      <td style="padding:8px 12px;font-weight:600;">${b}</td>
-      ${cells.join('')}
-      <td style="padding:8px 12px;text-align:center;font-weight:700;color:${totalColor};">${rowTotal||0}%</td>
-    </tr>`;
-  });
-  html += '</tbody></table>';
-  wrap.innerHTML = html;
-}
-
-function editAllocHeader(namesId, ci, prefix) {
-  const el = document.getElementById(`${namesId}-${ci}`);
-  if (!el) return;
-  const arr = prefix === 'und' ? underlyingNames : tradeTypeNames;
-  const cur = arr[ci];
-  const newName = prompt('Rename "'+cur+'" to:', cur);
-  if (!newName || newName.trim() === cur) return;
-  arr[ci] = newName.trim();
-  el.textContent = newName.trim() + ' ✏️';
-  // Save names to Firebase
-  const path = prefix === 'und' ? 'journal/basket_underlying_alloc' : 'journal/basket_tradetype_alloc';
-  if (db) db.ref(path+'/names').set(arr);
-}
-
-async function saveUnderlyingAlloc() {
-  const inputs = document.querySelectorAll('.und-alloc-inp');
-  const updates = {};
-  inputs.forEach(inp => {
-    const b = inp.dataset.basket, ci = inp.dataset.col;
-    const val = parseFloat(inp.value) || 0;
-    if (!updates[b]) updates[b] = {};
-    updates[b][`col${ci}`] = val;
-  });
-  Object.assign(underlyingAlloc, updates);
-  if (db) {
-    const dbUp = {};
-    Object.entries(updates).forEach(([b,cols]) => {
-      Object.entries(cols).forEach(([c,v]) => { dbUp[`journal/basket_underlying_alloc/data/${b}/${c}`] = v; });
-    });
-    dbUp['journal/basket_underlying_alloc/names'] = underlyingNames;
-    await db.ref().update(dbUp);
-  }
-  toast('✓ Underlying allocation saved', 'success');
-}
-
-async function saveTradeTypeAlloc() {
-  const inputs = document.querySelectorAll('.tt-alloc-inp');
-  const updates = {};
-  inputs.forEach(inp => {
-    const b = inp.dataset.basket, ci = inp.dataset.col;
-    const val = parseFloat(inp.value) || 0;
-    if (!updates[b]) updates[b] = {};
-    updates[b][`col${ci}`] = val;
-  });
-  Object.assign(tradeTypeAlloc, updates);
-  if (db) {
-    const dbUp = {};
-    Object.entries(updates).forEach(([b,cols]) => {
-      Object.entries(cols).forEach(([c,v]) => { dbUp[`journal/basket_tradetype_alloc/data/${b}/${c}`] = v; });
-    });
-    dbUp['journal/basket_tradetype_alloc/names'] = tradeTypeNames;
-    await db.ref().update(dbUp);
-  }
-  toast('✓ Trade type allocation saved', 'success');
 }
 
 function signOut() {
