@@ -2,6 +2,11 @@
 ==========================================================
   SKVK TRADING JOURNAL — VERSION HISTORY
 ==========================================================
+  v20.8 | 2026-07-01 | Global navy topbar theme (Row1 #1e3a5f, Row2 nav band #0f2440) to match
+         |            | Margin Availability app styling; brand/meta/nav-tab text recolored for
+         |            | contrast; dividers recolored for dark bg. Manual Entry removed from nav
+         |            | tabs and moved into App Settings as last card option.
+  ──────────────────────────────────────────────────────
   v20.7 | 2026-06-30 | Added thin vertical divider lines between Row 2 nav tabs for better
          |            | visual separation/distinguishability; dividers hidden adjacent to active tab.
   ──────────────────────────────────────────────────────
@@ -612,7 +617,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>SKVK Trading Journal v20.7</title>
+<title>SKVK Trading Journal v20.8</title>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -677,8 +682,8 @@ body {
 /* ── TOP BAR ── */
 #topbar {
   position: fixed; top: 0; left: 0; right: 0; z-index: 100;
-  background: #fff;
-  border-bottom: 1px solid var(--border);
+  background: #1e3a5f;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
   box-shadow: var(--shadow-sm);
   display: flex; flex-direction: column;
   padding: 0;
@@ -686,7 +691,7 @@ body {
 #topbar-row1 {
   display: flex; align-items: center; justify-content: space-between;
   padding: 7px 16px 5px 20px;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid rgba(255,255,255,0.08);
   gap: 12px;
 }
 .brand-block {
@@ -698,7 +703,7 @@ body {
   font-weight: 800;
   font-size: 1.28rem;
   letter-spacing: -0.03em;
-  color: var(--text0);
+  color: #fff;
   display: flex; align-items: center; gap: 7px;
   white-space: nowrap;
 }
@@ -713,30 +718,30 @@ body {
 #topbar-meta { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
 #brand-subline { display: flex; align-items: center; gap: 8px; }
 #last-updated-tag {
-  font-size: 0.68rem; color: var(--text2);
+  font-size: 0.68rem; color: rgba(255,255,255,0.65);
   white-space: nowrap; max-width: 320px;
   overflow: hidden; text-overflow: ellipsis;
 }
 #db-status {
-  font-size: 0.63rem; color: var(--text3);
+  font-size: 0.63rem; color: rgba(255,255,255,0.5);
   display: flex; align-items: center; gap: 4px;
   white-space: nowrap; flex-shrink: 0;
 }
-#db-status.connected { color: var(--green); }
-#topbar-row2 { display: flex; align-items: stretch; padding: 0 8px; gap: 0; }
+#db-status.connected { color: #6fe0a0; }
+#topbar-row2 { display: flex; align-items: stretch; padding: 0 8px; gap: 0; background: #0f2440; }
 .nav-tabs {
   display: flex; align-items: stretch; height: 40px; gap: 1px;
   flex-wrap: nowrap; overflow-x: auto; flex: 1;
-  scrollbar-width: thin; scrollbar-color: var(--blue) var(--bg2);
+  scrollbar-width: thin; scrollbar-color: var(--blue) #0f2440;
 }
 .nav-tabs::-webkit-scrollbar { height: 3px; }
 .nav-tabs::-webkit-scrollbar-thumb { background: var(--blue); border-radius: 2px; }
-.nav-tabs::-webkit-scrollbar-track { background: var(--bg2); }
+.nav-tabs::-webkit-scrollbar-track { background: #0f2440; }
 .nav-tab {
   display: flex; align-items: center; justify-content: center; gap: 4px;
   padding: 0 14px;
   font-size: 0.76rem; font-weight: 600;
-  color: var(--text1);
+  color: rgba(255,255,255,0.72);
   background: none; border: none; cursor: pointer;
   position: relative; transition: all 0.15s;
   white-space: nowrap; text-align: center; flex-shrink: 0;
@@ -744,9 +749,9 @@ body {
 }
 .nav-tab:not(:last-child)::before {
   content: ''; position: absolute; right: -1px; top: 9px; bottom: 9px;
-  width: 1px; background: var(--border);
+  width: 1px; background: rgba(255,255,255,0.14);
 }
-.nav-tab:hover { color: var(--text0); background: var(--bg2); border-radius: 6px; }
+.nav-tab:hover { color: #fff; background: rgba(255,255,255,0.08); border-radius: 6px; }
 .nav-tab.active { color: #fff; font-weight: 700; background: var(--blue); border-radius: 7px; }
 .nav-tab.active::after { display: none; }
 .nav-tab.active::before, .nav-tab.active + .nav-tab::before { background: transparent; }
@@ -805,8 +810,8 @@ body {
 /* ── SIGN-OUT POWER BUTTON ── */
 .signout-btn {
   width: 32px; height: 32px; border-radius: 8px;
-  border: 1.5px solid var(--border2);
-  background: var(--bg2); color: var(--text2);
+  border: 1.5px solid rgba(255,255,255,0.25);
+  background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.8);
   cursor: pointer; display: flex; align-items: center;
   justify-content: center; transition: all 0.15s; flex-shrink: 0;
   padding: 0;
@@ -1550,7 +1555,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div class="login-logo">📋</div>
     <div class="login-title">
       SKVK Trading Journal
-      <span class="login-vbadge">v20.7</span>
+      <span class="login-vbadge">v20.8</span>
     </div>
     <div class="login-sub">Sign in with your authorised Google account to access the journal.</div>
     <button class="google-signin-btn" id="googleSignInBtn" onclick="signInWithGoogle()">
@@ -1582,7 +1587,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
       <div class="brand">
         <span class="brand-dot"></span>
         SKVK Trading Journal
-        <span style="font-size:0.78rem;background:#1a73e8;color:#fff;padding:2px 8px;border-radius:8px;font-weight:700;margin-left:4px;">v20.7</span>
+        <span style="font-size:0.78rem;background:#1a73e8;color:#fff;padding:2px 8px;border-radius:8px;font-weight:700;margin-left:4px;">v20.8</span>
       </div>
     </div>
     <div id="topbar-meta">
@@ -1609,7 +1614,6 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
       <button class="nav-tab" onclick="showPage('upload')"                data-page="upload">⬆ Upload Trade Reports</button>
       <button class="nav-tab" onclick="showPage('stockmock')"             data-page="stockmock">🔬 StockMock Compare</button>
       <button class="nav-tab" onclick="showPage('compare')"               data-page="compare">⚖️ Compare Broker Execution</button>
-      <button class="nav-tab" onclick="showPage('manual')"                data-page="manual">✏️ Manual Entry</button>
       <button class="nav-tab" onclick="showPage('appsettings')"           data-page="appsettings">🛠️ App Settings</button>
     </nav>
   </div>
@@ -2499,11 +2503,22 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
       </div>
     </div>
 
+    <!-- ── Manual Entry (last option) ── -->
+    <div style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:22px;box-shadow:var(--shadow-sm);display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <span style="font-size:1.3rem;">✏️</span>
+        <div>
+          <div style="font-size:0.95rem;font-weight:700;color:var(--text0);">Manual Entry</div>
+          <div style="font-size:0.75rem;color:var(--text2);margin-top:2px;">Manually add or edit a trade entry</div>
+        </div>
+      </div>
+      <button class="btn btn-primary" onclick="showPage('manual')">
+        ✏️ Open Manual Entry
+      </button>
+    </div>
+
   </div>
 </div>
-
-
-<div id="page-stockmock" class="page">
   <div class="page-header">
     <div>
       <div class="page-title">Stockmock Compare</div>
