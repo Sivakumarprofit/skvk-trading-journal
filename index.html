@@ -2,6 +2,16 @@
 ==========================================================
   SKVK TRADING JOURNAL — VERSION HISTORY
 ==========================================================
+  v21.0 | 2026-07-01 | Nav tabs (Row 2) enlarged: height 40→50px, font 0.76→0.88rem, padding
+         |            | 14→20px. Sign Out button restyled as a pill (icon + "Sign Out" text) to
+         |            | match Margin Availability, replacing the old icon-only circular button.
+         |            | Fix: journal/last_updated now also written by Manual Entry (saveManualTrade)
+         |            | — previously only the CSV upload flow updated it, so manually-added trades
+         |            | never refreshed the "Last updated by" tag. Topbar heading restyled to match
+         |            | Margin Availability: green pulsing dot (redundant with the Live status
+         |            | already shown on the left) replaced with a slider icon; "SKVK" in white,
+         |            | "Trading Journal" in light blue, version badge restyled as a softer pill.
+  ──────────────────────────────────────────────────────
   v20.9 | 2026-07-01 | Fix: page-stockmock was missing its wrapping <div id="page-stockmock"
          |            | class="page"> tag (dropped in v20.8 edit), causing StockMock Compare
          |            | content to render unconditionally on every page instead of only its own
@@ -626,7 +636,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>SKVK Trading Journal v20.9</title>
+<title>SKVK Trading Journal v21.0</title>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -715,17 +725,19 @@ body {
   font-size: 1.28rem;
   letter-spacing: -0.03em;
   color: #fff;
-  display: flex; align-items: center; gap: 7px;
+  display: flex; align-items: center; gap: 8px;
   white-space: nowrap;
 }
-.brand-dot {
-  width: 10px; height: 10px;
-  background: var(--green);
-  border-radius: 50%;
-  animation: pulse 2.5s infinite;
-  flex-shrink: 0;
+.brand-icon { font-size: 1.2rem; flex-shrink: 0; line-height: 1; }
+.brand-skvk { color: #fff; font-weight: 800; }
+.brand-appname { color: #6fa8dc; font-weight: 800; }
+.brand-vbadge {
+  font-size: 0.72rem; font-weight: 700;
+  background: rgba(255,255,255,0.12); color: #8ab4f8;
+  border: 1px solid rgba(255,255,255,0.22);
+  padding: 3px 11px; border-radius: 12px;
+  margin-left: 4px; letter-spacing: 0.02em;
 }
-@keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(0.85)} }
 #topbar-meta { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
 #brand-subline { display: flex; align-items: center; gap: 8px; }
 #last-updated-tag {
@@ -741,7 +753,7 @@ body {
 #db-status.connected { color: #6fe0a0; }
 #topbar-row2 { display: flex; align-items: stretch; padding: 0 8px; gap: 0; background: #0f2440; }
 .nav-tabs {
-  display: flex; align-items: stretch; height: 40px; gap: 1px;
+  display: flex; align-items: stretch; height: 50px; gap: 1px;
   flex-wrap: nowrap; overflow-x: auto; flex: 1;
   scrollbar-width: thin; scrollbar-color: var(--blue) #0f2440;
 }
@@ -749,9 +761,9 @@ body {
 .nav-tabs::-webkit-scrollbar-thumb { background: var(--blue); border-radius: 2px; }
 .nav-tabs::-webkit-scrollbar-track { background: #0f2440; }
 .nav-tab {
-  display: flex; align-items: center; justify-content: center; gap: 4px;
-  padding: 0 14px;
-  font-size: 0.76rem; font-weight: 600;
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 0 20px;
+  font-size: 0.88rem; font-weight: 600;
   color: rgba(255,255,255,0.72);
   background: none; border: none; cursor: pointer;
   position: relative; transition: all 0.15s;
@@ -820,17 +832,17 @@ body {
 
 /* ── SIGN-OUT POWER BUTTON ── */
 .signout-btn {
-  width: 32px; height: 32px; border-radius: 8px;
-  border: 1.5px solid rgba(255,255,255,0.25);
-  background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.8);
-  cursor: pointer; display: flex; align-items: center;
-  justify-content: center; transition: all 0.15s; flex-shrink: 0;
-  padding: 0;
+  height: 34px; padding: 0 16px; border-radius: 20px;
+  border: 1.5px solid rgba(255,255,255,0.3);
+  background: rgba(255,255,255,0.08); color: #fff;
+  cursor: pointer; display: flex; align-items: center; gap: 7px;
+  font-size: 0.8rem; font-weight: 600;
+  transition: all 0.15s; flex-shrink: 0;
 }
 .signout-btn:hover {
   background: #fce8e6; border-color: var(--red); color: var(--red);
 }
-.signout-btn svg { width: 16px; height: 16px; }
+.signout-btn svg { width: 15px; height: 15px; }
 
 /* ── ACCESS CONTROL section in App Settings ── */
 .access-card {
@@ -1566,7 +1578,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div class="login-logo">📋</div>
     <div class="login-title">
       SKVK Trading Journal
-      <span class="login-vbadge">v20.9</span>
+      <span class="login-vbadge">v21.0</span>
     </div>
     <div class="login-sub">Sign in with your authorised Google account to access the journal.</div>
     <button class="google-signin-btn" id="googleSignInBtn" onclick="signInWithGoogle()">
@@ -1602,9 +1614,10 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     </div>
     <div class="brand-block">
       <div class="brand">
-        <span class="brand-dot"></span>
-        SKVK Trading Journal
-        <span style="font-size:0.78rem;background:#1a73e8;color:#fff;padding:2px 8px;border-radius:8px;font-weight:700;margin-left:4px;">v20.9</span>
+        <span class="brand-icon">🎚️</span>
+        <span class="brand-skvk">SKVK</span>
+        <span class="brand-appname">Trading Journal</span>
+        <span class="brand-vbadge">v21.0</span>
       </div>
     </div>
     <div id="topbar-right-wrap">
@@ -1614,6 +1627,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
             <path d="M18.36 6.64A9 9 0 1 1 5.64 6.64"/>
             <line x1="12" y1="2" x2="12" y2="12"/>
           </svg>
+          Sign Out
         </button>
       </div>
     </div>
@@ -6906,6 +6920,11 @@ async function saveManualTrade() {
   const h=await tradeKey(t); t.hash=h;
   if(db) await db.ref('journal/trades/'+h).set(t);
   else { allTrades.push(t); refreshAll(); }
+  if (db) {
+    const uploader = (currentUser?.displayName || currentUser?.email || 'Unknown');
+    const now = new Date().toLocaleString('en-IN', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit', hour12:true });
+    await db.ref('journal/last_updated').set({ by: uploader, at: now });
+  }
   toast('Trade added','success'); clearManualForm();
 }
 function clearManualForm(){ ['m-broker','m-client','m-symbol','m-entry-price','m-exit-price','m-pnl','m-qty','m-exit-date','m-expiry'].forEach(id=>el(id).value=''); el('m-entry-date').value=new Date().toISOString().slice(0,10); }
