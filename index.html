@@ -2,6 +2,27 @@
 ==========================================================
   SKVK TRADING JOURNAL — VERSION HISTORY
 ==========================================================
+  v21.1 | 2026-07-03 | Journal: replaced per-price entry/exit "Manual Check" radio dots
+         |            | (which overlapped the price text and caused accidental edit-mode
+         |            | clicks) with a single row-level "Manual Check" checkbox at the end
+         |            | of each leg row (regular + Tradetron + MCX views), hover-reveal,
+         |            | sets/clears both entry & exit confirmed flags together.
+         |            | Journal Client ID tabs: fixed per-account colour coding (was plain
+         |            | blue-on-active only); active tab shows a bolder fill of its own colour.
+         |            | Monthly P&L charts (Dashboard basket-wise & Account-wise): current
+         |            | month's bar now shows a dotted grey border to highlight it.
+         |            | App Settings: new "Tax P&L" section — read-only per-account Net P&L
+         |            | table for a selectable Indian fiscal year (Apr–Mar), defaults to
+         |            | current FY, placed just above Manual Entry.
+         |            | Topbar: brand icon changed from 🎚️ emoji to Tabler "equalizer/
+         |            | adjustments" icon font (matches Margin Availability), brand text
+         |            | and version badge enlarged to match.
+         |            | Topbar: single "Last updated by" line split into two stacked lines —
+         |            | "Last Report Update" (CSV upload only) and "Last Database Update"
+         |            | (any write — CSV or Manual Entry); new journal/last_report_update path.
+         |            | Nav tabs (Row 2): hover state strengthened — background tint increased
+         |            | plus a thin blue underline accent on hover (inactive tabs only).
+  ──────────────────────────────────────────────────────
   v21.0 | 2026-07-01 | Nav tabs (Row 2) enlarged: height 40→50px, font 0.76→0.88rem, padding
          |            | 14→20px. Sign Out button restyled as a pill (icon + "Sign Out" text) to
          |            | match Margin Availability, replacing the old icon-only circular button.
@@ -636,7 +657,8 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>SKVK Trading Journal v21.0</title>
+<title>SKVK Trading Journal v21.1</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -722,20 +744,20 @@ body {
 .brand {
   font-family: var(--display);
   font-weight: 800;
-  font-size: 1.28rem;
+  font-size: 1.58rem;
   letter-spacing: -0.03em;
   color: #fff;
-  display: flex; align-items: center; gap: 8px;
+  display: flex; align-items: center; gap: 10px;
   white-space: nowrap;
 }
-.brand-icon { font-size: 1.2rem; flex-shrink: 0; line-height: 1; }
+.brand-icon { font-size: 1.5rem; flex-shrink: 0; line-height: 1; color: #fff; }
 .brand-skvk { color: #fff; font-weight: 800; }
 .brand-appname { color: #6fa8dc; font-weight: 800; }
 .brand-vbadge {
-  font-size: 0.72rem; font-weight: 700;
+  font-size: 0.8rem; font-weight: 700;
   background: rgba(255,255,255,0.12); color: #8ab4f8;
   border: 1px solid rgba(255,255,255,0.22);
-  padding: 3px 11px; border-radius: 12px;
+  padding: 3px 12px; border-radius: 12px;
   margin-left: 4px; letter-spacing: 0.02em;
 }
 #topbar-meta { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
@@ -774,7 +796,11 @@ body {
   content: ''; position: absolute; right: -1px; top: 9px; bottom: 9px;
   width: 1px; background: rgba(255,255,255,0.14);
 }
-.nav-tab:hover { color: #fff; background: rgba(255,255,255,0.08); border-radius: 6px; }
+.nav-tab:hover { color: #fff; background: rgba(255,255,255,0.14); border-radius: 6px; }
+.nav-tab:not(.active):hover::after {
+  content: ''; position: absolute; left: 14px; right: 14px; bottom: 0;
+  height: 2px; background: var(--blue); border-radius: 2px 2px 0 0;
+}
 .nav-tab.active { color: #fff; font-weight: 700; background: var(--blue); border-radius: 7px; }
 .nav-tab.active::after { display: none; }
 .nav-tab.active::before, .nav-tab.active + .nav-tab::before { background: transparent; }
@@ -1191,6 +1217,9 @@ tbody tr.grand-total-row:hover td { background: #d8e2f0 !important; color: var(-
 }
 .underlying-tab:hover { border-color: var(--blue); color: var(--blue); }
 .underlying-tab.active { background: var(--blue); color: #fff; border-color: var(--blue); font-weight: 600; }
+/* Client ID tabs — fixed per-account color coding */
+.client-tab { padding: 5px 12px; border-radius: 20px; font-size: 0.72rem; font-weight: 500; cursor: pointer; transition: all 0.15s; border: 1px solid; background: var(--tint); border-color: var(--acc); color: var(--acc); }
+.client-tab.active { background: var(--acc); color: #fff; border-color: var(--acc); font-weight: 700; border-width: 2px; }
 .dte-tabs { display: flex; gap: 4px; }
 .dte-tab {
   padding: 5px 12px; background: #fff; border: 1px solid var(--border2);
@@ -1374,6 +1403,15 @@ tbody tr.grand-total-row:hover td { background: #d8e2f0 !important; color: var(-
 .price-confirmed {
   color: #1a56db !important;
   font-weight: 600;
+}
+/* ── ROW-LEVEL MANUAL CHECK (v21.1) — replaces per-price radios ── */
+.row-check-wrap {
+  display: inline-flex; align-items: center; justify-content: center;
+  opacity: 0; transition: opacity 0.12s; margin-left: 4px;
+}
+tr:hover .row-check-wrap, .row-check-wrap.checked { opacity: 1; }
+.row-check {
+  width: 15px; height: 15px; cursor: pointer; accent-color: #1a56db; margin: 0;
 }
 .inline-input {
   background: #fff;
@@ -1578,7 +1616,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div class="login-logo">📋</div>
     <div class="login-title">
       SKVK Trading Journal
-      <span class="login-vbadge">v21.0</span>
+      <span class="login-vbadge">v21.1</span>
     </div>
     <div class="login-sub">Sign in with your authorised Google account to access the journal.</div>
     <button class="google-signin-btn" id="googleSignInBtn" onclick="signInWithGoogle()">
@@ -1607,17 +1645,18 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
   <!-- Row 1: Brand left | meta + sign-out right -->
   <div id="topbar-row1">
     <div id="topbar-left">
-      <div id="brand-subline">
+      <div id="brand-subline" style="flex-direction:column;align-items:flex-start;gap:2px;">
         <div id="db-status">● connecting…</div>
-        <div id="last-updated-tag"></div>
+        <div id="last-report-update-tag"></div>
+        <div id="last-db-update-tag"></div>
       </div>
     </div>
     <div class="brand-block">
       <div class="brand">
-        <span class="brand-icon">🎚️</span>
+        <i class="ti ti-adjustments brand-icon"></i>
         <span class="brand-skvk">SKVK</span>
         <span class="brand-appname">Trading Journal</span>
-        <span class="brand-vbadge">v21.0</span>
+        <span class="brand-vbadge">v21.1</span>
       </div>
     </div>
     <div id="topbar-right-wrap">
@@ -2527,6 +2566,39 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
         <button class="btn btn-primary" onclick="acAddEmail()">
           ➕ Add Email
         </button>
+      </div>
+    </div>
+
+    <!-- ── Tax P&L Section ── -->
+    <div style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:22px;box-shadow:var(--shadow-sm);">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:16px;">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span style="font-size:1.3rem;">🧾</span>
+          <div>
+            <div style="font-size:0.95rem;font-weight:700;color:var(--text0);">Tax P&L</div>
+            <div style="font-size:0.75rem;color:var(--text2);margin-top:2px;">Net P&L per account for the selected fiscal year (Apr–Mar) · read-only</div>
+          </div>
+        </div>
+        <div class="period-tabs" id="tax-fy-tabs" style="display:flex;gap:4px;flex-wrap:wrap;"></div>
+      </div>
+      <div style="overflow-x:auto;">
+        <table style="width:100%;border-collapse:collapse;">
+          <thead>
+            <tr style="border-bottom:2px solid var(--border);">
+              <th style="text-align:left;padding:8px 10px;font-size:0.7rem;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.05em;">S.No</th>
+              <th style="text-align:left;padding:8px 10px;font-size:0.7rem;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.05em;">Name</th>
+              <th style="text-align:left;padding:8px 10px;font-size:0.7rem;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.05em;">Account Number</th>
+              <th style="text-align:right;padding:8px 10px;font-size:0.7rem;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.05em;">Net P&L for Account</th>
+            </tr>
+          </thead>
+          <tbody id="tax-pnl-body"></tbody>
+          <tfoot>
+            <tr style="border-top:2px solid var(--border);">
+              <td colspan="3" style="padding:10px;font-weight:700;font-size:0.85rem;color:var(--text0);">Total</td>
+              <td id="tax-pnl-total" style="padding:10px;text-align:right;font-weight:800;font-size:0.92rem;">—</td>
+            </tr>
+          </tfoot>
+        </table>
       </div>
     </div>
 
@@ -3540,11 +3612,15 @@ function renderAcctMonthlyTopChart(tr) {
     return sign+(abs/1000).toFixed(2)+'K';
   }
 
+  const curYM = new Date().toISOString().slice(0,7);
   window._acctMonthlyTopChart = new Chart(ctx, {
     type:'bar',
     data:{ labels:keys.map(fmtMonth), datasets:[{
       data:vals,
       backgroundColor:vals.map(v=>v>0?'rgba(26,158,92,0.75)':v<0?'rgba(217,48,37,0.75)':'rgba(156,163,175,0.35)'),
+      borderColor:keys.map(k=>k===curYM?'#9ca3af':'transparent'),
+      borderWidth:keys.map(k=>k===curYM?3:0),
+      borderDash:[4,3],
       borderRadius:5, borderSkipped:false
     }]},
     options:{ responsive:true, maintainAspectRatio:true,
@@ -3960,15 +4036,24 @@ function startListeners() {
     if (_initialRenderDone) refreshAll();
   });
   loadSMTrades();
-  // Listen for last updated tag
+  // Listen for last DATABASE update (any write — CSV upload or manual entry)
   db.ref('journal/last_updated').on('value', snap => {
     const d = snap.val();
-    const topbarEl = document.getElementById('last-updated-tag');
+    const topbarEl = document.getElementById('last-db-update-tag');
     const dashEl   = document.getElementById('dash-last-updated');
     if (d && d.by) {
-      const html = `Last updated by: <strong style="color:#fff;">${d.by}</strong> &nbsp;·&nbsp; ${d.at}`;
-      if (topbarEl) topbarEl.innerHTML = `<span style="color:var(--text3);font-size:0.72rem;">${html}</span>`;
+      const html = `Last Database Update: <strong style="color:#fff;">${d.by}</strong> &nbsp;·&nbsp; ${d.at}`;
+      if (topbarEl) topbarEl.innerHTML = `<span style="color:var(--text3);font-size:0.68rem;">${html}</span>`;
       if (dashEl)   dashEl.innerHTML   = `📅 ${html}`;
+    }
+  });
+  // Listen for last REPORT update (CSV upload only)
+  db.ref('journal/last_report_update').on('value', snap => {
+    const d = snap.val();
+    const topbarEl = document.getElementById('last-report-update-tag');
+    if (d && d.by) {
+      const html = `Last Report Update: <strong style="color:#fff;">${d.by}</strong> &nbsp;·&nbsp; ${d.at}`;
+      if (topbarEl) topbarEl.innerHTML = `<span style="color:var(--text3);font-size:0.68rem;">${html}</span>`;
     }
   });
 }
@@ -3994,7 +4079,7 @@ function showPage(name) {
   if (pg) pg.classList.add('active');
   const tab = document.querySelector(`[data-page="${name}"]`);
   if (tab) tab.classList.add('active');
-  if (name === 'appsettings') { initAppSettings(); renderGroupList(); renderAlgoPage(); loadDisplayPrefs(); loadCapitalTable(); buildNicknameList(); estimateDBSize(); populateBrokerClearDropdown(); acLoadEmails(); }
+  if (name === 'appsettings') { initAppSettings(); renderGroupList(); renderAlgoPage(); loadDisplayPrefs(); loadCapitalTable(); buildNicknameList(); renderTaxPnlSection(); estimateDBSize(); populateBrokerClearDropdown(); acLoadEmails(); }
   if (name === 'stockmock') { loadSMTolerances(); updateSMStrategyDropdown(); updateSMLoadedSummary(); onSMStratChange(); }
   if (name === 'algos') { renderGroupList(); renderAlgoPage(); }
   if (name === 'compare') { populateCompareSelects(); }
@@ -4192,9 +4277,12 @@ async function processFile(file) {
     if (skipped) parts.push(`${skipped} skipped`);
     if (added > 0 || updated > 0) {
       toast(`✓ "${file.name}": ${parts.join(', ')}`, 'success');
-      // Save last updated info to Firebase
+      // Save last updated info to Firebase (CSV upload = both report & database timestamp)
       const now = new Date().toLocaleString('en-IN', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit', hour12:true });
-      if (db) await db.ref('journal/last_updated').set({ by: uploader, at: now });
+      if (db) {
+        await db.ref('journal/last_report_update').set({ by: uploader, at: now });
+        await db.ref('journal/last_updated').set({ by: uploader, at: now });
+      }
     } else {
       toast(`"${file.name}": All ${skipped} trades already exist — nothing new added`, 'info');
     }
@@ -4864,11 +4952,15 @@ function drawMonthly(mMap) {
   const ctx=el('chart-monthly')?.getContext('2d');
   if (!ctx) return;
   if(mChart) mChart.destroy();
+  const curYM = new Date().toISOString().slice(0,7);
   mChart=new Chart(ctx,{
     type:'bar',
     data:{labels:keys.map(fmtMonth),datasets:[{
       data:vals,
       backgroundColor:vals.map(v=>v>0?'rgba(26,158,92,0.75)':v<0?'rgba(217,48,37,0.75)':'rgba(156,163,175,0.35)'),
+      borderColor:keys.map(k=>k===curYM?'#9ca3af':'transparent'),
+      borderWidth:keys.map(k=>k===curYM?3:0),
+      borderDash:[4,3],
       borderRadius:5,borderSkipped:false
     }]},
     options:{responsive:true,maintainAspectRatio:true,
@@ -5307,9 +5399,26 @@ function setUnderlying(el_tab, val) {
 // ── Client ID filter ──
 function setClientId(el_tab, val) {
   selectedClientId = val;
-  document.querySelectorAll('.underlying-tab[data-clientid]').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.client-tab[data-clientid]').forEach(t => t.classList.remove('active'));
   el_tab.classList.add('active');
   renderJournal();
+}
+
+// Fixed color per client_id — stable regardless of nickname/sort order.
+// Unrecognized/new client_ids fall back to neutral grey until added here.
+const CLIENT_COLOR_MAP = {
+  'Z62987': '#1a56db',       // ZEBU_PURUSHOTH — blue
+  'Z62992': '#0d9488',       // ZEBU_ALAMELU — teal
+  'Z64800': '#7c3aed',       // ZEBU_MURALI — purple
+  'Z67916': '#ea580c',       // ZEBU_KAYAL — orange
+  'Z71621': '#db2777',       // ZEBU_DEVIKA — pink/rose
+  'IIFL Capital': '#16a34a', // IIFL Capital — green
+};
+function getClientColor(cid) { return CLIENT_COLOR_MAP[cid] || '#6b7280'; }
+function hexToRgba(hex, alpha) {
+  const h = hex.replace('#','');
+  const r = parseInt(h.substring(0,2),16), g = parseInt(h.substring(2,4),16), b = parseInt(h.substring(4,6),16);
+  return `rgba(${r},${g},${b},${alpha})`;
 }
 
 function buildClientIdTabs() {
@@ -5322,7 +5431,11 @@ function buildClientIdTabs() {
   container.innerHTML = '';
   clientIds.forEach(cid => {
     const div = document.createElement('div');
-    div.className = 'underlying-tab' + (selectedClientId === cid ? ' active' : '');
+    const acc = getClientColor(cid);
+    const isActive = selectedClientId === cid;
+    div.className = 'client-tab' + (isActive ? ' active' : '');
+    div.style.setProperty('--acc', acc);
+    div.style.setProperty('--tint', hexToRgba(acc, 0.1));
     div.setAttribute('data-clientid', cid);
     div.onclick = function() { setClientId(this, cid); };
     div.textContent = getClientLabel(cid);
@@ -5451,16 +5564,10 @@ function renderJournal() {
             <td><span class="badge ${t.action==='SELL'?'b-red':'b-green'}">${t.action}</span></td>
             <td><span class="editable" onclick="editCell(this,'${h}','quantity','number')">${t.quantity||'—'}</span></td>
             <td>
-              <span class="confirm-wrap">
-                <span class="editable${t.entry_price_confirmed?' price-confirmed':''}" onclick="editCell(this,'${h}','entry_price','number')">${t.entry_price||'—'}</span>
-                ${t.entry_price ? `<button class="confirm-toggle${t.entry_price_confirmed?' confirmed':''}" onclick="toggleConfirm(this,'${h}','entry_price')" title="Manual Check Done"></button>` : ''}
-              </span>
+              <span class="editable${t.entry_price_confirmed?' price-confirmed':''}" data-role="entry-price" onclick="editCell(this,'${h}','entry_price','number')">${t.entry_price||'—'}</span>
             </td>
             <td>
-              <span class="confirm-wrap">
-                <span class="editable${t.exit_price_confirmed?' price-confirmed':''}" onclick="editCell(this,'${h}','exit_price','number')">${t.exit_price ? t.exit_price : '<em style=\'color:var(--text3);font-size:0.68rem\'>+ add</em>'}</span>
-                ${t.exit_price ? `<button class="confirm-toggle${t.exit_price_confirmed?' confirmed':''}" onclick="toggleConfirm(this,'${h}','exit_price')" title="Manual Check Done"></button>` : ''}
-              </span>
+              <span class="editable${t.exit_price_confirmed?' price-confirmed':''}" data-role="exit-price" onclick="editCell(this,'${h}','exit_price','number')">${t.exit_price ? t.exit_price : '<em style=\'color:var(--text3);font-size:0.68rem\'>+ add</em>'}</span>
             </td>
             <td><span class="editable" onclick="editCell(this,'${h}','exit_reason','select')">${exitBadge(t.exit_reason)}</span></td>
             <td class="${(t.pnl||0)>=0?'pnl-pos':'pnl-neg'}"><span class="editable" onclick="editCell(this,'${h}','pnl','number')">${fmt(t.pnl||0)}</span></td>
@@ -5475,6 +5582,9 @@ function renderJournal() {
               <button onclick="deleteTrade('${h}')" title="Delete trade"
                 style="background:none;border:none;cursor:pointer;color:#d1d5db;font-size:0.85rem;padding:2px 3px;border-radius:4px;transition:color 0.15s;"
                 onmouseover="this.style.color='var(--red)'" onmouseout="this.style.color='#d1d5db'">🗑</button>
+              <span class="row-check-wrap${isRowConfirmed(t)?' checked':''}" title="Manual Check">
+                <input type="checkbox" class="row-check" ${isRowConfirmed(t)?'checked':''} onclick="toggleRowConfirm(this,'${h}')">
+              </span>
             </td>
           </tr>`;
       });
@@ -5552,16 +5662,10 @@ function renderJournalTradetron(tr) {
           <td><span class="badge ${t.action==='SELL'?'b-red':'b-green'}">${t.action}</span></td>
           <td><span class="editable" onclick="editCell(this,'${h}','quantity','number')">${t.quantity||'—'}</span></td>
           <td>
-            <span class="confirm-wrap">
-              <span class="editable${t.entry_price_confirmed?' price-confirmed':''}" onclick="editCell(this,'${h}','entry_price','number')">${t.entry_price||'—'}</span>
-              ${t.entry_price ? `<button class="confirm-toggle${t.entry_price_confirmed?' confirmed':''}" onclick="toggleConfirm(this,'${h}','entry_price')" title="Manual Check Done"></button>` : ''}
-            </span>
+            <span class="editable${t.entry_price_confirmed?' price-confirmed':''}" data-role="entry-price" onclick="editCell(this,'${h}','entry_price','number')">${t.entry_price||'—'}</span>
           </td>
           <td>
-            <span class="confirm-wrap">
-              <span class="editable${t.exit_price_confirmed?' price-confirmed':''}" onclick="editCell(this,'${h}','exit_price','number')">${t.exit_price ? t.exit_price : '<em style=\'color:var(--text3);font-size:0.68rem\'>+ add</em>'}</span>
-              ${t.exit_price ? `<button class="confirm-toggle${t.exit_price_confirmed?' confirmed':''}" onclick="toggleConfirm(this,'${h}','exit_price')" title="Manual Check Done"></button>` : ''}
-            </span>
+            <span class="editable${t.exit_price_confirmed?' price-confirmed':''}" data-role="exit-price" onclick="editCell(this,'${h}','exit_price','number')">${t.exit_price ? t.exit_price : '<em style=\'color:var(--text3);font-size:0.68rem\'>+ add</em>'}</span>
           </td>
           <td><span class="editable" onclick="editCell(this,'${h}','exit_reason','select')">${exitBadge(t.exit_reason)}</span></td>
           <td class="${(t.pnl||0)>=0?'pnl-pos':'pnl-neg'}"><span class="editable" onclick="editCell(this,'${h}','pnl','number')">${fmt(t.pnl||0)}</span></td>
@@ -5576,6 +5680,9 @@ function renderJournalTradetron(tr) {
             <button onclick="deleteTrade('${h}')" title="Delete trade"
               style="background:none;border:none;cursor:pointer;color:#d1d5db;font-size:0.85rem;padding:2px 3px;border-radius:4px;"
               onmouseover="this.style.color='var(--red)'" onmouseout="this.style.color='#d1d5db'">🗑</button>
+            <span class="row-check-wrap${isRowConfirmed(t)?' checked':''}" title="Manual Check">
+              <input type="checkbox" class="row-check" ${isRowConfirmed(t)?'checked':''} onclick="toggleRowConfirm(this,'${h}')">
+            </span>
           </td>
         </tr>`;
     });
@@ -5663,6 +5770,72 @@ function generateCapitalMonths() {
   }
   return months;
 }
+
+// ════════════════════════════════════════════════════
+//  TAX P&L SECTION (v21.1) — Indian FY runs Apr–Mar
+// ════════════════════════════════════════════════════
+function getFY(dateStr) {
+  if (!dateStr) return null;
+  const d = new Date(dateStr);
+  if (isNaN(d)) return null;
+  const y = d.getFullYear(), m = d.getMonth() + 1;
+  const startYear = m >= 4 ? y : y - 1;
+  const s2 = String(startYear % 100).padStart(2, '0');
+  const e2 = String((startYear + 1) % 100).padStart(2, '0');
+  return `FY${s2}-${e2}`;
+}
+function getCurrentFY() { return getFY(new Date().toISOString().slice(0, 10)); }
+function getFYRange(fyLabel) {
+  const m = fyLabel.match(/FY(\d{2})-(\d{2})/);
+  const startYear = 2000 + parseInt(m[1]);
+  return [`${startYear}-04-01`, `${startYear + 1}-03-31`];
+}
+let selectedTaxFY = null;
+
+function renderTaxPnlSection() {
+  const body = document.getElementById('tax-pnl-body');
+  const tabsEl = document.getElementById('tax-fy-tabs');
+  if (!body) return;
+  if (!selectedTaxFY) selectedTaxFY = getCurrentFY();
+
+  const fySet = new Set();
+  allTrades.forEach(t => { const d = pnlDate(t) || t.entry_date; const fy = getFY(d); if (fy) fySet.add(fy); });
+  fySet.add(getCurrentFY());
+  const fys = [...fySet].sort();
+
+  if (tabsEl) {
+    tabsEl.innerHTML = fys.map(fy =>
+      `<div class="period-tab ${fy===selectedTaxFY?'active':''}" onclick="setTaxFY('${fy}')">${fy}</div>`).join('');
+  }
+
+  const [start, end] = getFYRange(selectedTaxFY);
+  const tradeIds  = [...new Set(allTrades.map(t => t.client_id).filter(Boolean))];
+  const manualIds = Object.keys(manualAccounts);
+  const clientIds = [...new Set([...tradeIds, ...manualIds, ...Object.keys(accountNicknames)])].sort();
+
+  let total = 0, rows = '';
+  clientIds.forEach((cid, i) => {
+    const pnl = allTrades
+      .filter(t => t.client_id === cid)
+      .reduce((s, t) => {
+        const d = pnlDate(t) || t.entry_date;
+        return (d && d >= start && d <= end) ? s + (t.pnl || 0) : s;
+      }, 0);
+    total += pnl;
+    const nick = getNick(cid) || '—';
+    rows += `<tr style="border-bottom:1px solid var(--border);">
+      <td style="padding:8px 10px;font-size:0.82rem;color:var(--text2);">${i+1}</td>
+      <td style="padding:8px 10px;font-size:0.82rem;font-weight:600;color:var(--text0);">${nick}</td>
+      <td style="padding:8px 10px;font-size:0.82rem;color:var(--text2);">${cid}</td>
+      <td style="padding:8px 10px;text-align:right;font-size:0.85rem;font-weight:700;" class="${pnl>=0?'pnl-pos':'pnl-neg'}">${fmt(pnl)}</td>
+    </tr>`;
+  });
+  body.innerHTML = rows || `<tr><td colspan="4" style="text-align:center;color:var(--text3);padding:20px;font-size:0.82rem;">No accounts found</td></tr>`;
+
+  const totalEl = document.getElementById('tax-pnl-total');
+  if (totalEl) { totalEl.textContent = fmt(total); totalEl.className = total>=0?'pnl-pos':'pnl-neg'; }
+}
+function setTaxFY(fy) { selectedTaxFY = fy; renderTaxPnlSection(); }
 
 // ════════════════════════════════════════════════════
 //  ACCOUNT NICKNAMES
@@ -7028,36 +7201,53 @@ function selectASP(asp) {
   upWrap.style.display = 'block';
 }
 
-function toggleConfirm(el, hash, field) {
-  const isOn = el.classList.toggle('confirmed');
-  const priceEl = el.previousElementSibling;
-  if (priceEl) priceEl.classList.toggle('price-confirmed', isOn);
-  // Hide radio immediately after click
-  el.style.opacity = '0';
-  el.style.pointerEvents = 'none';
-  // Persist to Firebase
-  const key = field + '_confirmed';
+// ── Row-level Manual Check (v21.1) — replaces separate entry/exit radios.
+// Checking sets both entry_price_confirmed & exit_price_confirmed (whichever prices exist);
+// unchecking clears both. Avoids accidental price-edit clicks caused by the old
+// tiny overlapping radio dots.
+function isRowConfirmed(t) {
+  const hasEntry = !!t.entry_price, hasExit = !!t.exit_price;
+  if (!hasEntry && !hasExit) return false;
+  return (!hasEntry || t.entry_price_confirmed) && (!hasExit || t.exit_price_confirmed);
+}
+
+function toggleRowConfirm(cbEl, hash) {
+  const isOn = cbEl.checked;
+  const row = cbEl.closest('tr');
+  const entryEl = row?.querySelector('[data-role="entry-price"]');
+  const exitEl  = row?.querySelector('[data-role="exit-price"]');
+  if (entryEl) entryEl.classList.toggle('price-confirmed', isOn);
+  if (exitEl)  exitEl.classList.toggle('price-confirmed', isOn);
+  cbEl.closest('.row-check-wrap')?.classList.toggle('checked', isOn);
+
+  const t = allTrades.find(x => x.hash === hash);
+  const updates = {};
+  if (t?.entry_price) updates.entry_price_confirmed = isOn;
+  if (t?.exit_price)  updates.exit_price_confirmed  = isOn;
   if (db) {
-    db.ref('journal/trades/' + hash + '/' + key).set(isOn);
-  } else {
-    const t = allTrades.find(x => x.hash === hash);
-    if (t) t[key] = isOn;
+    Object.keys(updates).forEach(k => db.ref('journal/trades/' + hash + '/' + k).set(updates[k]));
+  } else if (t) {
+    Object.assign(t, updates);
   }
 }
 
-function toggleMCXConfirm(el, id, field) {
-  const isOn = el.classList.toggle('confirmed');
-  const priceEl = el.previousElementSibling;
-  if (priceEl) priceEl.classList.toggle('price-confirmed', isOn);
-  // Hide radio immediately after click
-  el.style.opacity = '0';
-  el.style.pointerEvents = 'none';
-  const key = field + '_confirmed';
+function toggleMCXRowConfirm(cbEl, id) {
+  const isOn = cbEl.checked;
+  const row = cbEl.closest('tr');
+  const entryEl = row?.querySelector('[data-role="entry-price"]');
+  const exitEl  = row?.querySelector('[data-role="exit-price"]');
+  if (entryEl) entryEl.classList.toggle('price-confirmed', isOn);
+  if (exitEl)  exitEl.classList.toggle('price-confirmed', isOn);
+  cbEl.closest('.row-check-wrap')?.classList.toggle('checked', isOn);
+
+  const t = mcxTrades.find(x => x.id === id);
+  const updates = {};
+  if (t?.entry_price) updates.entry_price_confirmed = isOn;
+  if (t?.exit_price)  updates.exit_price_confirmed  = isOn;
   if (db) {
-    db.ref('journal/mcx_trades/' + id + '/' + key).set(isOn);
-  } else {
-    const t = mcxTrades.find(x => x.id === id);
-    if (t) t[key] = isOn;
+    Object.keys(updates).forEach(k => db.ref('journal/mcx_trades/' + id + '/' + k).set(updates[k]));
+  } else if (t) {
+    Object.assign(t, updates);
   }
 }
 
@@ -8010,7 +8200,7 @@ function renderMCXJournal() {
 
     html += '<div class="table-wrap" style="margin-bottom:16px;"><table><thead>'
       + '<tr class="date-group-header" onclick="tgl(\'' + dId + '\')">'
-      + '<td colspan="11"><div style="display:flex;align-items:center;gap:14px;">'
+      + '<td colspan="12"><div style="display:flex;align-items:center;gap:14px;">'
       + '<span id="arr-' + dId + '">▼</span>'
       + '<span style="font-family:var(--display);font-size:0.92rem;">' + fmtDate(date) + '</span>'
       + '<span style="font-size:0.72rem;color:var(--text2);">' + dayTrades.length + ' trade(s)</span>'
@@ -8020,18 +8210,19 @@ function renderMCXJournal() {
       + '<tr id="' + dId + '-hdr">'
       + '<th>Day</th><th>Symbol</th><th>Trade Name</th><th>Client</th>'
       + '<th>Expiry</th><th>Direction</th><th>Qty</th>'
-      + '<th>Entry ₹</th><th>Exit ₹</th><th>P&L ₹</th><th>Status</th>'
+      + '<th>Entry ₹</th><th>Exit ₹</th><th>P&L ₹</th><th>Status</th><th style="width:36px;"></th>'
       + '</tr></thead><tbody id="' + dId + '">';
 
     dayTrades.forEach(t => {
       const symClass = t.symbol.includes('GOLD')?'mcx-symbol-gold':t.symbol.includes('SILVER')?'mcx-symbol-silver':'mcx-symbol-crude';
       const stCls = t.status==='CLOSED'?'mcx-status-closed':t.status==='OPEN'?'mcx-status-open':'mcx-status-rollover';
       const pnlD  = t.pnl!=null ? '<span class="'+(t.pnl>=0?'pnl-pos':'pnl-neg')+'">'+fmt(t.pnl)+'</span>' : '<span class="mcx-pnl-open">Open</span>';
-      const exitD = t.type==='ROLLOVER' ? ('→ '+t.to_expiry) : (t.exit_price ? `<span class="confirm-wrap"><span class="${t.exit_price_confirmed?'price-confirmed':''}">${t.exit_price.toLocaleString('en-IN')}</span><button class="confirm-toggle${t.exit_price_confirmed?' confirmed':''}" onclick="toggleMCXConfirm(this,'${t.id}','exit_price')" title="Manual Check Done"></button></span>` : '<em style="color:var(--text3);font-size:0.7rem">pending</em>');
+      const exitD = t.type==='ROLLOVER' ? ('→ '+t.to_expiry) : (t.exit_price ? `<span class="${t.exit_price_confirmed?'price-confirmed':''}" data-role="exit-price">${t.exit_price.toLocaleString('en-IN')}</span>` : '<em style="color:var(--text3);font-size:0.7rem">pending</em>');
       const expD  = t.type==='ROLLOVER' ? '<span style="color:var(--purple)">'+t.from_expiry+' → '+t.to_expiry+'</span>' : (t.expiry||'—');
       const dirBadge = t.type==='ROLLOVER'?'b-purple':t.direction==='BUY'?'b-green':'b-red';
       const dirLabel = t.type==='ROLLOVER'?'ROLLOVER':(t.direction==='BUY'?'BUY (Long)':'SELL (Short)');
-      const entryFmt = t.entry_price ? `<span class="confirm-wrap"><span class="${t.entry_price_confirmed?'price-confirmed':''}">${t.entry_price.toLocaleString('en-IN')}</span><button class="confirm-toggle${t.entry_price_confirmed?' confirmed':''}" onclick="toggleMCXConfirm(this,'${t.id}','entry_price')" title="Manual Check Done"></button></span>` : '—';
+      const entryFmt = t.entry_price ? `<span class="${t.entry_price_confirmed?'price-confirmed':''}" data-role="entry-price">${t.entry_price.toLocaleString('en-IN')}</span>` : '—';
+      const mcxChecked = isRowConfirmed(t);
 
       html += '<tr class="trade-row" data-group="'+dId+'">'
         + '<td><span class="day-badge">Day '+(t.day_num||1)+'</span></td>'
@@ -8045,6 +8236,11 @@ function renderMCXJournal() {
         + '<td>'+exitD+'</td>'
         + '<td>'+pnlD+'</td>'
         + '<td><span class="badge '+stCls+'">'+t.status+'</span></td>'
+        + '<td style="text-align:center;">'
+        +   '<span class="row-check-wrap'+(mcxChecked?' checked':'')+'" title="Manual Check">'
+        +     '<input type="checkbox" class="row-check" '+(mcxChecked?'checked':'')+' onclick="toggleMCXRowConfirm(this,\''+t.id+'\')">'
+        +   '</span>'
+        + '</td>'
         + '</tr>';
     });
     html += '</tbody></table></div>';
