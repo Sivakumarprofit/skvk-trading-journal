@@ -2,6 +2,25 @@
 ==========================================================
   SKVK TRADING JOURNAL — VERSION HISTORY
 ==========================================================
+  v21.2 | 2026-07-03 | Topbar brand block now exact-matches Margin Availability's actual
+         |            | source CSS: icon changed from equalizer to Tabler "chart-candle"
+         |            | (candlesticks), font switched from Syne to system UI stack, 22px/900
+         |            | weight/-0.3px letter-spacing, app-name accent #64b5f6, version badge
+         |            | restyled to full pill (20px radius) with blue tint background.
+         |            | Monthly P&L charts (basket-wise & account-wise): current-month bar
+         |            | outline changed from dotted grey to dotted navy (#1e3a5f).
+         |            | Broker Account Settings: new "Account Holder Name" column (between
+         |            | Nickname and Preview), stored at journal/nicknames/{cid}/holder_name;
+         |            | "Add manually" row also captures holder name on creation.
+         |            | Tax P&L section: now grouped by Account Holder Name instead of by
+         |            | individual broker account — a holder with multiple accounts across
+         |            | any broker gets one combined row (P&L summed, account numbers shown
+         |            | as badges); falls back to nickname/client ID if holder name unset.
+         |            | Analytics — Account wise: new "Baskets Traded:" panel next to the
+         |            | account selector, listing each Basket Management basket the selected
+         |            | account has traded (one per line); hidden when "All Accounts" is
+         |            | selected since the combined list would be too long to be useful.
+  ──────────────────────────────────────────────────────
   v21.1 | 2026-07-03 | Journal: replaced per-price entry/exit "Manual Check" radio dots
          |            | (which overlapped the price text and caused accidental edit-mode
          |            | clicks) with a single row-level "Manual Check" checkbox at the end
@@ -657,7 +676,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>SKVK Trading Journal v21.1</title>
+<title>SKVK Trading Journal v21.2</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -742,23 +761,23 @@ body {
   flex-shrink: 0; line-height: 1;
 }
 .brand {
-  font-family: var(--display);
-  font-weight: 800;
-  font-size: 1.58rem;
-  letter-spacing: -0.03em;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, sans-serif;
+  font-weight: 900;
+  font-size: 22px;
+  letter-spacing: -0.3px;
   color: #fff;
   display: flex; align-items: center; gap: 10px;
   white-space: nowrap;
 }
-.brand-icon { font-size: 1.5rem; flex-shrink: 0; line-height: 1; color: #fff; }
-.brand-skvk { color: #fff; font-weight: 800; }
-.brand-appname { color: #6fa8dc; font-weight: 800; }
+.brand-icon { font-size: 22px; flex-shrink: 0; line-height: 1; color: #fff; }
+.brand-skvk { color: #fff; font-weight: 900; }
+.brand-appname { color: #64b5f6; font-weight: 900; }
 .brand-vbadge {
-  font-size: 0.8rem; font-weight: 700;
-  background: rgba(255,255,255,0.12); color: #8ab4f8;
-  border: 1px solid rgba(255,255,255,0.22);
-  padding: 3px 12px; border-radius: 12px;
-  margin-left: 4px; letter-spacing: 0.02em;
+  font-size: 13px; font-weight: 800;
+  background: rgba(100,181,246,0.18); color: #64b5f6;
+  border: 1px solid rgba(100,181,246,0.35);
+  padding: 3px 10px; border-radius: 20px;
+  margin-left: 4px; letter-spacing: 0.3px;
 }
 #topbar-meta { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
 #brand-subline { display: flex; align-items: center; gap: 8px; }
@@ -1616,7 +1635,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div class="login-logo">📋</div>
     <div class="login-title">
       SKVK Trading Journal
-      <span class="login-vbadge">v21.1</span>
+      <span class="login-vbadge">v21.2</span>
     </div>
     <div class="login-sub">Sign in with your authorised Google account to access the journal.</div>
     <button class="google-signin-btn" id="googleSignInBtn" onclick="signInWithGoogle()">
@@ -1653,10 +1672,10 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     </div>
     <div class="brand-block">
       <div class="brand">
-        <i class="ti ti-adjustments brand-icon"></i>
+        <i class="ti ti-chart-candle brand-icon"></i>
         <span class="brand-skvk">SKVK</span>
         <span class="brand-appname">Trading Journal</span>
-        <span class="brand-vbadge">v21.1</span>
+        <span class="brand-vbadge">v21.2</span>
       </div>
     </div>
     <div id="topbar-right-wrap">
@@ -1926,8 +1945,9 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div class="page-subtitle">Select one or more accounts to view combined performance analytics</div>
   </div>
 
-  <!-- ── Account Selector (centered, single select) ── -->
-  <div style="display:flex;justify-content:center;margin-bottom:24px;">
+  <!-- ── Account Selector (centered, single select) + Baskets Traded (right) ── -->
+  <div style="display:grid;grid-template-columns:1fr auto 1fr;align-items:start;margin-bottom:24px;gap:16px;">
+    <div></div>
     <div style="background:var(--blue);padding:14px 24px;border-radius:14px;box-shadow:0 2px 10px rgba(26,115,232,0.25);min-width:360px;max-width:560px;width:100%;">
       <div style="font-size:0.72rem;font-weight:700;color:rgba(255,255,255,0.85);letter-spacing:0.06em;text-align:center;margin-bottom:8px;">SELECT ACCOUNT</div>
       <select id="acct-select" onchange="renderAcctReport()" style="width:100%;padding:8px 12px;border:none;border-radius:8px;font-size:0.88rem;font-weight:600;outline:none;background:#fff;color:var(--blue);font-family:var(--font);cursor:pointer;">
@@ -1935,6 +1955,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
         <option value="__ALL__">All Accounts</option>
       </select>
     </div>
+    <div id="acct-baskets-traded" style="justify-self:end;text-align:right;"></div>
   </div>
 
   <!-- ══ BLOCK 1: Monthly P&L Data ══ -->
@@ -2587,7 +2608,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
             <tr style="border-bottom:2px solid var(--border);">
               <th style="text-align:left;padding:8px 10px;font-size:0.7rem;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.05em;">S.No</th>
               <th style="text-align:left;padding:8px 10px;font-size:0.7rem;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.05em;">Name</th>
-              <th style="text-align:left;padding:8px 10px;font-size:0.7rem;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.05em;">Account Number</th>
+              <th style="text-align:left;padding:8px 10px;font-size:0.7rem;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.05em;">Account Numbers</th>
               <th style="text-align:right;padding:8px 10px;font-size:0.7rem;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.05em;">Net P&L for Account</th>
             </tr>
           </thead>
@@ -3148,7 +3169,32 @@ function renderAcctReport() {
   renderAcctCharts(tr);
   renderAcctCapitalGrid();
   renderAcctMonthlyReturns(tr);
+  renderAcctBasketsTraded();
   document.getElementById('acct-heatmap').innerHTML = buildOneHeatmap(label, tr, '#1a73e8');
+}
+
+// ── Baskets Traded panel (v21.2) — shown only for a single selected account,
+// hidden for "All Accounts" since the list would be too long to be useful.
+function getBasketsTradedForAccount(cid) {
+  if (!cid || cid === '__ALL__') return [];
+  const algosInAcct = new Set(
+    allTrades.filter(t => !t.archived && t.client_id === cid).map(t => t.algo_name).filter(Boolean)
+  );
+  const basketNames = new Set();
+  Object.values(algoGroups).forEach(g => {
+    if ((g.algos || []).some(a => algosInAcct.has(a))) basketNames.add(g.name);
+  });
+  return [...basketNames].sort();
+}
+function renderAcctBasketsTraded() {
+  const el = document.getElementById('acct-baskets-traded');
+  if (!el) return;
+  if (!currentAcct || currentAcct === '__ALL__') { el.innerHTML = ''; return; }
+  const baskets = getBasketsTradedForAccount(currentAcct);
+  if (!baskets.length) { el.innerHTML = ''; return; }
+  el.innerHTML =
+    `<div style="font-size:0.7rem;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;">Baskets Traded:</div>` +
+    baskets.map(b => `<div style="font-size:0.8rem;font-weight:600;color:var(--text0);padding:2px 0;">${b}</div>`).join('');
 }
 
 function acctWeekNav(dir) {
@@ -3618,7 +3664,7 @@ function renderAcctMonthlyTopChart(tr) {
     data:{ labels:keys.map(fmtMonth), datasets:[{
       data:vals,
       backgroundColor:vals.map(v=>v>0?'rgba(26,158,92,0.75)':v<0?'rgba(217,48,37,0.75)':'rgba(156,163,175,0.35)'),
-      borderColor:keys.map(k=>k===curYM?'#9ca3af':'transparent'),
+      borderColor:keys.map(k=>k===curYM?'#1e3a5f':'transparent'),
       borderWidth:keys.map(k=>k===curYM?3:0),
       borderDash:[4,3],
       borderRadius:5, borderSkipped:false
@@ -4026,13 +4072,16 @@ function startListeners() {
   });
   db.ref('journal/nicknames').on('value', snap => {
     const raw = snap.val() || {};
-    // Backward compat: migrate old string format { cid: 'nick' } to new { cid: { nick } }
+    // Backward compat: migrate old string format { cid: 'nick' } to new { cid: { nick, holder_name } }
     accountNicknames = {};
     Object.entries(raw).forEach(([cid, val]) => {
-      accountNicknames[cid] = typeof val === 'string' ? { nick: val } : { nick: val?.nick || '' };
+      accountNicknames[cid] = typeof val === 'string'
+        ? { nick: val, holder_name: '' }
+        : { nick: val?.nick || '', holder_name: val?.holder_name || '' };
     });
     buildClientIdTabs();
     buildNicknameList();
+    renderTaxPnlSection();
     if (_initialRenderDone) refreshAll();
   });
   loadSMTrades();
@@ -4958,7 +5007,7 @@ function drawMonthly(mMap) {
     data:{labels:keys.map(fmtMonth),datasets:[{
       data:vals,
       backgroundColor:vals.map(v=>v>0?'rgba(26,158,92,0.75)':v<0?'rgba(217,48,37,0.75)':'rgba(156,163,175,0.35)'),
-      borderColor:keys.map(k=>k===curYM?'#9ca3af':'transparent'),
+      borderColor:keys.map(k=>k===curYM?'#1e3a5f':'transparent'),
       borderWidth:keys.map(k=>k===curYM?3:0),
       borderDash:[4,3],
       borderRadius:5,borderSkipped:false
@@ -5811,23 +5860,36 @@ function renderTaxPnlSection() {
   const [start, end] = getFYRange(selectedTaxFY);
   const tradeIds  = [...new Set(allTrades.map(t => t.client_id).filter(Boolean))];
   const manualIds = Object.keys(manualAccounts);
-  const clientIds = [...new Set([...tradeIds, ...manualIds, ...Object.keys(accountNicknames)])].sort();
+  const clientIds = [...new Set([...tradeIds, ...manualIds, ...Object.keys(accountNicknames)])];
 
-  let total = 0, rows = '';
-  clientIds.forEach((cid, i) => {
+  // Group accounts by Account Holder Name (one holder can own multiple broker accounts).
+  // Falls back to nickname, then raw client ID, if holder name hasn't been set yet —
+  // so the account still appears rather than silently disappearing from the table.
+  const holderGroups = {}; // { holderLabel: { accounts: [cid,...], pnl: number } }
+  clientIds.forEach(cid => {
+    const holder = getHolderName(cid) || getNick(cid) || cid;
+    if (!holderGroups[holder]) holderGroups[holder] = { accounts: [], pnl: 0 };
+    holderGroups[holder].accounts.push(cid);
     const pnl = allTrades
       .filter(t => t.client_id === cid)
       .reduce((s, t) => {
         const d = pnlDate(t) || t.entry_date;
         return (d && d >= start && d <= end) ? s + (t.pnl || 0) : s;
       }, 0);
-    total += pnl;
-    const nick = getNick(cid) || '—';
+    holderGroups[holder].pnl += pnl;
+  });
+
+  const holderNames = Object.keys(holderGroups).sort();
+  let total = 0, rows = '';
+  holderNames.forEach((holder, i) => {
+    const g = holderGroups[holder];
+    total += g.pnl;
+    const acctBadges = g.accounts.map(cid => `<span class="badge b-gray" style="font-size:0.65rem;">${cid}</span>`).join(' ');
     rows += `<tr style="border-bottom:1px solid var(--border);">
       <td style="padding:8px 10px;font-size:0.82rem;color:var(--text2);">${i+1}</td>
-      <td style="padding:8px 10px;font-size:0.82rem;font-weight:600;color:var(--text0);">${nick}</td>
-      <td style="padding:8px 10px;font-size:0.82rem;color:var(--text2);">${cid}</td>
-      <td style="padding:8px 10px;text-align:right;font-size:0.85rem;font-weight:700;" class="${pnl>=0?'pnl-pos':'pnl-neg'}">${fmt(pnl)}</td>
+      <td style="padding:8px 10px;font-size:0.82rem;font-weight:600;color:var(--text0);">${holder}</td>
+      <td style="padding:8px 10px;font-size:0.82rem;">${acctBadges}</td>
+      <td style="padding:8px 10px;text-align:right;font-size:0.85rem;font-weight:700;" class="${g.pnl>=0?'pnl-pos':'pnl-neg'}">${fmt(g.pnl)}</td>
     </tr>`;
   });
   body.innerHTML = rows || `<tr><td colspan="4" style="text-align:center;color:var(--text3);padding:20px;font-size:0.82rem;">No accounts found</td></tr>`;
@@ -5850,6 +5912,12 @@ function getNick(cid) {
   if (!e) return '';
   return typeof e === 'string' ? e : (e.nick || '');
 }
+// Helper: get account holder name (v21.2)
+function getHolderName(cid) {
+  const e = accountNicknames[cid];
+  if (!e || typeof e === 'string') return '';
+  return e.holder_name || '';
+}
 
 function buildNicknameList() {
   const container = document.getElementById('nickname-list');
@@ -5860,20 +5928,22 @@ function buildNicknameList() {
 
   let html = '';
   if (clientIds.length) {
-    html += `<div style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:10px;padding:6px 0;border-bottom:2px solid var(--border);margin-bottom:4px;">
+    html += `<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr auto;gap:10px;padding:6px 0;border-bottom:2px solid var(--border);margin-bottom:4px;">
       <span style="font-size:0.7rem;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.05em;">Client ID <span style="font-weight:400;color:var(--text3);">(editable)</span></span>
       <span style="font-size:0.7rem;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.05em;">Nickname</span>
+      <span style="font-size:0.7rem;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.05em;">Account Holder Name</span>
       <span style="font-size:0.7rem;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.05em;">Preview</span>
       <span></span>
     </div>`;
     html += clientIds.map(cid => {
       const nick    = getNick(cid);
+      const holder  = getHolderName(cid);
       const isBrokerName = /^[A-Za-z]/.test(cid) && !/^[A-Z]\d/.test(cid);
       const preview = nick ? (isBrokerName ? `${cid} (${nick})` : `${nick} (${cid})`) : cid;
       const isManual = !tradeIds.includes(cid);
       const tradeCount = allTrades.filter(t => t.client_id === cid).length;
       return `
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:10px;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr auto;gap:10px;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);">
         <div style="display:flex;align-items:center;gap:6px;">
           <input type="text" id="cid-${cid}" value="${cid}" placeholder="Client ID"
             style="flex:1;padding:5px 10px;border:1px solid var(--border);border-radius:6px;font-size:0.82rem;outline:none;font-weight:600;"
@@ -5881,6 +5951,9 @@ function buildNicknameList() {
           <button onclick="renameClientId('${cid}')" class="btn btn-ghost btn-sm" style="white-space:nowrap;padding:4px 8px;" title="${tradeCount} trade(s) will be updated">✏️</button>
         </div>
         <input type="text" id="nick-${cid}" value="${nick}" placeholder="Nickname…"
+          style="padding:5px 10px;border:1px solid var(--border);border-radius:6px;font-size:0.82rem;outline:none;"
+          onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--border)'">
+        <input type="text" id="holder-${cid}" value="${holder}" placeholder="Holder Name…"
           style="padding:5px 10px;border:1px solid var(--border);border-radius:6px;font-size:0.82rem;outline:none;"
           onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--border)'">
         <span style="font-size:0.78rem;color:var(--text2);">${preview}</span>
@@ -5900,6 +5973,9 @@ function buildNicknameList() {
       style="padding:5px 10px;border:1px solid var(--border);border-radius:6px;font-size:0.82rem;outline:none;min-width:160px;"
       onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--border)'">
     <input type="text" id="manual-acct-nick" placeholder="Nickname (e.g. IIFL_SIVA)"
+      style="padding:5px 10px;border:1px solid var(--border);border-radius:6px;font-size:0.82rem;outline:none;min-width:160px;"
+      onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--border)'">
+    <input type="text" id="manual-acct-holder" placeholder="Account Holder Name"
       style="padding:5px 10px;border:1px solid var(--border);border-radius:6px;font-size:0.82rem;outline:none;min-width:160px;"
       onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--border)'">
     <button onclick="addManualAccount()" class="btn btn-ghost btn-sm">+ Add Account</button>
@@ -5964,14 +6040,17 @@ async function renameClientId(oldId) {
 async function addManualAccount() {
   const idEl   = document.getElementById('manual-acct-id');
   const nickEl = document.getElementById('manual-acct-nick');
+  const holderEl = document.getElementById('manual-acct-holder');
   const id     = idEl?.value?.trim();
   const nick   = nickEl?.value?.trim();
+  const holder = holderEl?.value?.trim();
   if (!id) { toast('Enter a Client ID', 'warning'); return; }
   manualAccounts[id] = true;
-  accountNicknames[id] = { nick: nick || '' };
+  accountNicknames[id] = { nick: nick || '', holder_name: holder || '' };
   if (db) await db.ref('journal/nicknames/' + id).set(accountNicknames[id]);
-  if (idEl)   idEl.value   = '';
-  if (nickEl) nickEl.value = '';
+  if (idEl)     idEl.value     = '';
+  if (nickEl)   nickEl.value   = '';
+  if (holderEl) holderEl.value = '';
   buildNicknameList();
   initAcctReport();
   toast(`✓ Account "${id}" added`, 'success');
@@ -5992,15 +6071,18 @@ async function saveNicknames() {
   const clientIds = [...new Set([...tradeIds, ...manualIds, ...Object.keys(accountNicknames)])];
   const newData   = {};
   clientIds.forEach(cid => {
-    const nickInp = document.getElementById('nick-' + cid);
-    const nick    = nickInp?.value?.trim() || getNick(cid);
-    if (nick) newData[cid] = { nick };
+    const nickInp   = document.getElementById('nick-' + cid);
+    const holderInp = document.getElementById('holder-' + cid);
+    const nick   = nickInp?.value?.trim() || getNick(cid);
+    const holder = holderInp?.value?.trim() || getHolderName(cid);
+    if (nick || holder) newData[cid] = { nick: nick || '', holder_name: holder || '' };
     else if (accountNicknames[cid]) newData[cid] = accountNicknames[cid];
   });
   accountNicknames = newData;
   if (db) await db.ref('journal/nicknames').set(newData);
   buildClientIdTabs();
   buildNicknameList();
+  renderTaxPnlSection();
   toast('✓ Nicknames saved', 'success');
 }
 
