@@ -2,6 +2,15 @@
 ==========================================================
   SKVK TRADING JOURNAL — VERSION HISTORY
 ==========================================================
+  v21.5 | 2026-07-08 | Bug fix: Analytics-Basket & Account-wise pages showed an
+         |            | unexpected horizontal page scrollbar after the v21.4 reorder —
+         |            | classic CSS Grid min-width:auto issue where the chart <canvas>
+         |            | elements inside the two-column Daily P&L block's right-hand
+         |            | column (grid-template-columns:420px 1fr) forced that grid
+         |            | track wider than available space once nested one level deeper
+         |            | inside Yearly P&L Data. Fixed by adding min-width:0 to that
+         |            | column's container on both tabs, letting Chart.js size the
+         |            | canvases responsively instead of overflowing the page.
   v21.4 | 2026-07-08 | Reordered Analytics-Basket & Account-wise pages: calendar-grid
          |            | heatmap pulled out of Monthly P&L Data and moved to the very top
          |            | as its own "📆 Daily P&L" section, renamed from "Monthly P&L —
@@ -720,7 +729,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>SKVK Trading Journal v21.4</title>
+<title>SKVK Trading Journal v21.5</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -1679,7 +1688,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div class="login-logo">📋</div>
     <div class="login-title">
       SKVK Trading Journal
-      <span class="login-vbadge">v21.4</span>
+      <span class="login-vbadge">v21.5</span>
     </div>
     <div class="login-sub">Sign in with your authorised Google account to access the journal.</div>
     <button class="google-signin-btn" id="googleSignInBtn" onclick="signInWithGoogle()">
@@ -1719,7 +1728,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
         <i class="ti ti-chart-candle brand-icon"></i>
         <span class="brand-skvk">SKVK</span>
         <span class="brand-appname">Trading Journal</span>
-        <span class="brand-vbadge">v21.4</span>
+        <span class="brand-vbadge">v21.5</span>
       </div>
     </div>
     <div id="topbar-right-wrap">
@@ -1933,7 +1942,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     </div>
 
     <!-- RIGHT: Charts stacked -->
-    <div style="display:flex;flex-direction:column;gap:18px;">
+    <div style="display:flex;flex-direction:column;gap:18px;min-width:0;">
       <div style="background:var(--bg);border:1.5px solid var(--border);border-radius:14px;padding:16px 18px;">
         <div style="font-size:0.72rem;font-weight:700;color:var(--text1);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:10px;">Equity Curve</div>
         <canvas id="dash-chart-equity" style="max-height:180px;"></canvas>
@@ -2160,7 +2169,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
         </div>
 
         <!-- RIGHT: Charts stacked -->
-        <div style="display:flex;flex-direction:column;gap:18px;">
+        <div style="display:flex;flex-direction:column;gap:18px;min-width:0;">
           <!-- Equity Curve -->
           <div style="background:var(--bg);border:1.5px solid var(--border);border-radius:14px;padding:16px 18px;">
             <div style="font-size:0.72rem;font-weight:700;color:var(--text1);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:10px;">Equity Curve</div>
