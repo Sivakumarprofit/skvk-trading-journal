@@ -2,6 +2,31 @@
 ==========================================================
   SKVK TRADING JOURNAL — VERSION HISTORY
 ==========================================================
+  v21.4 | 2026-07-08 | Reordered Analytics-Basket & Account-wise pages: calendar-grid
+         |            | heatmap pulled out of Monthly P&L Data and moved to the very top
+         |            | as its own "📆 Daily P&L" section, renamed from "Monthly P&L —
+         |            | [Month]" to "Daily P&L — [Month]". The two-column Daily P&L
+         |            | table + Equity/Drawdown/Capital charts block moved back down
+         |            | into Yearly P&L Data (its v21.2 position), after Live
+         |            | Performance. New page order: Selection controls → Daily P&L →
+         |            | Monthly P&L Data → Yearly P&L Data (Live Perf + Daily P&L
+         |            | table/charts) → Monthly Returns → Capital Deployed → Daily P&L
+         |            | Heatmap → (Strategy P&L, Dashboard only, now hidden — see below).
+         |            | Bug fix: journal/capital_basket Firebase listener never
+         |            | triggered a re-render (only journal/capital_v2 did), so the
+         |            | Dashboard Capital Deployed grid stayed permanently blank
+         |            | regardless of saved data — now calls renderDashCapitalGrid().
+         |            | Bug fix: Dashboard Capital Deployed chart (dashChartCap) was
+         |            | declared but never implemented — built to mirror the working
+         |            | Account-wise version (acctChartCap), sourced from basket-level
+         |            | capital. Analytics — Basket: "📋 Strategy P&L" table section
+         |            | hidden from display (wrapped, not deleted — underlying
+         |            | renderDashTable()/algo-group logic kept intact for App
+         |            | Settings). Analytics — Account wise: Select Account box moved
+         |            | from centered to left-aligned, with Baskets Traded panel
+         |            | positioned beside it (was pinned far-right). Select Account
+         |            | box resized down / Basket box (Analytics-Basket) resized up so
+         |            | both now match (min-width 260px, same padding/font-size).
   v21.3 | 2026-07-07 | Daily P&L Data section (table+charts+heatmap) moved above Monthly
          |            | P&L Data, new green separator header, in both Dashboard & Account
          |            | wise tabs. Monthly P&L chart, Select Month dropdown, Daily P&L
@@ -695,7 +720,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>SKVK Trading Journal v21.3</title>
+<title>SKVK Trading Journal v21.4</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -1654,7 +1679,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div class="login-logo">📋</div>
     <div class="login-title">
       SKVK Trading Journal
-      <span class="login-vbadge">v21.3</span>
+      <span class="login-vbadge">v21.4</span>
     </div>
     <div class="login-sub">Sign in with your authorised Google account to access the journal.</div>
     <button class="google-signin-btn" id="googleSignInBtn" onclick="signInWithGoogle()">
@@ -1694,7 +1719,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
         <i class="ti ti-chart-candle brand-icon"></i>
         <span class="brand-skvk">SKVK</span>
         <span class="brand-appname">Trading Journal</span>
-        <span class="brand-vbadge">v21.3</span>
+        <span class="brand-vbadge">v21.4</span>
       </div>
     </div>
     <div id="topbar-right-wrap">
@@ -1745,10 +1770,10 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
         <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
           <input type="radio" name="dash-sel-mode" value="basket" checked onchange="onDashSelMode()"
             style="accent-color:var(--blue);width:14px;height:14px;flex-shrink:0;">
-          <div id="dash-basket-box" style="background:var(--blue);padding:8px 14px;border-radius:10px;box-shadow:0 2px 6px rgba(26,115,232,0.25);">
+          <div id="dash-basket-box" style="background:var(--blue);padding:10px 18px;border-radius:10px;box-shadow:0 2px 6px rgba(26,115,232,0.25);">
             <div style="font-size:0.65rem;font-weight:700;color:rgba(255,255,255,0.85);letter-spacing:0.05em;margin-bottom:4px;">🧺 BASKET</div>
             <select id="dash-basket-select" onchange="renderDashFiltered()"
-              style="padding:4px 8px;border:none;border-radius:6px;font-size:0.82rem;font-weight:600;outline:none;background:#fff;color:var(--blue);font-family:var(--font);cursor:pointer;min-width:150px;">
+              style="padding:6px 10px;border:none;border-radius:6px;font-size:0.85rem;font-weight:600;outline:none;background:#fff;color:var(--blue);font-family:var(--font);cursor:pointer;min-width:260px;">
               <option value="__ALL__">All Baskets</option>
             </select>
           </div>
@@ -1781,52 +1806,22 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     </div>
   </div>
 
-  <!-- ══ Daily P&L Data ══ -->
+  <!-- ══ Daily P&L ══ -->
   <div style="border-top:3px solid var(--green);padding-top:10px;margin-bottom:16px;">
-    <span style="font-size:1.05rem;font-weight:800;font-family:var(--display);color:var(--green);">📆 Daily P&L Data</span>
+    <span style="font-size:1.05rem;font-weight:800;font-family:var(--display);color:var(--green);">📆 Daily P&L</span>
   </div>
 
-  <!-- ── Two-column: Daily P&L table (left) + Charts (right) ── -->
-  <div style="display:grid;grid-template-columns:420px 1fr;gap:24px;margin-bottom:28px;">
-    <!-- LEFT: Daily P&L table -->
-    <div style="background:var(--bg);border:1.5px solid var(--border);border-radius:14px;overflow:hidden;">
-      <div style="padding:14px 18px;border-bottom:1px solid var(--border);font-size:0.95rem;font-weight:800;font-family:var(--display);">Daily P&L</div>
-      <table style="width:100%;border-collapse:collapse;font-size:0.8rem;">
-        <thead id="dash-table-thead">
-          <tr style="background:var(--bg2);">
-            <th style="padding:8px 14px;text-align:left;font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;">DATE</th>
-            <th style="padding:8px 8px;text-align:left;font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;">DAY</th>
-            <th style="padding:8px 8px;text-align:right;font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;">DAILY P&L</th>
-            <th style="padding:8px 8px;text-align:right;font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;">TRADES</th>
-            <th style="padding:8px 14px;text-align:right;font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;">CUMULATIVE</th>
-          </tr>
-        </thead>
-        <tbody id="dash-daily-tbody"></tbody>
-      </table>
-      <div style="padding:10px 14px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
-        <span id="dash-daily-info" style="font-size:0.72rem;color:var(--text2);"></span>
-        <div style="display:flex;gap:6px;">
-          <button onclick="dashDailyPage(-1)" id="dash-pg-prev" style="padding:4px 10px;border:1px solid var(--border);border-radius:6px;font-size:0.72rem;cursor:pointer;background:#fff;">← Prev</button>
-          <button onclick="dashDailyPage(1)"  id="dash-pg-next" style="padding:4px 10px;border:1px solid var(--border);border-radius:6px;font-size:0.72rem;cursor:pointer;background:#fff;">Next →</button>
-        </div>
+  <!-- Current Month P&L calendar -->
+  <div style="background:var(--bg);border:1.5px solid var(--border);border-radius:14px;padding:16px 20px;margin-bottom:28px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+      <div style="font-size:0.78rem;font-weight:700;color:var(--text1);letter-spacing:0.06em;text-transform:uppercase;" id="dash-cal-title">Current Month P&L</div>
+      <div style="display:flex;gap:5px;font-size:0.68rem;align-items:center;">
+        <span style="background:#16a34a;color:#fff;padding:2px 8px;border-radius:4px;">Profit</span>
+        <span style="background:#dc2626;color:#fff;padding:2px 8px;border-radius:4px;">Loss</span>
+        <span style="background:#f3f4f6;color:#9ca3af;padding:2px 8px;border-radius:4px;border:1px solid #e5e7eb;">No trade</span>
       </div>
     </div>
-
-    <!-- RIGHT: Charts stacked -->
-    <div style="display:flex;flex-direction:column;gap:18px;">
-      <div style="background:var(--bg);border:1.5px solid var(--border);border-radius:14px;padding:16px 18px;">
-        <div style="font-size:0.72rem;font-weight:700;color:var(--text1);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:10px;">Equity Curve</div>
-        <canvas id="dash-chart-equity" style="max-height:180px;"></canvas>
-      </div>
-      <div style="background:var(--bg);border:1.5px solid var(--border);border-radius:14px;padding:16px 18px;">
-        <div style="font-size:0.72rem;font-weight:700;color:var(--text1);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:10px;">Drawdown</div>
-        <canvas id="dash-chart-drawdown" style="max-height:160px;"></canvas>
-      </div>
-      <div style="background:var(--bg);border:1.5px solid var(--border);border-radius:14px;padding:16px 18px;">
-        <div style="font-size:0.72rem;font-weight:700;color:var(--text1);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:10px;">Capital Deployed</div>
-        <canvas id="dash-chart-capital" style="max-height:160px;"></canvas>
-      </div>
-    </div>
+    <div id="dash-cal-heatmap"></div>
   </div>
 
   <!-- ══ BLOCK 1: Monthly P&L Data ══ -->
@@ -1850,19 +1845,6 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
   <div style="background:var(--bg);border:1.5px solid var(--border);border-radius:14px;padding:16px 20px;margin-bottom:18px;">
     <div style="font-size:0.78rem;font-weight:700;color:var(--text1);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:10px;">Monthly P&L</div>
     <canvas id="chart-monthly" style="max-height:200px;"></canvas>
-  </div>
-
-  <!-- Current Month P&L calendar -->
-  <div style="background:var(--bg);border:1.5px solid var(--border);border-radius:14px;padding:16px 20px;margin-bottom:28px;">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
-      <div style="font-size:0.78rem;font-weight:700;color:var(--text1);letter-spacing:0.06em;text-transform:uppercase;" id="dash-cal-title">Current Month P&L</div>
-      <div style="display:flex;gap:5px;font-size:0.68rem;align-items:center;">
-        <span style="background:#16a34a;color:#fff;padding:2px 8px;border-radius:4px;">Profit</span>
-        <span style="background:#dc2626;color:#fff;padding:2px 8px;border-radius:4px;">Loss</span>
-        <span style="background:#f3f4f6;color:#9ca3af;padding:2px 8px;border-radius:4px;border:1px solid #e5e7eb;">No trade</span>
-      </div>
-    </div>
-    <div id="dash-cal-heatmap"></div>
   </div>
 
   <!-- Monthly Live Performance tiles (Basket tab) -->
@@ -1924,6 +1906,49 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     </div>
   </div>
 
+  <!-- ── Two-column: Daily P&L table (left) + Charts (right) ── -->
+  <div style="display:grid;grid-template-columns:420px 1fr;gap:24px;margin-bottom:28px;">
+    <!-- LEFT: Daily P&L table -->
+    <div style="background:var(--bg);border:1.5px solid var(--border);border-radius:14px;overflow:hidden;">
+      <div style="padding:14px 18px;border-bottom:1px solid var(--border);font-size:0.95rem;font-weight:800;font-family:var(--display);">Daily P&L</div>
+      <table style="width:100%;border-collapse:collapse;font-size:0.8rem;">
+        <thead id="dash-table-thead">
+          <tr style="background:var(--bg2);">
+            <th style="padding:8px 14px;text-align:left;font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;">DATE</th>
+            <th style="padding:8px 8px;text-align:left;font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;">DAY</th>
+            <th style="padding:8px 8px;text-align:right;font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;">DAILY P&L</th>
+            <th style="padding:8px 8px;text-align:right;font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;">TRADES</th>
+            <th style="padding:8px 14px;text-align:right;font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;">CUMULATIVE</th>
+          </tr>
+        </thead>
+        <tbody id="dash-daily-tbody"></tbody>
+      </table>
+      <div style="padding:10px 14px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
+        <span id="dash-daily-info" style="font-size:0.72rem;color:var(--text2);"></span>
+        <div style="display:flex;gap:6px;">
+          <button onclick="dashDailyPage(-1)" id="dash-pg-prev" style="padding:4px 10px;border:1px solid var(--border);border-radius:6px;font-size:0.72rem;cursor:pointer;background:#fff;">← Prev</button>
+          <button onclick="dashDailyPage(1)"  id="dash-pg-next" style="padding:4px 10px;border:1px solid var(--border);border-radius:6px;font-size:0.72rem;cursor:pointer;background:#fff;">Next →</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: Charts stacked -->
+    <div style="display:flex;flex-direction:column;gap:18px;">
+      <div style="background:var(--bg);border:1.5px solid var(--border);border-radius:14px;padding:16px 18px;">
+        <div style="font-size:0.72rem;font-weight:700;color:var(--text1);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:10px;">Equity Curve</div>
+        <canvas id="dash-chart-equity" style="max-height:180px;"></canvas>
+      </div>
+      <div style="background:var(--bg);border:1.5px solid var(--border);border-radius:14px;padding:16px 18px;">
+        <div style="font-size:0.72rem;font-weight:700;color:var(--text1);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:10px;">Drawdown</div>
+        <canvas id="dash-chart-drawdown" style="max-height:160px;"></canvas>
+      </div>
+      <div style="background:var(--bg);border:1.5px solid var(--border);border-radius:14px;padding:16px 18px;">
+        <div style="font-size:0.72rem;font-weight:700;color:var(--text1);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:10px;">Capital Deployed</div>
+        <canvas id="dash-chart-capital" style="max-height:160px;"></canvas>
+      </div>
+    </div>
+  </div>
+
   <!-- ── Monthly Returns table ── -->
   <div style="background:var(--bg);border:1.5px solid var(--border);border-radius:14px;padding:20px 24px;margin-bottom:28px;">
     <div style="font-size:0.95rem;font-weight:800;font-family:var(--display);margin-bottom:16px;">Monthly Returns</div>
@@ -1952,7 +1977,8 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div id="dash-heatmap"></div>
   </div>
 
-  <!-- ══ Strategy P&L table ══ -->
+  <!-- ══ Strategy P&L table (hidden from display per user request — logic kept for App Settings) ══ -->
+  <div style="display:none;">
   <div style="border-top:3px solid #0d9488;padding-top:10px;margin-bottom:12px;">
     <span style="font-size:1.05rem;font-weight:800;font-family:var(--display);color:#0d9488;">📋 Strategy P&L</span>
   </div>
@@ -1967,6 +1993,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
   <div class="table-wrap" id="dash-table">
     <div class="loading"><div class="spinner"></div> Loading data…</div>
   </div>
+  </div>
 
 </div>
 
@@ -1979,70 +2006,35 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div class="page-subtitle">Select one or more accounts to view combined performance analytics</div>
   </div>
 
-  <!-- ── Account Selector (centered, single select) + Baskets Traded (right) ── -->
-  <div style="display:grid;grid-template-columns:1fr auto 1fr;align-items:start;margin-bottom:24px;gap:16px;">
-    <div></div>
-    <div style="background:var(--blue);padding:14px 24px;border-radius:14px;box-shadow:0 2px 10px rgba(26,115,232,0.25);min-width:360px;max-width:560px;width:100%;">
+  <!-- ── Account Selector (left-aligned, single select) + Baskets Traded (beside it) ── -->
+  <div style="display:flex;align-items:flex-start;margin-bottom:24px;gap:32px;">
+    <div style="background:var(--blue);padding:10px 18px;border-radius:14px;box-shadow:0 2px 10px rgba(26,115,232,0.25);min-width:260px;">
       <div style="font-size:0.72rem;font-weight:700;color:rgba(255,255,255,0.85);letter-spacing:0.06em;text-align:center;margin-bottom:8px;">SELECT ACCOUNT</div>
-      <select id="acct-select" onchange="renderAcctReport()" style="width:100%;padding:8px 12px;border:none;border-radius:8px;font-size:0.88rem;font-weight:600;outline:none;background:#fff;color:var(--blue);font-family:var(--font);cursor:pointer;">
+      <select id="acct-select" onchange="renderAcctReport()" style="width:100%;padding:6px 10px;border:none;border-radius:8px;font-size:0.85rem;font-weight:600;outline:none;background:#fff;color:var(--blue);font-family:var(--font);cursor:pointer;">
         <option value="">— Select account —</option>
         <option value="__ALL__">All Accounts</option>
       </select>
     </div>
-    <div id="acct-baskets-traded" style="justify-self:end;text-align:right;padding-right:24px;"></div>
+    <div id="acct-baskets-traded" style="text-align:left;"></div>
   </div>
 
-  <!-- ══ Daily P&L Data ══ -->
+  <!-- ══ Daily P&L ══ -->
   <div id="acct-daily-block" style="display:none;margin-bottom:28px;">
     <div style="border-top:3px solid var(--green);padding-top:10px;margin-bottom:16px;">
-      <span style="font-size:1.05rem;font-weight:800;font-family:var(--display);color:var(--green);">📆 Daily P&L Data</span>
+      <span style="font-size:1.05rem;font-weight:800;font-family:var(--display);color:var(--green);">📆 Daily P&L</span>
     </div>
 
-  <!-- ── Two-column: Daily P&L table (left) + Charts (right) ── -->
-  <div style="display:grid;grid-template-columns:420px 1fr;gap:24px;margin-bottom:28px;">
-
-    <!-- LEFT: Daily P&L / Counter P&L table -->
-    <div style="background:var(--bg);border:1.5px solid var(--border);border-radius:14px;overflow:hidden;">
-      <div id="acct-table-title" style="padding:14px 18px;border-bottom:1px solid var(--border);font-size:0.95rem;font-weight:800;font-family:var(--display);">Daily P&L</div>
-      <table style="width:100%;border-collapse:collapse;font-size:0.8rem;">
-        <thead id="acct-table-thead">
-          <tr style="background:var(--bg2);">
-            <th style="padding:8px 14px;text-align:left;font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;">DATE</th>
-            <th style="padding:8px 8px;text-align:left;font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;">DAY</th>
-            <th style="padding:8px 8px;text-align:right;font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;">DAILY P&L</th>
-            <th style="padding:8px 8px;text-align:right;font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;">TRADES</th>
-            <th style="padding:8px 14px;text-align:right;font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;">CUMULATIVE</th>
-          </tr>
-        </thead>
-        <tbody id="acct-daily-tbody"></tbody>
-      </table>
-      <div style="padding:10px 14px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
-        <span id="acct-daily-info" style="font-size:0.72rem;color:var(--text2);"></span>
-        <div style="display:flex;gap:6px;">
-          <button onclick="acctDailyPage(-1)" id="acct-pg-prev" style="padding:4px 10px;border:1px solid var(--border);border-radius:6px;font-size:0.72rem;cursor:pointer;background:#fff;">← Prev</button>
-          <button onclick="acctDailyPage(1)"  id="acct-pg-next" style="padding:4px 10px;border:1px solid var(--border);border-radius:6px;font-size:0.72rem;cursor:pointer;background:#fff;">Next →</button>
-        </div>
+  <!-- Current month calendar heatmap -->
+  <div style="background:var(--bg);border:1.5px solid var(--border);border-radius:14px;padding:16px 20px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+      <div style="font-size:0.78rem;font-weight:700;color:var(--text1);letter-spacing:0.06em;text-transform:uppercase;" id="acct-cal-title">Current Month P&L</div>
+      <div style="display:flex;gap:5px;font-size:0.68rem;align-items:center;">
+        <span style="background:#16a34a;color:#fff;padding:2px 8px;border-radius:4px;">Profit</span>
+        <span style="background:#dc2626;color:#fff;padding:2px 8px;border-radius:4px;">Loss</span>
+        <span style="background:#f3f4f6;color:#9ca3af;padding:2px 8px;border-radius:4px;border:1px solid #e5e7eb;">No trade</span>
       </div>
     </div>
-
-    <!-- RIGHT: Charts stacked -->
-    <div style="display:flex;flex-direction:column;gap:18px;">
-      <!-- Equity Curve -->
-      <div style="background:var(--bg);border:1.5px solid var(--border);border-radius:14px;padding:16px 18px;">
-        <div style="font-size:0.72rem;font-weight:700;color:var(--text1);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:10px;">Equity Curve</div>
-        <canvas id="acct-chart-equity" style="max-height:180px;"></canvas>
-      </div>
-      <!-- Drawdown -->
-      <div style="background:var(--bg);border:1.5px solid var(--border);border-radius:14px;padding:16px 18px;">
-        <div style="font-size:0.72rem;font-weight:700;color:var(--text1);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:10px;">Drawdown</div>
-        <canvas id="acct-chart-drawdown" style="max-height:160px;"></canvas>
-      </div>
-      <!-- Capital Deployed -->
-      <div style="background:var(--bg);border:1.5px solid var(--border);border-radius:14px;padding:16px 18px;">
-        <div style="font-size:0.72rem;font-weight:700;color:var(--text1);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:10px;">Capital Deployed</div>
-        <canvas id="acct-chart-capital" style="max-height:160px;"></canvas>
-      </div>
-    </div>
+    <div id="acct-cal-heatmap"></div>
   </div>
   </div>
 
@@ -2068,19 +2060,6 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div id="acct-monthly-chart-wrap" style="background:var(--bg);border:1.5px solid var(--border);border-radius:14px;padding:16px 20px;margin-bottom:18px;">
       <div style="font-size:0.78rem;font-weight:700;color:var(--text1);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:10px;">Monthly P&L</div>
       <canvas id="acct-chart-monthly-top" style="max-height:200px;"></canvas>
-    </div>
-
-    <!-- Current month calendar heatmap -->
-    <div style="background:var(--bg);border:1.5px solid var(--border);border-radius:14px;padding:16px 20px;">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
-        <div style="font-size:0.78rem;font-weight:700;color:var(--text1);letter-spacing:0.06em;text-transform:uppercase;" id="acct-cal-title">Current Month P&L</div>
-        <div style="display:flex;gap:5px;font-size:0.68rem;align-items:center;">
-          <span style="background:#16a34a;color:#fff;padding:2px 8px;border-radius:4px;">Profit</span>
-          <span style="background:#dc2626;color:#fff;padding:2px 8px;border-radius:4px;">Loss</span>
-          <span style="background:#f3f4f6;color:#9ca3af;padding:2px 8px;border-radius:4px;border:1px solid #e5e7eb;">No trade</span>
-        </div>
-      </div>
-      <div id="acct-cal-heatmap"></div>
     </div>
 
     <!-- Monthly Live Performance tiles (Account wise tab) -->
@@ -2152,6 +2131,53 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
         <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Capital Deployed</div><div id="acct-lp-cap" style="font-size:1.1rem;font-weight:800;">—</div></div>
       </div>
     </div>
+
+      <!-- ── Two-column: Daily P&L table (left) + Charts (right) ── -->
+      <div style="display:grid;grid-template-columns:420px 1fr;gap:24px;margin-bottom:28px;">
+
+        <!-- LEFT: Daily P&L / Counter P&L table -->
+        <div style="background:var(--bg);border:1.5px solid var(--border);border-radius:14px;overflow:hidden;">
+          <div id="acct-table-title" style="padding:14px 18px;border-bottom:1px solid var(--border);font-size:0.95rem;font-weight:800;font-family:var(--display);">Daily P&L</div>
+          <table style="width:100%;border-collapse:collapse;font-size:0.8rem;">
+            <thead id="acct-table-thead">
+              <tr style="background:var(--bg2);">
+                <th style="padding:8px 14px;text-align:left;font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;">DATE</th>
+                <th style="padding:8px 8px;text-align:left;font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;">DAY</th>
+                <th style="padding:8px 8px;text-align:right;font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;">DAILY P&L</th>
+                <th style="padding:8px 8px;text-align:right;font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;">TRADES</th>
+                <th style="padding:8px 14px;text-align:right;font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;">CUMULATIVE</th>
+              </tr>
+            </thead>
+            <tbody id="acct-daily-tbody"></tbody>
+          </table>
+          <div style="padding:10px 14px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
+            <span id="acct-daily-info" style="font-size:0.72rem;color:var(--text2);"></span>
+            <div style="display:flex;gap:6px;">
+              <button onclick="acctDailyPage(-1)" id="acct-pg-prev" style="padding:4px 10px;border:1px solid var(--border);border-radius:6px;font-size:0.72rem;cursor:pointer;background:#fff;">← Prev</button>
+              <button onclick="acctDailyPage(1)"  id="acct-pg-next" style="padding:4px 10px;border:1px solid var(--border);border-radius:6px;font-size:0.72rem;cursor:pointer;background:#fff;">Next →</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- RIGHT: Charts stacked -->
+        <div style="display:flex;flex-direction:column;gap:18px;">
+          <!-- Equity Curve -->
+          <div style="background:var(--bg);border:1.5px solid var(--border);border-radius:14px;padding:16px 18px;">
+            <div style="font-size:0.72rem;font-weight:700;color:var(--text1);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:10px;">Equity Curve</div>
+            <canvas id="acct-chart-equity" style="max-height:180px;"></canvas>
+          </div>
+          <!-- Drawdown -->
+          <div style="background:var(--bg);border:1.5px solid var(--border);border-radius:14px;padding:16px 18px;">
+            <div style="font-size:0.72rem;font-weight:700;color:var(--text1);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:10px;">Drawdown</div>
+            <canvas id="acct-chart-drawdown" style="max-height:160px;"></canvas>
+          </div>
+          <!-- Capital Deployed -->
+          <div style="background:var(--bg);border:1.5px solid var(--border);border-radius:14px;padding:16px 18px;">
+            <div style="font-size:0.72rem;font-weight:700;color:var(--text1);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:10px;">Capital Deployed</div>
+            <canvas id="acct-chart-capital" style="max-height:160px;"></canvas>
+          </div>
+        </div>
+      </div>
 
     <!-- ── Monthly Returns table ── -->
     <div style="background:var(--bg);border:1.5px solid var(--border);border-radius:14px;padding:20px 24px;margin-bottom:28px;">
@@ -3766,7 +3792,7 @@ function renderAcctCalHeatmap(tr) {
   const mo = mo1 - 1;
   const monthName = new Date(yr, mo, 1).toLocaleDateString('en-IN',{month:'long',year:'numeric'});
   const titleEl = document.getElementById('acct-cal-title');
-  if (titleEl) titleEl.textContent = `Monthly P&L — ${monthName}`;
+  if (titleEl) titleEl.textContent = `Daily P&L — ${monthName}`;
 
   // Render monthly perf tiles
   renderMonthlyPerfTiles(tr, ym, 'acct-mp', 'acct-monthly-perf-label');
@@ -4156,6 +4182,7 @@ function startListeners() {
   });
   db.ref('journal/capital_basket').on('value', snap => {
     capitalBasket = snap.val() || {};
+    renderDashCapitalGrid();
   });
   db.ref('journal/nicknames').on('value', snap => {
     const raw = snap.val() || {};
@@ -4827,6 +4854,7 @@ function renderDashFiltered() {
   renderDashLivePerf(trPeriod, periodMode);
   renderDashDailyTable(trPeriod);
   drawDashEquityDD(trPeriod);
+  drawDashCapitalChart(trPeriod);
   renderDashMonthlyReturns(tr);
   renderDashCapitalGrid();
   renderDashHeatmap();
@@ -5174,7 +5202,7 @@ function drawDashCalHeatmap(tr) {
   const mo = mo1 - 1;
   const monthName = new Date(yr, mo, 1).toLocaleDateString('en-IN',{month:'long',year:'numeric'});
   const titleEl = document.getElementById('dash-cal-title');
-  if (titleEl) titleEl.textContent = `Monthly P&L — ${monthName}`;
+  if (titleEl) titleEl.textContent = `Daily P&L — ${monthName}`;
   const container = document.getElementById('dash-cal-heatmap');
   if (!container) return;
 
@@ -5256,6 +5284,46 @@ function drawDashEquityDD(tr) {
       options:{responsive:true,maintainAspectRatio:true,interaction:{mode:'index',intersect:false},
         plugins:{legend:{display:false},datalabels:{display:false},tooltip:{backgroundColor:'#fff',titleColor:'#374151',bodyColor:'#dc2626',borderColor:'#e5e7eb',borderWidth:1,padding:10,cornerRadius:8,displayColors:false,callbacks:{title:items=>{const idx=items[0]?.dataIndex;const ds=eqFullDates[idx];const d=ds?new Date(ds):null;return d&&!isNaN(d)?d.toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'2-digit'}):(items[0]?.label||'');},label:item=>'Drawdown: '+fmtV(item.raw)}}},
         scales:sharedScales}});
+  }
+}
+
+// Capital Deployed chart on Dashboard — was declared (dashChartCap) but never implemented in v21.2/v21.3;
+// mirrors the working Account-wise version (acctChartCap), sourced from basket-level capital.
+function getDashBasketCapitalForMonth(basketVal, ym) {
+  if (basketVal === '__ALL__') {
+    let sum = 0;
+    Object.values(capitalBasket).forEach(b => { if (b && b[ym]) sum += b[ym]; });
+    return sum;
+  }
+  return (capitalBasket[basketVal] && capitalBasket[basketVal][ym]) || 0;
+}
+function drawDashCapitalChart(tr) {
+  const basketVal = document.getElementById('dash-basket-select')?.value || '__ALL__';
+  const dayPnl = {};
+  tr.forEach(t => { const pd=pnlDate(t); if(pd) dayPnl[pd]=true; });
+  const sortedDays = Object.keys(dayPnl).sort();
+  const capLabels = [], capData = [];
+  sortedDays.forEach(d => {
+    const ym = d.slice(0,7);
+    capLabels.push(d.slice(5));
+    capData.push(getDashBasketCapitalForMonth(basketVal, ym));
+  });
+  if (dashChartCap) dashChartCap.destroy();
+  const ctxCap = document.getElementById('dash-chart-capital')?.getContext('2d');
+  if (ctxCap && capData.length) {
+    dashChartCap = new Chart(ctxCap, {
+      type:'line',
+      data:{ labels:capLabels, datasets:[{ data:capData, borderColor:'#6366f1', borderWidth:2, fill:false, stepped:true, tension:0 }]},
+      options:{
+        responsive:true, maintainAspectRatio:true,
+        plugins:{ legend:{display:false}, datalabels:{display:false} },
+        elements:{ point:{radius:0} },
+        scales:{
+          x:{grid:{color:'rgba(0,0,0,0.04)',drawBorder:false},ticks:{color:'#9ca3af',font:{size:9},maxTicksLimit:8},border:{display:false}},
+          y:{grid:{color:'rgba(0,0,0,0.05)',borderDash:[4,4],drawBorder:false},ticks:{color:'#9ca3af',font:{size:9}},border:{display:false}}
+        }
+      }
+    });
   }
 }
 
