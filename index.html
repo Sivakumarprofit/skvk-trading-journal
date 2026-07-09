@@ -2,6 +2,13 @@
 ==========================================================
   SKVK TRADING JOURNAL — VERSION HISTORY
 ==========================================================
+  v21.8 | 2026-07-09 | Expenses section: Person dropdown now shown as a highlighted
+         |            | blue box (matching Select Account/Basket style) instead of a
+         |            | plain select, so it's clear at a glance whose expenses are
+         |            | being viewed. Add/Edit Expense form now shows a highlighted,
+         |            | read-only "Adding For: [Name]" label alongside the editable
+         |            | fields, so it's unambiguous which account holder the entry is
+         |            | going into.
   v21.7 | 2026-07-09 | Taxation/Expenses tab: renamed "Tax P&L" to "Tax P&L (Gross)",
          |            | added FY badge, amounts now shown in K/L/Cr format (was plain
          |            | rupee figures). New "Expenses" section — Person dropdown
@@ -757,7 +764,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>SKVK Trading Journal v21.7</title>
+<title>SKVK Trading Journal v21.8</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -1716,7 +1723,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div class="login-logo">📋</div>
     <div class="login-title">
       SKVK Trading Journal
-      <span class="login-vbadge">v21.7</span>
+      <span class="login-vbadge">v21.8</span>
     </div>
     <div class="login-sub">Sign in with your authorised Google account to access the journal.</div>
     <button class="google-signin-btn" id="googleSignInBtn" onclick="signInWithGoogle()">
@@ -1756,7 +1763,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
         <i class="ti ti-chart-candle brand-icon"></i>
         <span class="brand-skvk">SKVK</span>
         <span class="brand-appname">Trading Journal</span>
-        <span class="brand-vbadge">v21.7</span>
+        <span class="brand-vbadge">v21.8</span>
       </div>
     </div>
     <div id="topbar-right-wrap">
@@ -2412,7 +2419,10 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
         </div>
       </div>
       <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
-        <select id="exp-person-select" onchange="onExpPersonChange()" style="padding:6px 10px;border:1.5px solid var(--border);border-radius:6px;font-size:0.8rem;outline:none;font-weight:600;"></select>
+        <div style="background:var(--blue);padding:6px 12px;border-radius:8px;box-shadow:0 2px 6px rgba(26,115,232,0.25);">
+          <div style="font-size:0.62rem;font-weight:700;color:rgba(255,255,255,0.85);letter-spacing:0.05em;margin-bottom:2px;">PERSON</div>
+          <select id="exp-person-select" onchange="onExpPersonChange()" style="padding:4px 8px;border:none;border-radius:5px;font-size:0.82rem;font-weight:700;outline:none;background:#fff;color:var(--blue);font-family:var(--font);cursor:pointer;min-width:140px;"></select>
+        </div>
         <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:0.8rem;font-weight:600;color:var(--text0);">
           <input type="radio" name="exp-fy-mode" value="current" checked onchange="onExpFYModeChange()" style="accent-color:var(--blue);width:13px;height:13px;"> Current Fiscal
         </label>
@@ -2454,6 +2464,10 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div id="exp-form" style="display:none;margin-top:14px;padding:16px;background:var(--bg2);border-radius:10px;border:1px solid var(--border);">
       <input type="hidden" id="exp-edit-id" value="">
       <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end;">
+        <div>
+          <div style="font-size:0.7rem;font-weight:700;color:var(--text2);margin-bottom:4px;">ADDING FOR</div>
+          <div id="exp-f-person-label" style="padding:6px 12px;background:var(--blue);color:#fff;border-radius:6px;font-size:0.82rem;font-weight:700;white-space:nowrap;">—</div>
+        </div>
         <div>
           <div style="font-size:0.7rem;font-weight:700;color:var(--text2);margin-bottom:4px;">DATE</div>
           <input type="date" id="exp-f-date" style="padding:6px 10px;border:1.5px solid var(--border);border-radius:6px;font-size:0.82rem;outline:none;">
@@ -6396,6 +6410,8 @@ function openExpenseForm(id) {
   if (!form) return;
   form.style.display = 'block';
   document.getElementById('exp-edit-id').value = id || '';
+  const personLabel = document.getElementById('exp-f-person-label');
+  if (personLabel) personLabel.textContent = selectedExpPerson || '—';
   if (id) {
     const e = (expensesData[selectedExpPerson] || {})[id];
     if (e) {
