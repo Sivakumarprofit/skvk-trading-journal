@@ -2,6 +2,20 @@
 ==========================================================
   SKVK TRADING JOURNAL — VERSION HISTORY
 ==========================================================
+  v21.7 | 2026-07-09 | Taxation/Expenses tab: renamed "Tax P&L" to "Tax P&L (Gross)",
+         |            | added FY badge, amounts now shown in K/L/Cr format (was plain
+         |            | rupee figures). New "Expenses" section — Person dropdown
+         |            | (sourced from Tax P&L holder names) + its own independent
+         |            | Current Fiscal/Select Fiscal toggle, manual add/edit/delete of
+         |            | expense entries (Date, Expense, Amount, One-time or Recurring
+         |            | with a free-entry occurrence count, Google Drive checkbox),
+         |            | saved to journal/expenses/{holder}/{id} in Firebase. New
+         |            | "P&L (Net after Deductions)" section — all account holders in
+         |            | one table (Gross P&L, Expenses, Net P&L per holder), its own
+         |            | independent Current Fiscal/Select Fiscal toggle, K/L/Cr format,
+         |            | includes holders who only have expenses and no trading P&L.
+         |            | All three sections' FY toggles are independent of each other
+         |            | but default to Current Fiscal.
   v21.6 | 2026-07-08 | New top-level tab "🧾 Taxation/ Expenses" (2-line wrapped label)
          |            | added before App Settings in the nav bar. Entire Tax P&L
          |            | section (Current Fiscal/Select Fiscal toggle, per-holder
@@ -743,7 +757,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>SKVK Trading Journal v21.6</title>
+<title>SKVK Trading Journal v21.7</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -1702,7 +1716,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div class="login-logo">📋</div>
     <div class="login-title">
       SKVK Trading Journal
-      <span class="login-vbadge">v21.6</span>
+      <span class="login-vbadge">v21.7</span>
     </div>
     <div class="login-sub">Sign in with your authorised Google account to access the journal.</div>
     <button class="google-signin-btn" id="googleSignInBtn" onclick="signInWithGoogle()">
@@ -1742,7 +1756,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
         <i class="ti ti-chart-candle brand-icon"></i>
         <span class="brand-skvk">SKVK</span>
         <span class="brand-appname">Trading Journal</span>
-        <span class="brand-vbadge">v21.6</span>
+        <span class="brand-vbadge">v21.7</span>
       </div>
     </div>
     <div id="topbar-right-wrap">
@@ -2345,13 +2359,13 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     </div>
   </div>
   <div class="page-body">
-  <!-- ── Tax P&L Section ── -->
+  <!-- ── Tax P&L (Gross) Section ── -->
   <div style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:22px;box-shadow:var(--shadow-sm);">
     <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:16px;">
       <div style="display:flex;align-items:center;gap:10px;">
         <span style="font-size:1.3rem;">🧾</span>
         <div>
-          <div style="font-size:0.95rem;font-weight:700;color:var(--text0);">Tax P&L</div>
+          <div style="font-size:0.95rem;font-weight:700;color:var(--text0);">Tax P&L (Gross)</div>
           <div style="font-size:0.75rem;color:var(--text2);margin-top:2px;">Net P&L per account for the selected fiscal year (Apr–Mar) · read-only</div>
         </div>
       </div>
@@ -2363,6 +2377,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
           <input type="radio" name="tax-fy-mode" value="select" onchange="onTaxFYModeChange()" style="accent-color:var(--blue);width:13px;height:13px;"> Select Fiscal
         </label>
         <select id="tax-fy-select" style="display:none;padding:5px 10px;border:1.5px solid var(--blue);border-radius:6px;font-size:0.8rem;outline:none;" onchange="onTaxFYSelectChange()"></select>
+        <span id="tax-fy-badge" class="badge" style="background:var(--blue);color:#fff;font-weight:700;">FY</span>
       </div>
     </div>
     <div style="overflow-x:auto;">
@@ -2386,8 +2401,143 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     </div>
   </div>
 
+  <!-- ── Expenses Section ── -->
+  <div style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:22px;box-shadow:var(--shadow-sm);margin-top:20px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:16px;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <span style="font-size:1.3rem;">💰</span>
+        <div>
+          <div style="font-size:0.95rem;font-weight:700;color:var(--text0);">Expenses</div>
+          <div style="font-size:0.75rem;color:var(--text2);margin-top:2px;">Manually tracked expenses per account holder</div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
+        <select id="exp-person-select" onchange="onExpPersonChange()" style="padding:6px 10px;border:1.5px solid var(--border);border-radius:6px;font-size:0.8rem;outline:none;font-weight:600;"></select>
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:0.8rem;font-weight:600;color:var(--text0);">
+          <input type="radio" name="exp-fy-mode" value="current" checked onchange="onExpFYModeChange()" style="accent-color:var(--blue);width:13px;height:13px;"> Current Fiscal
+        </label>
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:0.8rem;font-weight:600;color:var(--text0);">
+          <input type="radio" name="exp-fy-mode" value="select" onchange="onExpFYModeChange()" style="accent-color:var(--blue);width:13px;height:13px;"> Select Fiscal
+        </label>
+        <select id="exp-fy-select" style="display:none;padding:5px 10px;border:1.5px solid var(--blue);border-radius:6px;font-size:0.8rem;outline:none;" onchange="onExpFYSelectChange()"></select>
+        <span id="exp-fy-badge" class="badge" style="background:var(--blue);color:#fff;font-weight:700;">FY</span>
+      </div>
+    </div>
+    <div style="overflow-x:auto;">
+      <table style="width:100%;border-collapse:collapse;">
+        <thead>
+          <tr style="border-bottom:2px solid var(--border);">
+            <th style="text-align:left;padding:8px 10px;font-size:0.7rem;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.05em;">S.No</th>
+            <th style="text-align:left;padding:8px 10px;font-size:0.7rem;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.05em;">Date</th>
+            <th style="text-align:left;padding:8px 10px;font-size:0.7rem;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.05em;">Expense</th>
+            <th style="text-align:right;padding:8px 10px;font-size:0.7rem;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.05em;">Amount</th>
+            <th style="text-align:left;padding:8px 10px;font-size:0.7rem;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.05em;">Type</th>
+            <th style="text-align:center;padding:8px 10px;font-size:0.7rem;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.05em;">G-Drive</th>
+            <th style="text-align:right;padding:8px 10px;font-size:0.7rem;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.05em;">Total</th>
+            <th style="text-align:center;padding:8px 10px;font-size:0.7rem;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.05em;"></th>
+          </tr>
+        </thead>
+        <tbody id="exp-body"></tbody>
+        <tfoot>
+          <tr style="border-top:2px solid var(--border);">
+            <td colspan="6" style="padding:10px;font-weight:700;font-size:0.85rem;color:var(--text0);">Total</td>
+            <td id="exp-total" style="padding:10px;text-align:right;font-weight:800;font-size:0.92rem;">—</td>
+            <td></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+    <div style="margin-top:14px;">
+      <button class="btn btn-primary" onclick="openExpenseForm()">➕ Add Expense</button>
+    </div>
+    <!-- Add/Edit expense form -->
+    <div id="exp-form" style="display:none;margin-top:14px;padding:16px;background:var(--bg2);border-radius:10px;border:1px solid var(--border);">
+      <input type="hidden" id="exp-edit-id" value="">
+      <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end;">
+        <div>
+          <div style="font-size:0.7rem;font-weight:700;color:var(--text2);margin-bottom:4px;">DATE</div>
+          <input type="date" id="exp-f-date" style="padding:6px 10px;border:1.5px solid var(--border);border-radius:6px;font-size:0.82rem;outline:none;">
+        </div>
+        <div>
+          <div style="font-size:0.7rem;font-weight:700;color:var(--text2);margin-bottom:4px;">EXPENSE</div>
+          <input type="text" id="exp-f-name" placeholder="e.g. CA fees" style="padding:6px 10px;border:1.5px solid var(--border);border-radius:6px;font-size:0.82rem;outline:none;min-width:200px;">
+        </div>
+        <div>
+          <div style="font-size:0.7rem;font-weight:700;color:var(--text2);margin-bottom:4px;">AMOUNT</div>
+          <input type="number" id="exp-f-amount" placeholder="0" style="padding:6px 10px;border:1.5px solid var(--border);border-radius:6px;font-size:0.82rem;outline:none;width:120px;">
+        </div>
+        <div>
+          <div style="font-size:0.7rem;font-weight:700;color:var(--text2);margin-bottom:4px;">TYPE</div>
+          <select id="exp-f-type" onchange="toggleExpCountField()" style="padding:6px 10px;border:1.5px solid var(--border);border-radius:6px;font-size:0.82rem;outline:none;">
+            <option value="onetime">One-time</option>
+            <option value="recurring">Recurring</option>
+          </select>
+        </div>
+        <div id="exp-f-count-wrap" style="display:none;">
+          <div style="font-size:0.7rem;font-weight:700;color:var(--text2);margin-bottom:4px;">NO. OF COUNT</div>
+          <input type="number" id="exp-f-count" min="1" value="1" style="padding:6px 10px;border:1.5px solid var(--border);border-radius:6px;font-size:0.82rem;outline:none;width:80px;">
+        </div>
+        <div>
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:0.82rem;font-weight:600;color:var(--text0);">
+            <input type="checkbox" id="exp-f-gdrive" style="width:14px;height:14px;"> Stored in Google Drive
+          </label>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-primary" onclick="saveExpense()">💾 Save</button>
+          <button class="btn btn-ghost" onclick="closeExpenseForm()">Cancel</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── P&L (Net after Deductions) Section ── -->
+  <div style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:22px;box-shadow:var(--shadow-sm);margin-top:20px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:16px;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <span style="font-size:1.3rem;">📊</span>
+        <div>
+          <div style="font-size:0.95rem;font-weight:700;color:var(--text0);">P&L – Net (after Deductions)</div>
+          <div style="font-size:0.75rem;color:var(--text2);margin-top:2px;">Gross P&L minus Expenses, per account holder · read-only</div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:0.8rem;font-weight:600;color:var(--text0);">
+          <input type="radio" name="pnlnet-fy-mode" value="current" checked onchange="onPnlNetFYModeChange()" style="accent-color:var(--blue);width:13px;height:13px;"> Current Fiscal
+        </label>
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:0.8rem;font-weight:600;color:var(--text0);">
+          <input type="radio" name="pnlnet-fy-mode" value="select" onchange="onPnlNetFYModeChange()" style="accent-color:var(--blue);width:13px;height:13px;"> Select Fiscal
+        </label>
+        <select id="pnlnet-fy-select" style="display:none;padding:5px 10px;border:1.5px solid var(--blue);border-radius:6px;font-size:0.8rem;outline:none;" onchange="onPnlNetFYSelectChange()"></select>
+        <span id="pnlnet-fy-badge" class="badge" style="background:var(--blue);color:#fff;font-weight:700;">FY</span>
+      </div>
+    </div>
+    <div style="overflow-x:auto;">
+      <table style="width:100%;border-collapse:collapse;">
+        <thead>
+          <tr style="border-bottom:2px solid var(--border);">
+            <th style="text-align:left;padding:8px 10px;font-size:0.7rem;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.05em;">S.No</th>
+            <th style="text-align:left;padding:8px 10px;font-size:0.7rem;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.05em;">Name</th>
+            <th style="text-align:right;padding:8px 10px;font-size:0.7rem;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.05em;">Gross P&L</th>
+            <th style="text-align:right;padding:8px 10px;font-size:0.7rem;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.05em;">Expenses</th>
+            <th style="text-align:right;padding:8px 10px;font-size:0.7rem;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.05em;">Net P&L</th>
+          </tr>
+        </thead>
+        <tbody id="pnlnet-body"></tbody>
+        <tfoot>
+          <tr style="border-top:2px solid var(--border);">
+            <td colspan="2" style="padding:10px;font-weight:700;font-size:0.85rem;color:var(--text0);">Total</td>
+            <td id="pnlnet-total-gross" style="padding:10px;text-align:right;font-weight:800;font-size:0.92rem;">—</td>
+            <td id="pnlnet-total-exp" style="padding:10px;text-align:right;font-weight:800;font-size:0.92rem;">—</td>
+            <td id="pnlnet-total-net" style="padding:10px;text-align:right;font-weight:800;font-size:0.92rem;">—</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  </div>
+
   </div>
 </div>
+
 
 <div id="page-appsettings" class="page">
   <div class="page-header">
@@ -4219,6 +4369,10 @@ function startListeners() {
     capitalBasket = snap.val() || {};
     renderDashCapitalGrid();
   });
+  db.ref('journal/expenses').on('value', snap => {
+    expensesData = snap.val() || {};
+    if (document.getElementById('page-taxation')?.classList.contains('active')) renderExpensesSection();
+  });
   db.ref('journal/nicknames').on('value', snap => {
     const raw = snap.val() || {};
     // Backward compat: migrate old string format { cid: 'nick' } to new { cid: { nick, holder_name } }
@@ -4278,7 +4432,7 @@ function showPage(name) {
   const tab = document.querySelector(`[data-page="${name}"]`);
   if (tab) tab.classList.add('active');
   if (name === 'appsettings') { initAppSettings(); renderGroupList(); renderAlgoPage(); loadDisplayPrefs(); loadCapitalTable(); buildNicknameList(); estimateDBSize(); populateBrokerClearDropdown(); acLoadEmails(); }
-  if (name === 'taxation') { renderTaxPnlSection(); }
+  if (name === 'taxation') { renderTaxPnlSection(); renderExpensesSection(); }
   if (name === 'stockmock') { loadSMTolerances(); updateSMStrategyDropdown(); onSMStratChange(); }
   if (name === 'algos') { renderGroupList(); renderAlgoPage(); }
   if (name === 'compare') { populateCompareSelects(); }
@@ -6075,11 +6229,31 @@ function getBrokerForClient(cid) {
   const t = allTrades.find(tr => tr.client_id === cid && tr.broker);
   return t ? t.broker.toUpperCase() : '';
 }
+// Format currency in K/L/Cr — used for Tax P&L (Gross), Expenses, P&L (Net)
+function fmtKLCr(v) {
+  if (v == null || isNaN(v)) return '—';
+  const sign = v < 0 ? '-' : '';
+  const abs = Math.abs(v);
+  if (abs >= 10000000) return sign + (abs/10000000).toFixed(2) + 'Cr';
+  if (abs >= 100000)   return sign + (abs/100000).toFixed(2) + 'L';
+  return sign + (abs/1000).toFixed(2) + 'K';
+}
+// All account-holder names (union of trade accounts, manual accounts, nicknamed accounts)
+function getAllHolderNames() {
+  const tradeIds  = [...new Set(allTrades.map(t => t.client_id).filter(Boolean))];
+  const manualIds = Object.keys(manualAccounts);
+  const clientIds = [...new Set([...tradeIds, ...manualIds, ...Object.keys(accountNicknames)])];
+  const holders = new Set();
+  clientIds.forEach(cid => holders.add(getHolderName(cid) || getNick(cid) || cid));
+  return [...holders].sort();
+}
 function renderTaxPnlSection() {
   const body = document.getElementById('tax-pnl-body');
   if (!body) return;
   const mode = document.querySelector('input[name="tax-fy-mode"]:checked')?.value || 'current';
   if (mode === 'current' || !selectedTaxFY) selectedTaxFY = getCurrentFY();
+  const badge = document.getElementById('tax-fy-badge');
+  if (badge) badge.textContent = selectedTaxFY;
 
   const [start, end] = getFYRange(selectedTaxFY);
   const tradeIds  = [...new Set(allTrades.map(t => t.client_id).filter(Boolean))];
@@ -6117,13 +6291,245 @@ function renderTaxPnlSection() {
       <td style="padding:8px 10px;font-size:0.82rem;color:var(--text2);">${i+1}</td>
       <td style="padding:8px 10px;font-size:0.82rem;font-weight:600;color:var(--text0);">${holder}</td>
       <td style="padding:8px 10px;font-size:0.82rem;">${acctBadges}</td>
-      <td style="padding:8px 10px;text-align:right;font-size:0.85rem;font-weight:700;" class="${g.pnl>=0?'pnl-pos':'pnl-neg'}">${fmt(g.pnl)}</td>
+      <td style="padding:8px 10px;text-align:right;font-size:0.85rem;font-weight:700;" class="${g.pnl>=0?'pnl-pos':'pnl-neg'}">${fmtKLCr(g.pnl)}</td>
     </tr>`;
   });
   body.innerHTML = rows || `<tr><td colspan="4" style="text-align:center;color:var(--text3);padding:20px;font-size:0.82rem;">No accounts found</td></tr>`;
 
   const totalEl = document.getElementById('tax-pnl-total');
-  if (totalEl) { totalEl.textContent = fmt(total); totalEl.className = total>=0?'pnl-pos':'pnl-neg'; }
+  if (totalEl) { totalEl.textContent = fmtKLCr(total); totalEl.className = total>=0?'pnl-pos':'pnl-neg'; }
+}
+
+// ════════════════════════════════════════════════════
+//  EXPENSES (manual entry, per account holder, Firebase-backed)
+// ════════════════════════════════════════════════════
+let expensesData = {}; // { holderName: { expId: {date, expense, amount, type, count?, gdrive} } }
+let selectedExpPerson = null;
+let selectedExpFY = null;
+
+function populateExpPersonSelect() {
+  const sel = document.getElementById('exp-person-select');
+  if (!sel) return;
+  const names = getAllHolderNames();
+  if (!selectedExpPerson || !names.includes(selectedExpPerson)) selectedExpPerson = names[0] || '';
+  sel.innerHTML = names.map(n => `<option value="${n}" ${n===selectedExpPerson?'selected':''}>${n}</option>`).join('');
+}
+function onExpPersonChange() {
+  selectedExpPerson = document.getElementById('exp-person-select')?.value || '';
+  closeExpenseForm();
+  renderExpensesSection();
+}
+function onExpFYModeChange() {
+  const mode = document.querySelector('input[name="exp-fy-mode"]:checked')?.value || 'current';
+  const sel = document.getElementById('exp-fy-select');
+  if (mode === 'select') {
+    populateExpFYSelect();
+    if (sel) sel.style.display = 'inline-block';
+    selectedExpFY = sel?.value || getCurrentFY();
+  } else {
+    if (sel) sel.style.display = 'none';
+    selectedExpFY = getCurrentFY();
+  }
+  renderExpensesSection();
+}
+function populateExpFYSelect() {
+  const sel = document.getElementById('exp-fy-select');
+  if (!sel) return;
+  const opts = getTaxFYSelectOptions();
+  const cur = selectedExpFY || getCurrentFY();
+  sel.innerHTML = opts.map(fy => `<option value="${fy}" ${fy===cur?'selected':''}>${fy}</option>`).join('');
+}
+function onExpFYSelectChange() {
+  selectedExpFY = document.getElementById('exp-fy-select')?.value || getCurrentFY();
+  renderExpensesSection();
+}
+function expenseTotal(e) {
+  const amt = parseFloat(e.amount) || 0;
+  if (e.type === 'recurring') return amt * (parseInt(e.count) || 1);
+  return amt;
+}
+function renderExpensesSection() {
+  populateExpPersonSelect();
+  const mode = document.querySelector('input[name="exp-fy-mode"]:checked')?.value || 'current';
+  if (mode === 'current' || !selectedExpFY) selectedExpFY = getCurrentFY();
+  const badge = document.getElementById('exp-fy-badge');
+  if (badge) badge.textContent = selectedExpFY;
+
+  const [start, end] = getFYRange(selectedExpFY);
+  const personData = expensesData[selectedExpPerson] || {};
+  const entries = Object.entries(personData).filter(([, e]) => e.date && e.date >= start && e.date <= end);
+  entries.sort((a, b) => a[1].date.localeCompare(b[1].date));
+
+  const tbody = document.getElementById('exp-body');
+  let total = 0, rows = '';
+  entries.forEach(([id, e], i) => {
+    const t = expenseTotal(e);
+    total += t;
+    const typeLabel = e.type === 'recurring' ? `Recurring ×${e.count}` : 'One-time';
+    rows += `<tr style="border-bottom:1px solid var(--border);">
+      <td style="padding:8px 10px;font-size:0.82rem;color:var(--text2);">${i+1}</td>
+      <td style="padding:8px 10px;font-size:0.82rem;">${new Date(e.date).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'})}</td>
+      <td style="padding:8px 10px;font-size:0.82rem;font-weight:600;color:var(--text0);">${e.expense}</td>
+      <td style="padding:8px 10px;text-align:right;font-size:0.82rem;">${fmtKLCr(e.amount)}</td>
+      <td style="padding:8px 10px;font-size:0.78rem;color:var(--text2);">${typeLabel}</td>
+      <td style="padding:8px 10px;text-align:center;">${e.gdrive ? '✅' : '—'}</td>
+      <td style="padding:8px 10px;text-align:right;font-size:0.85rem;font-weight:700;">${fmtKLCr(t)}</td>
+      <td style="padding:8px 10px;text-align:center;white-space:nowrap;">
+        <button onclick="openExpenseForm('${id}')" title="Edit" style="background:none;border:none;cursor:pointer;font-size:0.9rem;">✎</button>
+        <button onclick="deleteExpense('${id}')" title="Delete" style="background:none;border:none;cursor:pointer;font-size:0.9rem;">🗑</button>
+      </td>
+    </tr>`;
+  });
+  if (tbody) tbody.innerHTML = rows || `<tr><td colspan="8" style="text-align:center;color:var(--text3);padding:20px;font-size:0.82rem;">No expenses for this period</td></tr>`;
+  const totalEl = document.getElementById('exp-total');
+  if (totalEl) totalEl.textContent = fmtKLCr(total);
+
+  renderPnlNetSection();
+}
+function toggleExpCountField() {
+  const type = document.getElementById('exp-f-type')?.value;
+  const wrap = document.getElementById('exp-f-count-wrap');
+  if (wrap) wrap.style.display = type === 'recurring' ? 'block' : 'none';
+}
+function openExpenseForm(id) {
+  const form = document.getElementById('exp-form');
+  if (!form) return;
+  form.style.display = 'block';
+  document.getElementById('exp-edit-id').value = id || '';
+  if (id) {
+    const e = (expensesData[selectedExpPerson] || {})[id];
+    if (e) {
+      document.getElementById('exp-f-date').value = e.date || '';
+      document.getElementById('exp-f-name').value = e.expense || '';
+      document.getElementById('exp-f-amount').value = e.amount || '';
+      document.getElementById('exp-f-type').value = e.type || 'onetime';
+      document.getElementById('exp-f-count').value = e.count || 1;
+      document.getElementById('exp-f-gdrive').checked = !!e.gdrive;
+    }
+  } else {
+    document.getElementById('exp-f-date').value = '';
+    document.getElementById('exp-f-name').value = '';
+    document.getElementById('exp-f-amount').value = '';
+    document.getElementById('exp-f-type').value = 'onetime';
+    document.getElementById('exp-f-count').value = 1;
+    document.getElementById('exp-f-gdrive').checked = false;
+  }
+  toggleExpCountField();
+}
+function closeExpenseForm() {
+  const form = document.getElementById('exp-form');
+  if (form) form.style.display = 'none';
+}
+async function saveExpense() {
+  if (!selectedExpPerson) { toast('Select a person first', 'warning'); return; }
+  const id = document.getElementById('exp-edit-id').value || ('exp_' + Date.now());
+  const date = document.getElementById('exp-f-date').value;
+  const expense = document.getElementById('exp-f-name').value.trim();
+  const amount = parseFloat(document.getElementById('exp-f-amount').value) || 0;
+  const type = document.getElementById('exp-f-type').value;
+  const count = type === 'recurring' ? (parseInt(document.getElementById('exp-f-count').value) || 1) : null;
+  const gdrive = document.getElementById('exp-f-gdrive').checked;
+  if (!date || !expense || !amount) { toast('Please fill Date, Expense and Amount', 'warning'); return; }
+  const entry = { date, expense, amount, type, gdrive };
+  if (count) entry.count = count;
+  if (!expensesData[selectedExpPerson]) expensesData[selectedExpPerson] = {};
+  expensesData[selectedExpPerson][id] = entry;
+  if (db) await db.ref('journal/expenses/' + encodeURIComponent(selectedExpPerson) + '/' + id).set(entry);
+  closeExpenseForm();
+  renderExpensesSection();
+  toast('✓ Expense saved', 'success');
+}
+async function deleteExpense(id) {
+  if (!confirm('Delete this expense?')) return;
+  if (expensesData[selectedExpPerson]) delete expensesData[selectedExpPerson][id];
+  if (db) await db.ref('journal/expenses/' + encodeURIComponent(selectedExpPerson) + '/' + id).remove();
+  renderExpensesSection();
+  toast('✓ Expense deleted', 'success');
+}
+
+// ════════════════════════════════════════════════════
+//  P&L — NET (after Deductions) = Gross P&L − Expenses, per holder
+// ════════════════════════════════════════════════════
+let selectedPnlNetFY = null;
+function onPnlNetFYModeChange() {
+  const mode = document.querySelector('input[name="pnlnet-fy-mode"]:checked')?.value || 'current';
+  const sel = document.getElementById('pnlnet-fy-select');
+  if (mode === 'select') {
+    populatePnlNetFYSelect();
+    if (sel) sel.style.display = 'inline-block';
+    selectedPnlNetFY = sel?.value || getCurrentFY();
+  } else {
+    if (sel) sel.style.display = 'none';
+    selectedPnlNetFY = getCurrentFY();
+  }
+  renderPnlNetSection();
+}
+function populatePnlNetFYSelect() {
+  const sel = document.getElementById('pnlnet-fy-select');
+  if (!sel) return;
+  const opts = getTaxFYSelectOptions();
+  const cur = selectedPnlNetFY || getCurrentFY();
+  sel.innerHTML = opts.map(fy => `<option value="${fy}" ${fy===cur?'selected':''}>${fy}</option>`).join('');
+}
+function onPnlNetFYSelectChange() {
+  selectedPnlNetFY = document.getElementById('pnlnet-fy-select')?.value || getCurrentFY();
+  renderPnlNetSection();
+}
+function getGrossPnlForHolder(holder, fy) {
+  const [start, end] = getFYRange(fy);
+  const tradeIds  = [...new Set(allTrades.map(t => t.client_id).filter(Boolean))];
+  const manualIds = Object.keys(manualAccounts);
+  const clientIds = [...new Set([...tradeIds, ...manualIds, ...Object.keys(accountNicknames)])];
+  let pnl = 0;
+  clientIds.forEach(cid => {
+    if ((getHolderName(cid) || getNick(cid) || cid) !== holder) return;
+    pnl += allTrades.filter(t => t.client_id === cid).reduce((s, t) => {
+      const d = pnlDate(t) || t.entry_date;
+      return (d && d >= start && d <= end) ? s + (t.pnl || 0) : s;
+    }, 0);
+  });
+  return pnl;
+}
+function getExpensesForHolder(holder, fy) {
+  const [start, end] = getFYRange(fy);
+  const personData = expensesData[holder] || {};
+  return Object.values(personData)
+    .filter(e => e.date && e.date >= start && e.date <= end)
+    .reduce((s, e) => s + expenseTotal(e), 0);
+}
+function renderPnlNetSection() {
+  const body = document.getElementById('pnlnet-body');
+  if (!body) return;
+  const mode = document.querySelector('input[name="pnlnet-fy-mode"]:checked')?.value || 'current';
+  if (mode === 'current' || !selectedPnlNetFY) selectedPnlNetFY = getCurrentFY();
+  const badge = document.getElementById('pnlnet-fy-badge');
+  if (badge) badge.textContent = selectedPnlNetFY;
+
+  const taxHolders = getAllHolderNames();
+  const expHolders = Object.keys(expensesData);
+  const allHolders = [...new Set([...taxHolders, ...expHolders])].sort();
+
+  let totalGross = 0, totalExp = 0, totalNet = 0, rows = '';
+  allHolders.forEach((h, i) => {
+    const gross = getGrossPnlForHolder(h, selectedPnlNetFY);
+    const exp = getExpensesForHolder(h, selectedPnlNetFY);
+    const net = gross - exp;
+    totalGross += gross; totalExp += exp; totalNet += net;
+    rows += `<tr style="border-bottom:1px solid var(--border);">
+      <td style="padding:8px 10px;font-size:0.82rem;color:var(--text2);">${i+1}</td>
+      <td style="padding:8px 10px;font-size:0.82rem;font-weight:600;color:var(--text0);">${h}</td>
+      <td style="padding:8px 10px;text-align:right;font-size:0.82rem;" class="${gross>=0?'pnl-pos':'pnl-neg'}">${fmtKLCr(gross)}</td>
+      <td style="padding:8px 10px;text-align:right;font-size:0.82rem;">${fmtKLCr(exp)}</td>
+      <td style="padding:8px 10px;text-align:right;font-size:0.85rem;font-weight:700;" class="${net>=0?'pnl-pos':'pnl-neg'}">${fmtKLCr(net)}</td>
+    </tr>`;
+  });
+  body.innerHTML = rows || `<tr><td colspan="5" style="text-align:center;color:var(--text3);padding:20px;font-size:0.82rem;">No data</td></tr>`;
+  const gEl = document.getElementById('pnlnet-total-gross');
+  const eEl = document.getElementById('pnlnet-total-exp');
+  const nEl = document.getElementById('pnlnet-total-net');
+  if (gEl) { gEl.textContent = fmtKLCr(totalGross); gEl.className = totalGross>=0?'pnl-pos':'pnl-neg'; }
+  if (eEl) eEl.textContent = fmtKLCr(totalExp);
+  if (nEl) { nEl.textContent = fmtKLCr(totalNet); nEl.className = totalNet>=0?'pnl-pos':'pnl-neg'; }
 }
 
 // ════════════════════════════════════════════════════
