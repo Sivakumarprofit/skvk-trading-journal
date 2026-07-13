@@ -2,6 +2,17 @@
 ==========================================================
   SKVK TRADING JOURNAL — VERSION HISTORY
 ==========================================================
+  v22.1 | 2026-07-13 | Bug fix: editGroup(name) now finds a basket by matching its
+         |            | .name field across algoGroups (like asDeleteGroup already did)
+         |            | instead of assuming the Firebase key equals the display name —
+         |            | fixes pre-selected algo checkboxes not showing when editing any
+         |            | basket whose name contains a character other than letters/
+         |            | numbers/underscore (e.g. "BNF+MC_COMBO"), since such names are
+         |            | stored under a sanitized key. Nav bar: increased inactive-tab
+         |            | text brightness and font size for better visibility. All
+         |            | Allocations tab: icon swapped from 🧮 emoji to Tabler ti-sitemap
+         |            | icon (matches Tradetron's hierarchy icon), only on this one tab.
+==========================================================
   v22.0 | 2026-07-13 | MAJOR: New "Analytics-Execution" tab merges the old StockMock
          |            | Compare and Compare Broker Execution tabs into one scrollable
          |            | page — "StockMock Comparison" then "Broker Comparison", stacked,
@@ -810,7 +821,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>SKVK Trading Journal v22.0</title>
+<title>SKVK Trading Journal v22.1</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -938,8 +949,8 @@ body {
 .nav-tab {
   display: flex; align-items: center; justify-content: center; gap: 6px;
   padding: 0 20px;
-  font-size: 0.88rem; font-weight: 600;
-  color: rgba(255,255,255,0.72);
+  font-size: 0.92rem; font-weight: 650;
+  color: rgba(255,255,255,0.88);
   background: none; border: none; cursor: pointer;
   position: relative; transition: all 0.15s;
   white-space: nowrap; text-align: center; flex-shrink: 0;
@@ -1769,7 +1780,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div class="login-logo">📋</div>
     <div class="login-title">
       SKVK Trading Journal
-      <span class="login-vbadge">v22.0</span>
+      <span class="login-vbadge">v22.1</span>
     </div>
     <div class="login-sub">Sign in with your authorised Google account to access the journal.</div>
     <button class="google-signin-btn" id="googleSignInBtn" onclick="signInWithGoogle()">
@@ -1809,7 +1820,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
         <i class="ti ti-chart-candle brand-icon"></i>
         <span class="brand-skvk">SKVK</span>
         <span class="brand-appname">Trading Journal</span>
-        <span class="brand-vbadge">v22.0</span>
+        <span class="brand-vbadge">v22.1</span>
       </div>
     </div>
     <div id="topbar-right-wrap">
@@ -1832,7 +1843,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
       <button class="nav-tab" onclick="showPage('acctreport')"            data-page="acctreport">👤 Analytics — Account wise</button>
       <button class="nav-tab" onclick="showPage('upload')"                data-page="upload">⬆ Upload Trade Reports</button>
       <button class="nav-tab" onclick="showPage('stockmock')"             data-page="stockmock">📊 Analytics-Execution</button>
-      <button class="nav-tab" onclick="showPage('allocations')"           data-page="allocations">🧮 All Allocations</button>
+      <button class="nav-tab" onclick="showPage('allocations')"           data-page="allocations"><i class="ti ti-sitemap"></i>&nbsp;All Allocations</button>
       <button class="nav-tab" onclick="showPage('taxation')" data-page="taxation" style="line-height:1.2;">🧾 Taxation/<br>Expenses</button>
       <button class="nav-tab" onclick="showPage('appsettings')"           data-page="appsettings">🛠️ App Settings</button>
     </nav>
@@ -8619,7 +8630,8 @@ function openAddGroupModal() {
 }
 
 function editGroup(name) {
-  const g = algoGroups[name] || {};
+  const gk = Object.keys(algoGroups).find(k => algoGroups[k].name === name) || name;
+  const g = algoGroups[gk] || {};
   el('g-name').value = g.name || name;
   el('g-color').value = g.color || '#1a73e8';
   el('g-category').value = g.category || '';
