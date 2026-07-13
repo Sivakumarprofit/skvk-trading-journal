@@ -2,6 +2,52 @@
 ==========================================================
   SKVK TRADING JOURNAL — VERSION HISTORY
 ==========================================================
+  v22.0 | 2026-07-13 | MAJOR: New "Analytics-Execution" tab merges the old StockMock
+         |            | Compare and Compare Broker Execution tabs into one scrollable
+         |            | page — "StockMock Comparison" then "Broker Comparison", stacked,
+         |            | no section numbering shown. Basket Management: new "Capital
+         |            | Required for 1 Lot (₹)" field per basket (capital_per_lot),
+         |            | shown in the basket list. NEW "All Allocations" top-level tab:
+         |            | per-month grid of Account (Client ID) → Basket → Lots (multiple
+         |            | baskets per account allowed); margin = lots × capital_per_lot;
+         |            | account + grand totals; "Carry forward last month" checkbox;
+         |            | manual add row, CSV import/export; per-month "⚠️ Mark Incomplete"
+         |            | button (used for Apr/May 2026 where allocation data isn't
+         |            | reliable) which suppresses capital warnings and excludes that
+         |            | month from capital-based metrics (P&L still shown normally).
+         |            | MAJOR REWIRE: Capital Deployed is no longer manually entered
+         |            | anywhere — all manual Capital Deployed grids removed (App
+         |            | Settings → Total Capital section deleted; Dashboard, Analytics-
+         |            | Account, Analytics-Basket capital tiles/grids now read-only,
+         |            | auto-computed from Allocations data, both account-level and
+         |            | basket-level). Incomplete-flagged months show "—" for Capital
+         |            | Deployed / Return% / Max Drawdown% (no warning). Old
+         |            | journal/capital_v2, journal/capital, journal/capital_basket
+         |            | Firebase data deleted — fully replaced by journal/allocations.
+==========================================================
+  v21.9 | 2026-07-10 | Broker Account Settings: Client ID rename button relabeled from
+         |            | ✏️ to "💾 Rename" — the field was always editable, the icon just
+         |            | implied "click to start editing" rather than "click to confirm",
+         |            | causing "no change" confusion. Monthly Performance panel (both
+         |            | tabs): added Max Drawdown % and Capital Deployed tiles. Capital
+         |            | Deployed shows ⚠️ "Not entered" and dependent stats (Max
+         |            | Drawdown %) show "Error" when capital is missing for the current
+         |            | or any past month within the current fiscal year (future months
+         |            | are exempt, since the app only has data from this FY onward).
+         |            | Reordered Monthly P&L Data: Monthly Performance tiles now shown
+         |            | above the Monthly P&L bar chart. Current-month highlight on that
+         |            | chart changed from a dotted border outline to a background
+         |            | shade band (custom lightweight Chart.js plugin, no external
+         |            | dependency). Daily P&L calendar-grid card now has its own
+         |            | independent Current Month/Select Month selector, decoupled from
+         |            | Monthly P&L Data's selector. Bug fix: added autocomplete="off"
+         |            | to every radio button group in the app (month-mode both tabs,
+         |            | all FY-mode toggles) — Chrome was silently restoring
+         |            | "Select Month"/non-default selections on simple page refresh
+         |            | (before our JS ran), leaving the month dropdown empty and
+         |            | producing "DAILY P&L — INVALID DATE". Also added a safety
+         |            | fallback in getSelectedYM() to default to the current month if
+         |            | Select-mode is somehow active with an empty dropdown value.
   v21.8 | 2026-07-09 | Expenses section: Person dropdown now shown as a highlighted
          |            | blue box (matching Select Account/Basket style) instead of a
          |            | plain select, so it's clear at a glance whose expenses are
@@ -764,7 +810,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>SKVK Trading Journal v21.8</title>
+<title>SKVK Trading Journal v22.0</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -1723,7 +1769,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div class="login-logo">📋</div>
     <div class="login-title">
       SKVK Trading Journal
-      <span class="login-vbadge">v21.8</span>
+      <span class="login-vbadge">v22.0</span>
     </div>
     <div class="login-sub">Sign in with your authorised Google account to access the journal.</div>
     <button class="google-signin-btn" id="googleSignInBtn" onclick="signInWithGoogle()">
@@ -1763,7 +1809,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
         <i class="ti ti-chart-candle brand-icon"></i>
         <span class="brand-skvk">SKVK</span>
         <span class="brand-appname">Trading Journal</span>
-        <span class="brand-vbadge">v21.8</span>
+        <span class="brand-vbadge">v22.0</span>
       </div>
     </div>
     <div id="topbar-right-wrap">
@@ -1785,8 +1831,8 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
       <button class="nav-tab" onclick="showPage('dashboard')"             data-page="dashboard">📊 Analytics — Basket</button>
       <button class="nav-tab" onclick="showPage('acctreport')"            data-page="acctreport">👤 Analytics — Account wise</button>
       <button class="nav-tab" onclick="showPage('upload')"                data-page="upload">⬆ Upload Trade Reports</button>
-      <button class="nav-tab" onclick="showPage('stockmock')"             data-page="stockmock">🔬 StockMock Compare</button>
-      <button class="nav-tab" onclick="showPage('compare')"               data-page="compare">⚖️ Compare Broker Execution</button>
+      <button class="nav-tab" onclick="showPage('stockmock')"             data-page="stockmock">📊 Analytics-Execution</button>
+      <button class="nav-tab" onclick="showPage('allocations')"           data-page="allocations">🧮 All Allocations</button>
       <button class="nav-tab" onclick="showPage('taxation')" data-page="taxation" style="line-height:1.2;">🧾 Taxation/<br>Expenses</button>
       <button class="nav-tab" onclick="showPage('appsettings')"           data-page="appsettings">🛠️ App Settings</button>
     </nav>
@@ -1813,7 +1859,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
       <div style="display:flex;gap:10px;align-items:stretch;">
         <!-- Basket -->
         <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
-          <input type="radio" name="dash-sel-mode" value="basket" checked onchange="onDashSelMode()"
+          <input type="radio" autocomplete="off" name="dash-sel-mode" value="basket" checked onchange="onDashSelMode()"
             style="accent-color:var(--blue);width:14px;height:14px;flex-shrink:0;">
           <div id="dash-basket-box" style="background:var(--blue);padding:10px 18px;border-radius:10px;box-shadow:0 2px 6px rgba(26,115,232,0.25);">
             <div style="font-size:0.65rem;font-weight:700;color:rgba(255,255,255,0.85);letter-spacing:0.05em;margin-bottom:4px;">🧺 BASKET</div>
@@ -1825,7 +1871,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
         </label>
         <!-- Group -->
         <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
-          <input type="radio" name="dash-sel-mode" value="group" onchange="onDashSelMode()"
+          <input type="radio" autocomplete="off" name="dash-sel-mode" value="group" onchange="onDashSelMode()"
             style="accent-color:#0d9488;width:14px;height:14px;flex-shrink:0;">
           <div id="dash-group-box" style="background:#0d9488;padding:8px 14px;border-radius:10px;box-shadow:0 2px 6px rgba(13,148,136,0.25);opacity:0.5;">
             <div style="font-size:0.65rem;font-weight:700;color:rgba(255,255,255,0.85);letter-spacing:0.05em;margin-bottom:4px;">📁 GROUP</div>
@@ -1837,7 +1883,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
         </label>
         <!-- Strategy -->
         <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
-          <input type="radio" name="dash-sel-mode" value="algo" onchange="onDashSelMode()"
+          <input type="radio" autocomplete="off" name="dash-sel-mode" value="algo" onchange="onDashSelMode()"
             style="accent-color:#6366f1;width:14px;height:14px;flex-shrink:0;">
           <div id="dash-algo-box" style="background:#6366f1;padding:8px 14px;border-radius:10px;box-shadow:0 2px 6px rgba(99,102,241,0.25);opacity:0.5;">
             <div style="font-size:0.65rem;font-weight:700;color:rgba(255,255,255,0.85);letter-spacing:0.05em;margin-bottom:4px;">📋 STRATEGY</div>
@@ -1854,6 +1900,15 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
   <!-- ══ Daily P&L ══ -->
   <div style="border-top:3px solid var(--blue);padding-top:10px;margin-bottom:16px;">
     <span style="font-size:1.05rem;font-weight:800;font-family:var(--display);color:var(--blue);">📆 Daily P&L</span>
+  </div>
+  <div style="display:flex;align-items:center;gap:16px;margin-bottom:14px;flex-wrap:wrap;">
+    <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:0.85rem;font-weight:600;color:var(--text0);">
+      <input type="radio" autocomplete="off" name="dash-daily-month-mode" value="current" checked onchange="onDashDailyMonthModeChange()" style="accent-color:var(--blue);width:14px;height:14px;"> Current Month
+    </label>
+    <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:0.85rem;font-weight:600;color:var(--text0);">
+      <input type="radio" autocomplete="off" name="dash-daily-month-mode" value="select" onchange="onDashDailyMonthModeChange()" style="accent-color:var(--blue);width:14px;height:14px;"> Select Month
+    </label>
+    <select id="dash-daily-month-select" onchange="onDashDailyMonthSelectChange()" style="display:none;padding:6px 10px;border:1.5px solid var(--blue);border-radius:6px;font-size:0.82rem;outline:none;"></select>
   </div>
 
   <!-- Current Month P&L calendar -->
@@ -1877,23 +1932,17 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
   <!-- Month selector -->
   <div style="display:flex;align-items:center;gap:16px;margin-bottom:16px;flex-wrap:wrap;">
     <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:0.85rem;font-weight:600;color:var(--text0);">
-      <input type="radio" name="dash-month-mode" value="current" checked onchange="onDashMonthModeChange()" style="accent-color:var(--blue);width:14px;height:14px;"> Current Month
+      <input type="radio" autocomplete="off" name="dash-month-mode" value="current" checked onchange="onDashMonthModeChange()" style="accent-color:var(--blue);width:14px;height:14px;"> Current Month
     </label>
     <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:0.85rem;font-weight:600;color:var(--text0);">
-      <input type="radio" name="dash-month-mode" value="select" onchange="onDashMonthModeChange()" style="accent-color:var(--blue);width:14px;height:14px;"> Select Month
+      <input type="radio" autocomplete="off" name="dash-month-mode" value="select" onchange="onDashMonthModeChange()" style="accent-color:var(--blue);width:14px;height:14px;"> Select Month
     </label>
     <select id="dash-month-select" style="display:none;padding:5px 10px;border:1.5px solid var(--blue);border-radius:6px;font-size:0.82rem;outline:none;" onchange="onDashMonthSelectChange()">
     </select>
   </div>
 
-  <!-- Monthly bar chart (current year Jan-Dec) -->
-  <div style="background:var(--bg);border:1.5px solid var(--border);border-radius:14px;padding:16px 20px;margin-bottom:18px;">
-    <div style="font-size:0.78rem;font-weight:700;color:var(--text1);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:10px;">Monthly P&L</div>
-    <canvas id="chart-monthly" style="max-height:200px;"></canvas>
-  </div>
-
   <!-- Monthly Live Performance tiles (Basket tab) -->
-  <div id="dash-monthly-perf-wrap" style="background:var(--bg);border:1.5px solid var(--border);border-radius:14px;padding:20px 24px;margin-bottom:28px;">
+  <div id="dash-monthly-perf-wrap" style="background:var(--bg);border:1.5px solid var(--border);border-radius:14px;padding:20px 24px;margin-bottom:18px;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
       <div style="display:flex;align-items:center;gap:8px;">
         <span style="font-size:1rem;">📈</span>
@@ -1901,12 +1950,14 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
       </div>
       <span id="dash-monthly-perf-label" style="font-size:0.75rem;background:#eef2ff;color:#3730a3;padding:4px 12px;border-radius:20px;font-weight:600;"></span>
     </div>
-    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:16px 24px;">
+    <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:16px 24px;">
       <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Net P&L</div><div id="dash-mp-pnl" style="font-size:1.1rem;font-weight:800;">—</div></div>
       <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Win Rate</div><div id="dash-mp-wr" style="font-size:1.1rem;font-weight:800;">—</div></div>
       <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Profit Factor</div><div id="dash-mp-pf" style="font-size:1.1rem;font-weight:800;">—</div></div>
       <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Total Trades</div><div id="dash-mp-trades" style="font-size:1.1rem;font-weight:800;">—</div></div>
       <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Max Drawdown</div><div id="dash-mp-dd" style="font-size:1.1rem;font-weight:800;color:var(--red);">—</div></div>
+      <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Max Drawdown %</div><div id="dash-mp-dd-pct" style="font-size:1.1rem;font-weight:800;color:var(--red);">—</div></div>
+      <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Capital Deployed</div><div id="dash-mp-cap" style="font-size:1.1rem;font-weight:800;">—</div></div>
       <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Winning Days</div><div id="dash-mp-wdays" style="font-size:1.1rem;font-weight:800;color:var(--green);">—</div></div>
       <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Losing Days</div><div id="dash-mp-ldays" style="font-size:1.1rem;font-weight:800;color:var(--red);">—</div></div>
       <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Best Day</div><div id="dash-mp-best" style="font-size:1.1rem;font-weight:800;color:var(--green);">—</div></div>
@@ -1914,6 +1965,13 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
       <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Avg Daily P&L</div><div id="dash-mp-avg" style="font-size:1.1rem;font-weight:800;">—</div></div>
     </div>
   </div>
+
+  <!-- Monthly bar chart (current year Jan-Dec) -->
+  <div style="background:var(--bg);border:1.5px solid var(--border);border-radius:14px;padding:16px 20px;margin-bottom:28px;">
+    <div style="font-size:0.78rem;font-weight:700;color:var(--text1);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:10px;">Monthly P&L</div>
+    <canvas id="chart-monthly" style="max-height:200px;"></canvas>
+  </div>
+
   <div style="border-top:3px solid #6366f1;padding-top:10px;margin-bottom:16px;">
     <span style="font-size:1.05rem;font-weight:800;font-family:var(--display);color:#6366f1;">📊 Yearly P&L Data</span>
   </div>
@@ -1921,10 +1979,10 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
   <!-- Period selector: All Time / FY -->
   <div style="display:flex;align-items:center;gap:16px;margin-bottom:16px;flex-wrap:wrap;">
     <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:0.85rem;font-weight:600;color:var(--text0);">
-      <input type="radio" name="dash-period-mode" value="all" checked onchange="renderDashFiltered()" style="accent-color:#6366f1;width:14px;height:14px;"> All Time
+      <input type="radio" autocomplete="off" name="dash-period-mode" value="all" checked onchange="renderDashFiltered()" style="accent-color:#6366f1;width:14px;height:14px;"> All Time
     </label>
     <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:0.85rem;font-weight:600;color:var(--text0);">
-      <input type="radio" name="dash-period-mode" value="fy" onchange="renderDashFiltered()" style="accent-color:#6366f1;width:14px;height:14px;"> <span id="dash-period-fy-label">FY</span>
+      <input type="radio" autocomplete="off" name="dash-period-mode" value="fy" onchange="renderDashFiltered()" style="accent-color:#6366f1;width:14px;height:14px;"> <span id="dash-period-fy-label">FY</span>
     </label>
   </div>
 
@@ -2004,7 +2062,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
   <div style="background:var(--bg);border:1.5px solid var(--border);border-radius:14px;padding:20px 24px;margin-bottom:28px;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
       <div style="font-size:0.95rem;font-weight:800;font-family:var(--display);">💰 Capital Deployed</div>
-      <button onclick="saveDashCapital()" class="btn btn-primary btn-sm">💾 Save Capital</button>
+      <span style="font-size:0.72rem;color:var(--text3);">Set via 🧮 All Allocations</span>
     </div>
     <div id="dash-capital-grid"></div>
   </div>
@@ -2068,6 +2126,15 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div style="border-top:3px solid var(--blue);padding-top:10px;margin-bottom:16px;">
       <span style="font-size:1.05rem;font-weight:800;font-family:var(--display);color:var(--blue);">📆 Daily P&L</span>
     </div>
+    <div style="display:flex;align-items:center;gap:16px;margin-bottom:14px;flex-wrap:wrap;">
+      <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:0.85rem;font-weight:600;color:var(--text0);">
+        <input type="radio" autocomplete="off" name="acct-daily-month-mode" value="current" checked onchange="onAcctDailyMonthModeChange()" style="accent-color:var(--blue);width:14px;height:14px;"> Current Month
+      </label>
+      <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:0.85rem;font-weight:600;color:var(--text0);">
+        <input type="radio" autocomplete="off" name="acct-daily-month-mode" value="select" onchange="onAcctDailyMonthModeChange()" style="accent-color:var(--blue);width:14px;height:14px;"> Select Month
+      </label>
+      <select id="acct-daily-month-select" onchange="onAcctDailyMonthSelectChange()" style="display:none;padding:6px 10px;border:1.5px solid var(--blue);border-radius:6px;font-size:0.82rem;outline:none;"></select>
+    </div>
 
   <!-- Current month calendar heatmap -->
   <div style="background:var(--bg);border:1.5px solid var(--border);border-radius:14px;padding:16px 20px;">
@@ -2092,23 +2159,17 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <!-- Month selector -->
     <div style="display:flex;align-items:center;gap:16px;margin-bottom:16px;flex-wrap:wrap;">
       <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:0.85rem;font-weight:600;color:var(--text0);">
-        <input type="radio" name="acct-month-mode" value="current" checked onchange="onAcctMonthModeChange()" style="accent-color:var(--blue);width:14px;height:14px;"> Current Month
+        <input type="radio" autocomplete="off" name="acct-month-mode" value="current" checked onchange="onAcctMonthModeChange()" style="accent-color:var(--blue);width:14px;height:14px;"> Current Month
       </label>
       <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:0.85rem;font-weight:600;color:var(--text0);">
-        <input type="radio" name="acct-month-mode" value="select" onchange="onAcctMonthModeChange()" style="accent-color:var(--blue);width:14px;height:14px;"> Select Month
+        <input type="radio" autocomplete="off" name="acct-month-mode" value="select" onchange="onAcctMonthModeChange()" style="accent-color:var(--blue);width:14px;height:14px;"> Select Month
       </label>
       <select id="acct-month-select" style="display:none;padding:5px 10px;border:1.5px solid var(--blue);border-radius:6px;font-size:0.82rem;outline:none;" onchange="onAcctMonthSelectChange()">
       </select>
     </div>
 
-    <!-- 12-month bar chart -->
-    <div id="acct-monthly-chart-wrap" style="background:var(--bg);border:1.5px solid var(--border);border-radius:14px;padding:16px 20px;margin-bottom:18px;">
-      <div style="font-size:0.78rem;font-weight:700;color:var(--text1);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:10px;">Monthly P&L</div>
-      <canvas id="acct-chart-monthly-top" style="max-height:200px;"></canvas>
-    </div>
-
     <!-- Monthly Live Performance tiles (Account wise tab) -->
-    <div id="acct-monthly-perf-wrap" style="background:var(--bg);border:1.5px solid var(--border);border-radius:14px;padding:20px 24px;margin-top:18px;">
+    <div id="acct-monthly-perf-wrap" style="background:var(--bg);border:1.5px solid var(--border);border-radius:14px;padding:20px 24px;margin-bottom:18px;">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
         <div style="display:flex;align-items:center;gap:8px;">
           <span style="font-size:1rem;">📈</span>
@@ -2116,18 +2177,26 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
         </div>
         <span id="acct-monthly-perf-label" style="font-size:0.75rem;background:#eef2ff;color:#3730a3;padding:4px 12px;border-radius:20px;font-weight:600;"></span>
       </div>
-      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:16px 24px;">
+      <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:16px 24px;">
         <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Net P&L</div><div id="acct-mp-pnl" style="font-size:1.1rem;font-weight:800;">—</div></div>
         <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Win Rate</div><div id="acct-mp-wr" style="font-size:1.1rem;font-weight:800;">—</div></div>
         <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Profit Factor</div><div id="acct-mp-pf" style="font-size:1.1rem;font-weight:800;">—</div></div>
         <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Total Trades</div><div id="acct-mp-trades" style="font-size:1.1rem;font-weight:800;">—</div></div>
         <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Max Drawdown</div><div id="acct-mp-dd" style="font-size:1.1rem;font-weight:800;color:var(--red);">—</div></div>
+        <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Max Drawdown %</div><div id="acct-mp-dd-pct" style="font-size:1.1rem;font-weight:800;color:var(--red);">—</div></div>
+        <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Capital Deployed</div><div id="acct-mp-cap" style="font-size:1.1rem;font-weight:800;">—</div></div>
         <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Winning Days</div><div id="acct-mp-wdays" style="font-size:1.1rem;font-weight:800;color:var(--green);">—</div></div>
         <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Losing Days</div><div id="acct-mp-ldays" style="font-size:1.1rem;font-weight:800;color:var(--red);">—</div></div>
         <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Best Day</div><div id="acct-mp-best" style="font-size:1.1rem;font-weight:800;color:var(--green);">—</div></div>
         <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Worst Day</div><div id="acct-mp-worst" style="font-size:1.1rem;font-weight:800;color:var(--red);">—</div></div>
         <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Avg Daily P&L</div><div id="acct-mp-avg" style="font-size:1.1rem;font-weight:800;">—</div></div>
       </div>
+    </div>
+
+    <!-- 12-month bar chart -->
+    <div id="acct-monthly-chart-wrap" style="background:var(--bg);border:1.5px solid var(--border);border-radius:14px;padding:16px 20px;">
+      <div style="font-size:0.78rem;font-weight:700;color:var(--text1);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:10px;">Monthly P&L</div>
+      <canvas id="acct-chart-monthly-top" style="max-height:200px;"></canvas>
     </div>
   </div>
 
@@ -2147,10 +2216,10 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <!-- Period selector: All Time / FY -->
     <div style="display:flex;align-items:center;gap:16px;margin-bottom:16px;flex-wrap:wrap;">
       <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:0.85rem;font-weight:600;color:var(--text0);">
-        <input type="radio" name="acct-period-mode" value="all" checked onchange="renderAcctReport()" style="accent-color:#6366f1;width:14px;height:14px;"> All Time
+        <input type="radio" autocomplete="off" name="acct-period-mode" value="all" checked onchange="renderAcctReport()" style="accent-color:#6366f1;width:14px;height:14px;"> All Time
       </label>
       <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:0.85rem;font-weight:600;color:var(--text0);">
-        <input type="radio" name="acct-period-mode" value="fy" onchange="renderAcctReport()" style="accent-color:#6366f1;width:14px;height:14px;"> <span id="acct-period-fy-label">FY</span>
+        <input type="radio" autocomplete="off" name="acct-period-mode" value="fy" onchange="renderAcctReport()" style="accent-color:#6366f1;width:14px;height:14px;"> <span id="acct-period-fy-label">FY</span>
       </label>
     </div>
 
@@ -2230,11 +2299,11 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
       <div id="acct-monthly-returns" style="overflow-x:auto;"></div>
     </div>
 
-    <!-- ── Capital Deployed (inline edit) ── -->
+    <!-- ── Capital Deployed (read-only, computed from Allocations) ── -->
     <div id="acct-capital-section" style="background:var(--bg);border:1.5px solid var(--border);border-radius:14px;padding:20px 24px;margin-bottom:28px;">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
         <div style="font-size:0.95rem;font-weight:800;font-family:var(--display);">💰 Capital Deployed</div>
-        <button onclick="saveAcctCapital()" class="btn btn-primary btn-sm">💾 Save Capital</button>
+        <span style="font-size:0.72rem;color:var(--text3);">Set via 🧮 All Allocations</span>
       </div>
       <div id="acct-capital-grid"></div>
     </div>
@@ -2378,10 +2447,10 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
       </div>
       <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
         <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:0.8rem;font-weight:600;color:var(--text0);">
-          <input type="radio" name="tax-fy-mode" value="current" checked onchange="onTaxFYModeChange()" style="accent-color:var(--blue);width:13px;height:13px;"> Current Fiscal
+          <input type="radio" autocomplete="off" name="tax-fy-mode" value="current" checked onchange="onTaxFYModeChange()" style="accent-color:var(--blue);width:13px;height:13px;"> Current Fiscal
         </label>
         <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:0.8rem;font-weight:600;color:var(--text0);">
-          <input type="radio" name="tax-fy-mode" value="select" onchange="onTaxFYModeChange()" style="accent-color:var(--blue);width:13px;height:13px;"> Select Fiscal
+          <input type="radio" autocomplete="off" name="tax-fy-mode" value="select" onchange="onTaxFYModeChange()" style="accent-color:var(--blue);width:13px;height:13px;"> Select Fiscal
         </label>
         <select id="tax-fy-select" style="display:none;padding:5px 10px;border:1.5px solid var(--blue);border-radius:6px;font-size:0.8rem;outline:none;" onchange="onTaxFYSelectChange()"></select>
         <span id="tax-fy-badge" class="badge" style="background:var(--blue);color:#fff;font-weight:700;">FY</span>
@@ -2424,10 +2493,10 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
           <select id="exp-person-select" onchange="onExpPersonChange()" style="padding:4px 8px;border:none;border-radius:5px;font-size:0.82rem;font-weight:700;outline:none;background:#fff;color:var(--blue);font-family:var(--font);cursor:pointer;min-width:140px;"></select>
         </div>
         <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:0.8rem;font-weight:600;color:var(--text0);">
-          <input type="radio" name="exp-fy-mode" value="current" checked onchange="onExpFYModeChange()" style="accent-color:var(--blue);width:13px;height:13px;"> Current Fiscal
+          <input type="radio" autocomplete="off" name="exp-fy-mode" value="current" checked onchange="onExpFYModeChange()" style="accent-color:var(--blue);width:13px;height:13px;"> Current Fiscal
         </label>
         <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:0.8rem;font-weight:600;color:var(--text0);">
-          <input type="radio" name="exp-fy-mode" value="select" onchange="onExpFYModeChange()" style="accent-color:var(--blue);width:13px;height:13px;"> Select Fiscal
+          <input type="radio" autocomplete="off" name="exp-fy-mode" value="select" onchange="onExpFYModeChange()" style="accent-color:var(--blue);width:13px;height:13px;"> Select Fiscal
         </label>
         <select id="exp-fy-select" style="display:none;padding:5px 10px;border:1.5px solid var(--blue);border-radius:6px;font-size:0.8rem;outline:none;" onchange="onExpFYSelectChange()"></select>
         <span id="exp-fy-badge" class="badge" style="background:var(--blue);color:#fff;font-weight:700;">FY</span>
@@ -2516,10 +2585,10 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
       </div>
       <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
         <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:0.8rem;font-weight:600;color:var(--text0);">
-          <input type="radio" name="pnlnet-fy-mode" value="current" checked onchange="onPnlNetFYModeChange()" style="accent-color:var(--blue);width:13px;height:13px;"> Current Fiscal
+          <input type="radio" autocomplete="off" name="pnlnet-fy-mode" value="current" checked onchange="onPnlNetFYModeChange()" style="accent-color:var(--blue);width:13px;height:13px;"> Current Fiscal
         </label>
         <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:0.8rem;font-weight:600;color:var(--text0);">
-          <input type="radio" name="pnlnet-fy-mode" value="select" onchange="onPnlNetFYModeChange()" style="accent-color:var(--blue);width:13px;height:13px;"> Select Fiscal
+          <input type="radio" autocomplete="off" name="pnlnet-fy-mode" value="select" onchange="onPnlNetFYModeChange()" style="accent-color:var(--blue);width:13px;height:13px;"> Select Fiscal
         </label>
         <select id="pnlnet-fy-select" style="display:none;padding:5px 10px;border:1.5px solid var(--blue);border-radius:6px;font-size:0.8rem;outline:none;" onchange="onPnlNetFYSelectChange()"></select>
         <span id="pnlnet-fy-badge" class="badge" style="background:var(--blue);color:#fff;font-weight:700;">FY</span>
@@ -2549,6 +2618,92 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     </div>
   </div>
 
+  </div>
+</div>
+
+
+<!-- ══════════ ALL ALLOCATIONS (v22.0) ══════════ -->
+<div id="page-allocations" class="page">
+  <div class="page-header">
+    <div>
+      <div class="page-title">All Allocations</div>
+      <div class="page-subtitle">Account → Basket → Lots per month · drives Capital Deployed across the app</div>
+    </div>
+    <div style="display:flex;gap:8px;">
+      <label style="display:flex;align-items:center;gap:6px;font-size:0.8rem;color:var(--text2);cursor:pointer;background:var(--bg2);border:1px solid var(--border);border-radius:7px;padding:6px 12px;">
+        <input type="checkbox" id="alloc-carry-fwd" onchange="allocCarryForwardToggle()" style="accent-color:var(--blue);width:14px;height:14px;">
+        Carry forward last month's allocation
+      </label>
+      <button class="btn btn-ghost btn-sm" id="alloc-incomplete-btn" onclick="allocToggleIncomplete()">⚠️ Mark Incomplete</button>
+      <input type="file" id="alloc-import-input" accept=".csv" style="display:none" onchange="allocImportCSV(this.files[0])">
+      <button class="btn btn-ghost btn-sm" onclick="document.getElementById('alloc-import-input').click()">⬆ Import CSV</button>
+      <button class="btn btn-ghost btn-sm" onclick="allocExportCSV()">⬇ Export CSV</button>
+    </div>
+  </div>
+
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px;flex-wrap:wrap;">
+    <label style="font-size:0.8rem;font-weight:700;color:var(--text1);">Month</label>
+    <select id="alloc-month-select" class="form-select" onchange="onAllocMonthChange()" style="min-width:160px;"></select>
+    <span id="alloc-incomplete-tag" style="display:none;font-size:0.72rem;font-weight:700;color:#d97706;background:#fffbeb;border:1px solid #fde68a;border-radius:6px;padding:4px 10px;">⚠️ Marked Incomplete — warnings suppressed, excluded from capital metrics (P&L still shown)</span>
+  </div>
+
+  <!-- Summary -->
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:22px;">
+    <div style="background:var(--bg);border:1.5px solid var(--border);border-radius:12px;padding:14px 16px;">
+      <div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Accounts Allocated</div>
+      <div id="alloc-sum-accounts" style="font-size:1.2rem;font-weight:800;">0</div>
+    </div>
+    <div style="background:var(--bg);border:1.5px solid var(--border);border-radius:12px;padding:14px 16px;">
+      <div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Baskets Allocated</div>
+      <div id="alloc-sum-baskets" style="font-size:1.2rem;font-weight:800;">0</div>
+    </div>
+    <div style="background:var(--bg);border:1.5px solid var(--border);border-radius:12px;padding:14px 16px;">
+      <div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Total Lots</div>
+      <div id="alloc-sum-lots" style="font-size:1.2rem;font-weight:800;">0</div>
+    </div>
+    <div style="background:var(--bg);border:1.5px solid var(--border);border-radius:12px;padding:14px 16px;">
+      <div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Total Margin</div>
+      <div id="alloc-sum-margin" style="font-size:1.2rem;font-weight:800;color:var(--blue);">₹0</div>
+    </div>
+  </div>
+
+  <!-- Add row -->
+  <div style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:18px;box-shadow:var(--shadow-sm);">
+    <div style="font-size:0.82rem;font-weight:700;color:var(--text0);margin-bottom:10px;">+ Add Allocation Row</div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;">
+      <div class="form-group" style="min-width:200px;">
+        <label class="form-label">Account (Client ID)</label>
+        <select class="form-select" id="alloc-new-account"><option value="">Select account…</option></select>
+      </div>
+      <div class="form-group" style="min-width:200px;">
+        <label class="form-label">Basket</label>
+        <select class="form-select" id="alloc-new-basket"><option value="">Select basket…</option></select>
+      </div>
+      <div class="form-group" style="min-width:100px;">
+        <label class="form-label">Lots</label>
+        <input type="number" class="form-input" id="alloc-new-lots" min="0" step="1" placeholder="e.g. 3">
+      </div>
+      <button class="btn btn-primary" onclick="allocAddRow()">+ Add Row</button>
+    </div>
+  </div>
+
+  <!-- Rows table -->
+  <div style="background:#fff;border:1px solid var(--border);border-radius:12px;overflow:hidden;box-shadow:var(--shadow-sm);">
+    <table style="width:100%;border-collapse:collapse;font-size:0.82rem;">
+      <thead>
+        <tr style="background:var(--bg2);">
+          <th style="padding:9px 12px;text-align:left;font-weight:700;color:var(--text1);border-bottom:1px solid var(--border);">Account</th>
+          <th style="padding:9px 12px;text-align:left;font-weight:700;color:var(--text1);border-bottom:1px solid var(--border);">Basket</th>
+          <th style="padding:9px 12px;text-align:right;font-weight:700;color:var(--text1);border-bottom:1px solid var(--border);">Lots</th>
+          <th style="padding:9px 12px;text-align:right;font-weight:700;color:var(--text1);border-bottom:1px solid var(--border);">Capital/Lot</th>
+          <th style="padding:9px 12px;text-align:right;font-weight:700;color:var(--text1);border-bottom:1px solid var(--border);">Margin</th>
+          <th style="padding:9px 12px;text-align:center;font-weight:700;color:var(--text1);border-bottom:1px solid var(--border);">Actions</th>
+        </tr>
+      </thead>
+      <tbody id="alloc-rows-tbody">
+        <tr><td colspan="6" style="padding:24px;text-align:center;color:var(--text3);">No allocations for this month yet</td></tr>
+      </tbody>
+    </table>
   </div>
 </div>
 
@@ -2746,19 +2901,15 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
       </div>
     </div>
 
-    <!-- ── Total Capital ── -->
+    <!-- ── Capital Deployed (now read-only, computed from Allocations) ── -->
     <div style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:22px;box-shadow:var(--shadow-sm);">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
-        <div style="display:flex;align-items:center;gap:10px;">
-          <span style="font-size:1.3rem;">💰</span>
-          <div>
-            <div style="font-size:0.95rem;font-weight:700;color:var(--text0);">Total Capital</div>
-            <div style="font-size:0.72rem;color:var(--text2);margin-top:2px;">Monthly capital used to calculate % P&L in reports</div>
-          </div>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+        <span style="font-size:1.3rem;">💰</span>
+        <div>
+          <div style="font-size:0.95rem;font-weight:700;color:var(--text0);">Capital Deployed</div>
+          <div style="font-size:0.72rem;color:var(--text2);margin-top:2px;">No longer entered manually — computed automatically from 🧮 All Allocations (lots × capital/lot per basket). Go to the All Allocations tab to set account/basket/lot allocations.</div>
         </div>
-        <button class="btn btn-primary btn-sm" onclick="saveCapitalTable()">💾 Save</button>
       </div>
-      <div id="capital-grid" style="overflow-x:auto;"></div>
     </div>
 
     <!-- ── Firebase Usage ── -->
@@ -2811,12 +2962,12 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
       <!-- Radio: Current Year / Date Range -->
       <div style="display:flex;gap:20px;margin-bottom:14px;">
         <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:0.83rem;font-weight:600;color:var(--text1);">
-          <input type="radio" name="brk-clear-mode" value="year" checked onchange="toggleBrkClearMode()"
+          <input type="radio" autocomplete="off" name="brk-clear-mode" value="year" checked onchange="toggleBrkClearMode()"
             style="accent-color:var(--blue);width:14px;height:14px;">
           Current Year (2026)
         </label>
         <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:0.83rem;font-weight:600;color:var(--text1);">
-          <input type="radio" name="brk-clear-mode" value="range" onchange="toggleBrkClearMode()"
+          <input type="radio" autocomplete="off" name="brk-clear-mode" value="range" onchange="toggleBrkClearMode()"
             style="accent-color:var(--blue);width:14px;height:14px;">
           Date Range
         </label>
@@ -2927,10 +3078,12 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
 <div id="page-stockmock" class="page">
   <div class="page-header">
     <div>
-      <div class="page-title">Stockmock Compare</div>
-      <div class="page-subtitle">Stockmock backtest vs Actual broker trades · Strategy-wise</div>
+      <div class="page-title">Analytics-Execution</div>
+      <div class="page-subtitle">StockMock backtest vs Actual broker trades, and broker-vs-broker execution comparison</div>
     </div>
   </div>
+
+  <div style="font-size:1.05rem;font-weight:800;color:var(--text0);margin:4px 0 14px;">StockMock Comparison</div>
 
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:24px;">
 
@@ -3026,6 +3179,59 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
 
   <!-- Comparison content -->
   <div id="sm-comparison-content"></div>
+
+  <!-- ══════════ Section 2: Broker Comparison (no number shown) ══════════ -->
+  <hr style="border:none;border-top:1px solid var(--border);margin:32px 0 24px;">
+  <div style="font-size:1.05rem;font-weight:800;color:var(--text0);margin:4px 0 14px;">Broker Comparison</div>
+  <div style="font-size:0.78rem;color:var(--text2);margin:-10px 0 16px;">Compare same algo execution side-by-side across two brokers</div>
+
+  <!-- Config row -->
+  <div class="compare-config">
+    <div class="form-group">
+      <label class="form-label">Algo / Strategy</label>
+      <select class="form-select" id="cmp-algo" onchange="runComparison()">
+        <option value="">Select algo…</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">🔵 Broker A</label>
+      <select class="form-select" id="cmp-broker-a" onchange="runComparison()">
+        <option value="">Select broker…</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">🟣 Broker B</label>
+      <select class="form-select" id="cmp-broker-b" onchange="runComparison()">
+        <option value="">Select broker…</option>
+      </select>
+    </div>
+    <div class="form-group" style="min-width:120px;flex:0;">
+      <label class="form-label">Tolerance %</label>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <input type="number" class="tolerance-input" id="cmp-tolerance" value="2" min="0" max="20" step="0.5" onchange="runComparison()" />
+        <span style="font-size:0.8rem;color:var(--text2);">%</span>
+      </div>
+    </div>
+    <div class="form-group" style="min-width:120px;flex:0;">
+      <label class="form-label">Month</label>
+      <select class="form-select" id="cmp-month" onchange="runComparison()">
+        <option value="">All Months</option>
+      </select>
+    </div>
+    <button class="btn btn-primary" onclick="runComparison()" style="align-self:flex-end;">Compare</button>
+  </div>
+
+  <!-- Summary stats -->
+  <div class="compare-summary" id="cmp-summary" style="display:none;"></div>
+
+  <!-- Results -->
+  <div id="cmp-results">
+    <div class="empty-state">
+      <span class="eicon">⚖️</span>
+      <h3>Select an algo and two brokers</h3>
+      <p>Trades will be matched by date and compared side-by-side</p>
+    </div>
+  </div>
 </div>
 
 <!-- ══════════ MANUAL ENTRY ══════════ -->
@@ -3212,63 +3418,6 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
 </div>
 
 <!-- ══════════ SYSTEM STATISTICS ══════════ -->
-<!-- ══════════ COMPARE ══════════ -->
-<div id="page-compare" class="page">
-  <div class="page-header">
-    <div>
-      <div class="page-title">Broker Comparison</div>
-      <div class="page-subtitle">Compare same algo execution side-by-side across two brokers</div>
-    </div>
-  </div>
-
-  <!-- Config row -->
-  <div class="compare-config">
-    <div class="form-group">
-      <label class="form-label">Algo / Strategy</label>
-      <select class="form-select" id="cmp-algo" onchange="runComparison()">
-        <option value="">Select algo…</option>
-      </select>
-    </div>
-    <div class="form-group">
-      <label class="form-label">🔵 Broker A</label>
-      <select class="form-select" id="cmp-broker-a" onchange="runComparison()">
-        <option value="">Select broker…</option>
-      </select>
-    </div>
-    <div class="form-group">
-      <label class="form-label">🟣 Broker B</label>
-      <select class="form-select" id="cmp-broker-b" onchange="runComparison()">
-        <option value="">Select broker…</option>
-      </select>
-    </div>
-    <div class="form-group" style="min-width:120px;flex:0;">
-      <label class="form-label">Tolerance %</label>
-      <div style="display:flex;align-items:center;gap:6px;">
-        <input type="number" class="tolerance-input" id="cmp-tolerance" value="2" min="0" max="20" step="0.5" onchange="runComparison()" />
-        <span style="font-size:0.8rem;color:var(--text2);">%</span>
-      </div>
-    </div>
-    <div class="form-group" style="min-width:120px;flex:0;">
-      <label class="form-label">Month</label>
-      <select class="form-select" id="cmp-month" onchange="runComparison()">
-        <option value="">All Months</option>
-      </select>
-    </div>
-    <button class="btn btn-primary" onclick="runComparison()" style="align-self:flex-end;">Compare</button>
-  </div>
-
-  <!-- Summary stats -->
-  <div class="compare-summary" id="cmp-summary" style="display:none;"></div>
-
-  <!-- Results -->
-  <div id="cmp-results">
-    <div class="empty-state">
-      <span class="eicon">⚖️</span>
-      <h3>Select an algo and two brokers</h3>
-      <p>Trades will be matched by date and compared side-by-side</p>
-    </div>
-  </div>
-</div>
 
 </div><!-- #main -->
 
@@ -3310,6 +3459,10 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
       <div class="form-group">
         <label class="form-label">Notes</label>
         <input type="text" class="form-input" id="g-notes" placeholder="Optional description…" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Capital Required for 1 Lot (₹)</label>
+        <input type="number" class="form-input" id="g-capital-per-lot" placeholder="e.g. 120000" min="0" step="1" />
       </div>
       <div class="form-group" style="grid-column:1/-1">
         <label class="form-label">Select Algos for this Group</label>
@@ -3457,6 +3610,7 @@ function renderAcctReport() {
   renderAcctLivePerf(trPeriod, periodMode);
   renderAcctMonthlyTopChart(tr);
   renderAcctCalHeatmap(tr);
+  renderAcctMonthlyPerfPanel(tr);
   renderAcctDailyTable(trPeriod);
   renderAcctCharts(trPeriod);
   renderAcctCapitalGrid();
@@ -3959,15 +4113,15 @@ function renderAcctMonthlyTopChart(tr) {
     data:{ labels:keys.map(fmtMonth), datasets:[{
       data:vals,
       backgroundColor:vals.map(v=>v>0?'rgba(26,158,92,0.75)':v<0?'rgba(217,48,37,0.75)':'rgba(156,163,175,0.35)'),
-      borderColor:keys.map(k=>k===curYM?'#1e3a5f':'transparent'),
-      borderWidth:keys.map(k=>k===curYM?3:0),
-      borderDash:[4,3],
+      borderWidth:0,
       borderRadius:5, borderSkipped:false
     }]},
+    plugins:[currentMonthShadePlugin],
     options:{ responsive:true, maintainAspectRatio:true,
       layout:{padding:{top:28}},
       plugins:{
         legend:{display:false},
+        currentMonthShade:{ index: keys.indexOf(curYM), color:'rgba(30,58,95,0.08)' },
         datalabels:{
           display: ctx2 => ctx2.dataset.data[ctx2.dataIndex]!==0,
           anchor:  ctx2 => ctx2.dataset.data[ctx2.dataIndex]>=0?'end':'start',
@@ -3986,15 +4140,12 @@ function renderAcctMonthlyTopChart(tr) {
 
 // Current-month calendar heatmap
 function renderAcctCalHeatmap(tr) {
-  const ym = getSelectedYM('acct-month-mode', 'acct-month-select');
+  const ym = getSelectedYM('acct-daily-month-mode', 'acct-daily-month-select');
   const [yr, mo1] = ym.split('-').map(Number);
   const mo = mo1 - 1;
   const monthName = new Date(yr, mo, 1).toLocaleDateString('en-IN',{month:'long',year:'numeric'});
   const titleEl = document.getElementById('acct-cal-title');
   if (titleEl) titleEl.textContent = `Daily P&L — ${monthName}`;
-
-  // Render monthly perf tiles
-  renderMonthlyPerfTiles(tr, ym, 'acct-mp', 'acct-monthly-perf-label');
 
   const dayPnl = {};
   tr.forEach(t => { const pd=pnlDate(t); if(pd&&pd.startsWith(ym)) dayPnl[pd]=(dayPnl[pd]||0)+(t.pnl||0); });
@@ -4060,68 +4211,37 @@ function renderAcctCalHeatmap(tr) {
   document.getElementById('acct-cal-heatmap').innerHTML=html;
 }
 
-// Inline capital edit from Live Performance tile
-function acctCapInlineEdit() {
-  if (!currentAcct || currentAcct==='__ALL__') { toast('Select a single account to edit capital','warning'); return; }
-  const el = document.getElementById('acct-lp-cap');
-  const today = new Date();
-  const ym = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}`;
-  const acctCap = capitalDataAll[currentAcct]||{};
-  const cur = acctCap[ym]||0;
-  const input = document.createElement('input');
-  input.type='number'; input.value=cur||'';
-  input.style.cssText='width:120px;padding:3px 8px;border:1.5px solid var(--blue);border-radius:6px;font-size:1rem;font-weight:700;outline:none;';
-  input.placeholder='Enter capital';
-  el.replaceWith(input);
-  input.focus();
-  async function saveIt() {
-    const val = parseFloat(input.value)||0;
-    if (!capitalDataAll[currentAcct]) capitalDataAll[currentAcct]={};
-    capitalDataAll[currentAcct][ym]=val;
-    if (db) await db.ref('journal/capital_v2/'+currentAcct+'/'+ym).set(val);
-    toast('✓ Capital saved for '+getClientLabel(currentAcct),'success');
-    renderAcctReport();
-  }
-  input.addEventListener('keydown', e=>{ if(e.key==='Enter') saveIt(); if(e.key==='Escape') renderAcctReport(); });
-  input.addEventListener('blur', saveIt);
+// Monthly Performance tiles — uses Monthly P&L Data's own month selector (acct-month-mode),
+// independent from the Daily P&L calendar's selector above.
+function renderAcctMonthlyPerfPanel(tr) {
+  const ym = getSelectedYM('acct-month-mode', 'acct-month-select');
+  renderMonthlyPerfTiles(tr, ym, 'acct-mp', 'acct-monthly-perf-label', (m) => ({
+    value: getCapital(currentAcct, m),
+    entered: acctCapitalEnteredFor(m)
+  }));
 }
 
+// v22.0: acctCapInlineEdit removed — Capital Deployed is read-only, computed from Allocations.
+
+// v22.0: read-only — Capital Deployed is computed from Allocations, not entered here.
 function renderAcctCapitalGrid() {
   const grid = document.getElementById('acct-capital-grid');
   if (!grid) return;
   const fyKeys = getFYMonthKeys(getCurrentFYStartYear());
   const acctCap = capitalDataAll[currentAcct] || {};
-  let html = `<div style="display:flex;gap:10px;flex-wrap:wrap;">`;
+  let html = `<div style="font-size:0.7rem;color:var(--text3);margin-bottom:8px;font-style:italic;">Computed from 🧮 All Allocations — read-only</div><div style="display:flex;gap:10px;flex-wrap:wrap;">`;
   fyKeys.forEach(ym => {
     const [y,mo] = ym.split('-');
     const m = MONTH_NAMES[parseInt(mo)-1];
-    const val = acctCap[ym] || '';
+    const incomplete = isAllocationIncomplete(ym);
+    const val = incomplete ? '—' : (acctCap[ym] ? acctCap[ym].toLocaleString('en-IN') : '—');
     html += `<div style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:8px 10px;min-width:90px;text-align:center;">
       <div style="font-size:0.65rem;font-weight:700;color:var(--text2);margin-bottom:4px;">${m} ${y}</div>
-      <input type="number" id="acct-cap-${ym}" value="${val}" placeholder="—"
-        style="width:100%;padding:3px 5px;border:1px solid var(--border);border-radius:5px;font-size:0.78rem;text-align:right;outline:none;background:#fff;"
-        onfocus="this.style.borderColor='var(--blue)'"
-        onblur="this.style.borderColor='var(--border)'">
+      <div style="font-size:0.78rem;font-weight:700;color:${incomplete?'var(--text3)':'var(--text0)'};">${val}</div>
     </div>`;
   });
   html += '</div>';
   grid.innerHTML = html;
-}
-
-async function saveAcctCapital() {
-  if (!currentAcct) return;
-  const fyKeys = getFYMonthKeys(getCurrentFYStartYear());
-  const newData = {};
-  fyKeys.forEach(ym => {
-    const inp = document.getElementById('acct-cap-'+ym);
-    if (inp && inp.value) newData[ym] = parseFloat(inp.value)||0;
-  });
-  if (!capitalDataAll[currentAcct]) capitalDataAll[currentAcct]={};
-  Object.assign(capitalDataAll[currentAcct], newData);
-  if (db) await db.ref('journal/capital_v2/'+currentAcct).update(newData);
-  const label = currentAcct === '__ALL__' ? 'All Accounts' : getClientLabel(currentAcct);
-  toast('✓ Capital saved for '+label, 'success');
-  renderAcctReport();
 }
 
 // ── Month selector helpers ──────────────────────────────────────
@@ -4144,6 +4264,38 @@ function getCurrentFYStartYear() {
   return today.getMonth() >= 3 ? today.getFullYear() : today.getFullYear() - 1;
 }
 
+// Capital Deployed warning/error checks — only apply to the current month and past
+// months within the current fiscal year (future months are exempt, as they haven't
+// happened yet and blank capital there is normal).
+function isCapitalCheckApplicable(ym) {
+  if (!ym) return false;
+  const todayYM = new Date().toISOString().slice(0,7);
+  const fyMonths = getFYMonthKeys(getCurrentFYStartYear());
+  return fyMonths.includes(ym) && ym <= todayYM;
+}
+function dashCapitalEnteredFor(ym) {
+  const basketVal = document.getElementById('dash-basket-select')?.value || '__ALL__';
+  if (basketVal === '__ALL__') {
+    return Object.values(capitalBasket).some(b => b && b[ym] !== undefined && b[ym] !== null && b[ym] !== '');
+  }
+  const b = capitalBasket[basketVal];
+  return !!(b && b[ym] !== undefined && b[ym] !== null && b[ym] !== '');
+}
+function acctCapitalEnteredFor(ym) {
+  if (currentAcct === '__ALL__') {
+    return Object.values(capitalDataAll).some(d => d && d[ym] !== undefined && d[ym] !== null && d[ym] !== '');
+  }
+  const d = capitalDataAll[currentAcct];
+  return !!(d && d[ym] !== undefined && d[ym] !== null && d[ym] !== '');
+}
+// Checks every applicable (current/past, current-FY) month via checkFn(ym)->bool
+function fyCapitalFullyEntered(checkFn) {
+  const fyMonths = getFYMonthKeys(getCurrentFYStartYear());
+  const todayYM = new Date().toISOString().slice(0,7);
+  const applicableMonths = fyMonths.filter(m => m <= todayYM);
+  return applicableMonths.every(m => checkFn(m));
+}
+
 function populateMonthSelect(selId) {
   const sel = document.getElementById(selId);
   if (!sel) return;
@@ -4161,7 +4313,13 @@ function getSelectedYM(radioName, selId) {
     const today = new Date();
     return `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}`;
   }
-  return document.getElementById(selId)?.value || '';
+  const val = document.getElementById(selId)?.value || '';
+  if (val) return val;
+  // Safety fallback: "Select Month" was active but dropdown had no value (e.g. browser
+  // restored a stale radio-checked state on reload before the dropdown got populated) —
+  // fall back to current month rather than producing "Invalid Date".
+  const today = new Date();
+  return `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}`;
 }
 
 // Basket tab month selector handlers
@@ -4174,6 +4332,16 @@ function onDashMonthModeChange() {
 }
 function onDashMonthSelectChange() { renderDashboard(); }
 
+// Daily P&L calendar's own independent month selector (Basket tab)
+function onDashDailyMonthModeChange() {
+  const mode = document.querySelector('input[name="dash-daily-month-mode"]:checked')?.value;
+  const sel = document.getElementById('dash-daily-month-select');
+  if (sel) sel.style.display = mode === 'select' ? 'block' : 'none';
+  if (mode === 'select') populateMonthSelect('dash-daily-month-select');
+  renderDashboard();
+}
+function onDashDailyMonthSelectChange() { renderDashboard(); }
+
 // Account wise tab month selector handlers
 function onAcctMonthModeChange() {
   const mode = document.querySelector('input[name="acct-month-mode"]:checked')?.value;
@@ -4184,8 +4352,18 @@ function onAcctMonthModeChange() {
 }
 function onAcctMonthSelectChange() { renderAcctReport(); }
 
+// Daily P&L calendar's own independent month selector (Account wise tab)
+function onAcctDailyMonthModeChange() {
+  const mode = document.querySelector('input[name="acct-daily-month-mode"]:checked')?.value;
+  const sel = document.getElementById('acct-daily-month-select');
+  if (sel) sel.style.display = mode === 'select' ? 'block' : 'none';
+  if (mode === 'select') populateMonthSelect('acct-daily-month-select');
+  renderAcctReport();
+}
+function onAcctDailyMonthSelectChange() { renderAcctReport(); }
+
 // Compute and render monthly performance tiles
-function renderMonthlyPerfTiles(tr, ym, prefixId, labelId) {
+function renderMonthlyPerfTiles(tr, ym, prefixId, labelId, getCapitalForMonth) {
   const monthTrades = tr.filter(t => (pnlDate(t)||t.entry_date||'').startsWith(ym));
   const yr = parseInt(ym.slice(0,4)), mo = parseInt(ym.slice(5,7))-1;
   const mLabel = new Date(yr, mo, 1).toLocaleDateString('en-IN',{month:'long',year:'numeric'});
@@ -4227,6 +4405,45 @@ function renderMonthlyPerfTiles(tr, ym, prefixId, labelId) {
   set(`${prefixId}-best`,  bestDay!==null ? fmt(bestDay) : '—', 'var(--green)');
   set(`${prefixId}-worst`, worstDay!==null ? fmt(worstDay) : '—', 'var(--red)');
   set(`${prefixId}-avg`,   avgDay!==null ? fmt(avgDay) : '—', col(avgDay));
+
+  // Capital Deployed + Max Drawdown % — with warning/error for missing capital
+  // (only flagged for current/past months within the current FY; future months are exempt)
+  const applicable = isCapitalCheckApplicable(ym);
+  const incomplete = isAllocationIncomplete(ym);
+  let capVal = 0, capEntered = true;
+  if (typeof getCapitalForMonth === 'function') {
+    const r = getCapitalForMonth(ym) || { value: 0, entered: false };
+    capVal = r.value; capEntered = r.entered;
+  }
+  const capEl = document.getElementById(`${prefixId}-cap`);
+  if (capEl) {
+    if (incomplete) {
+      capEl.textContent = '—';
+      capEl.style.color = 'var(--text3)';
+    } else if (!capEntered && applicable) {
+      capEl.innerHTML = '⚠️ <span style="font-size:0.85rem;">Not entered</span>';
+      capEl.style.color = '#d97706';
+    } else {
+      capEl.textContent = capEntered ? fmt(capVal).replace(/^[+-]/,'') : '—';
+      capEl.style.color = 'var(--text0)';
+    }
+  }
+  const ddPctEl = document.getElementById(`${prefixId}-dd-pct`);
+  if (ddPctEl) {
+    if (incomplete) {
+      ddPctEl.textContent = '—';
+      ddPctEl.style.color = 'var(--text3)';
+    } else if (!capEntered && applicable) {
+      ddPctEl.textContent = 'Error';
+      ddPctEl.style.color = 'var(--red)';
+    } else if (capEntered && capVal > 0) {
+      ddPctEl.textContent = (Math.abs(dd)/capVal*100).toFixed(1)+'%';
+      ddPctEl.style.color = 'var(--red)';
+    } else {
+      ddPctEl.textContent = 'NA';
+      ddPctEl.style.color = 'var(--text3)';
+    }
+  }
 }
 
 function renderAcctMonthlyReturns(tr) {
@@ -4370,19 +4587,15 @@ function startListeners() {
     uploads = Object.values(snap.val() || {});
     renderUploadHistory();
   });
-  db.ref('journal/capital').on('value', snap => {
-    capitalData = snap.val() || {};
-    buildCapitalTable();
+  // v22.0: manual Capital Deployed entry retired — capital is now derived entirely from
+  // journal/allocations. Old capital nodes are deleted once (see cleanupOldCapitalNodes).
+  db.ref('journal/allocations').on('value', snap => {
+    allocations = snap.val() || {};
+    recomputeCapitalFromAllocations();
     renderDashboard();
+    if (document.getElementById('page-allocations')?.classList.contains('active')) renderAllocationsPage();
   });
-  db.ref('journal/capital_v2').on('value', snap => {
-    capitalDataAll = snap.val() || {};
-    buildCapitalTable();
-  });
-  db.ref('journal/capital_basket').on('value', snap => {
-    capitalBasket = snap.val() || {};
-    renderDashCapitalGrid();
-  });
+  cleanupOldCapitalNodes();
   db.ref('journal/expenses').on('value', snap => {
     expensesData = snap.val() || {};
     if (document.getElementById('page-taxation')?.classList.contains('active')) renderExpensesSection();
@@ -4445,11 +4658,11 @@ function showPage(name) {
   if (pg) pg.classList.add('active');
   const tab = document.querySelector(`[data-page="${name}"]`);
   if (tab) tab.classList.add('active');
-  if (name === 'appsettings') { initAppSettings(); renderGroupList(); renderAlgoPage(); loadDisplayPrefs(); loadCapitalTable(); buildNicknameList(); estimateDBSize(); populateBrokerClearDropdown(); acLoadEmails(); }
+  if (name === 'appsettings') { initAppSettings(); renderGroupList(); renderAlgoPage(); loadDisplayPrefs(); buildNicknameList(); estimateDBSize(); populateBrokerClearDropdown(); acLoadEmails(); }
   if (name === 'taxation') { renderTaxPnlSection(); renderExpensesSection(); }
-  if (name === 'stockmock') { loadSMTolerances(); updateSMStrategyDropdown(); onSMStratChange(); }
+  if (name === 'stockmock') { loadSMTolerances(); updateSMStrategyDropdown(); onSMStratChange(); populateCompareSelects(); }
   if (name === 'algos') { renderGroupList(); renderAlgoPage(); }
-  if (name === 'compare') { populateCompareSelects(); }
+  if (name === 'allocations') { initAllocationsPage(); }
   if (name === 'acctreport') { acctWeekOffset = 0; initAcctReport(); }
 }
 
@@ -5055,6 +5268,7 @@ function renderDashFiltered() {
   // Re-render all sections with filtered trades
   drawMonthly(mMap);
   drawDashCalHeatmap(tr);
+  renderDashMonthlyPerfPanel(tr);
   renderDashLivePerf(trPeriod, periodMode);
   renderDashDailyTable(trPeriod);
   drawDashEquityDD(trPeriod);
@@ -5314,42 +5528,26 @@ function renderDashCapitalGrid() {
   }
   const basketVal = document.getElementById('dash-basket-select')?.value || '__ALL__';
   const fyKeys=getFYMonthKeys(getCurrentFYStartYear());
-  let html=`<div style="display:flex;gap:10px;flex-wrap:wrap;">`;
+  let html=`<div style="font-size:0.7rem;color:var(--text3);margin-bottom:8px;font-style:italic;">Computed from 🧮 All Allocations — read-only</div><div style="display:flex;gap:10px;flex-wrap:wrap;">`;
   fyKeys.forEach(ym=>{
     const [y,mo]=ym.split('-');
     const m=MONTH_NAMES[parseInt(mo)-1];
-    let val = '';
+    const incomplete = isAllocationIncomplete(ym);
+    let val = 0, hasAny = false;
     if (basketVal === '__ALL__') {
-      // Sum of all baskets for that month
-      let sum = 0, hasAny = false;
-      Object.values(capitalBasket).forEach(b => { if(b && b[ym]){ sum += b[ym]; hasAny = true; } });
-      val = hasAny ? sum : '';
+      Object.values(capitalBasket).forEach(b => { if(b && b[ym]){ val += b[ym]; hasAny = true; } });
     } else {
-      val = (capitalBasket[basketVal] && capitalBasket[basketVal][ym]) ? capitalBasket[basketVal][ym] : '';
+      val = (capitalBasket[basketVal] && capitalBasket[basketVal][ym]) || 0;
+      hasAny = !!val;
     }
-    const readonly = basketVal === '__ALL__';
+    const display = incomplete ? '—' : (hasAny ? val.toLocaleString('en-IN') : '—');
     html+=`<div style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:8px 10px;min-width:90px;text-align:center;">
       <div style="font-size:0.65rem;font-weight:700;color:var(--text2);margin-bottom:4px;">${m} ${y}</div>
-      <input type="number" id="dash-cap-${ym}" value="${val}" placeholder="—" ${readonly?'readonly style="width:100%;padding:3px 5px;border:1px solid var(--border);border-radius:5px;font-size:0.78rem;text-align:right;outline:none;background:#f3f4f6;color:var(--text2);"':'style="width:100%;padding:3px 5px;border:1px solid var(--border);border-radius:5px;font-size:0.78rem;text-align:right;outline:none;background:#fff;"'}
-        ${readonly?'':'onfocus="this.style.borderColor=\'var(--blue)\'" onblur="this.style.borderColor=\'var(--border)\'"'}>
+      <div style="font-size:0.78rem;font-weight:700;color:${incomplete?'var(--text3)':'var(--text0)'};">${display}</div>
     </div>`;
   });
   html+=`</div>`;
-  if (basketVal !== '__ALL__') html += `<div style="margin-top:10px;"><button onclick="saveDashCapital()" style="background:var(--blue);color:#fff;border:none;border-radius:7px;padding:7px 18px;font-size:0.8rem;font-weight:700;cursor:pointer;">💾 Save Capital</button></div>`;
   grid.innerHTML=html;
-}
-
-async function saveDashCapital() {
-  const basketVal = document.getElementById('dash-basket-select')?.value || '__ALL__';
-  if (basketVal === '__ALL__') { toast('Select a specific basket to save capital','warning'); return; }
-  const fyKeys=getFYMonthKeys(getCurrentFYStartYear());
-  const newData={};
-  fyKeys.forEach(ym=>{const inp=document.getElementById('dash-cap-'+ym);if(inp&&inp.value)newData[ym]=parseFloat(inp.value)||0;});
-  if(!capitalBasket[basketVal]) capitalBasket[basketVal]={};
-  Object.assign(capitalBasket[basketVal], newData);
-  if(db) await db.ref('journal/capital_basket/'+basketVal).update(newData);
-  toast('✓ Capital saved for '+basketVal,'success');
-  renderDashFiltered();
 }
 
 function setYear(y){ currentYear=y; renderDashboard(); }
@@ -5363,6 +5561,26 @@ function fmtKLCr(v) {
   return (v>=0?'+':'-')+abs;
 }
 
+// Reusable Chart.js plugin: shades the background behind a given bar-chart category
+// index (used to highlight "current month" instead of a dotted border outline).
+const currentMonthShadePlugin = {
+  id: 'currentMonthShade',
+  beforeDatasetsDraw(chart, args, opts) {
+    const idx = opts?.index;
+    if (idx == null || idx < 0) return;
+    const { ctx, chartArea, scales } = chart;
+    const xScale = scales.x;
+    if (!xScale || !chartArea) return;
+    const bandWidth = xScale.width / (xScale.ticks?.length || 1);
+    const centerX = xScale.getPixelForValue(idx);
+    const left = centerX - bandWidth / 2;
+    ctx.save();
+    ctx.fillStyle = opts.color || 'rgba(30,58,95,0.08)';
+    ctx.fillRect(left, chartArea.top, bandWidth, chartArea.bottom - chartArea.top);
+    ctx.restore();
+  }
+};
+
 function drawMonthly(mMap) {
   const keys=Object.keys(mMap).sort();
   const vals=keys.map(k=>mMap[k]);
@@ -5375,15 +5593,15 @@ function drawMonthly(mMap) {
     data:{labels:keys.map(fmtMonth),datasets:[{
       data:vals,
       backgroundColor:vals.map(v=>v>0?'rgba(26,158,92,0.75)':v<0?'rgba(217,48,37,0.75)':'rgba(156,163,175,0.35)'),
-      borderColor:keys.map(k=>k===curYM?'#1e3a5f':'transparent'),
-      borderWidth:keys.map(k=>k===curYM?3:0),
-      borderDash:[4,3],
+      borderWidth:0,
       borderRadius:5,borderSkipped:false
     }]},
+    plugins:[currentMonthShadePlugin],
     options:{responsive:true,maintainAspectRatio:true,
       layout:{padding:{top:28}},
       plugins:{
         legend:{display:false},
+        currentMonthShade:{ index: keys.indexOf(curYM), color:'rgba(30,58,95,0.08)' },
         datalabels:{
           display: ctx2=>ctx2.dataset.data[ctx2.dataIndex]!==0,
           anchor: ctx2=>ctx2.dataset.data[ctx2.dataIndex]>=0?'end':'start',
@@ -5401,7 +5619,7 @@ function drawMonthly(mMap) {
 }
 
 function drawDashCalHeatmap(tr) {
-  const ym = getSelectedYM('dash-month-mode', 'dash-month-select');
+  const ym = getSelectedYM('dash-daily-month-mode', 'dash-daily-month-select');
   const [yr, mo1] = ym.split('-').map(Number);
   const mo = mo1 - 1;
   const monthName = new Date(yr, mo, 1).toLocaleDateString('en-IN',{month:'long',year:'numeric'});
@@ -5409,9 +5627,6 @@ function drawDashCalHeatmap(tr) {
   if (titleEl) titleEl.textContent = `Daily P&L — ${monthName}`;
   const container = document.getElementById('dash-cal-heatmap');
   if (!container) return;
-
-  // Render monthly perf tiles
-  renderMonthlyPerfTiles(tr, ym, 'dash-mp', 'dash-monthly-perf-label');
 
   const dayPnl = {};
   tr.forEach(t => { const pd=pnlDate(t); if(pd&&pd.startsWith(ym)) dayPnl[pd]=(dayPnl[pd]||0)+(t.pnl||0); });
@@ -5452,6 +5667,17 @@ function drawDashCalHeatmap(tr) {
   for(let i=0;i<rem;i++) html+=`<td style="background:transparent;"></td>`;
   html+=`</tr></tbody></table></div>`;
   container.innerHTML=html;
+}
+
+// Monthly Performance tiles — uses Monthly P&L Data's own month selector (dash-month-mode),
+// independent from the Daily P&L calendar's selector above.
+function renderDashMonthlyPerfPanel(tr) {
+  const ym = getSelectedYM('dash-month-mode', 'dash-month-select');
+  const basketVal = document.getElementById('dash-basket-select')?.value || '__ALL__';
+  renderMonthlyPerfTiles(tr, ym, 'dash-mp', 'dash-monthly-perf-label', (m) => ({
+    value: getDashBasketCapitalForMonth(basketVal, m),
+    entered: dashCapitalEnteredFor(m)
+  }));
 }
 
 function drawDashEquityDD(tr) {
@@ -6151,8 +6377,8 @@ async function loadDailyQuote() {
 // ════════════════════════════════════════════════════
 //  TOTAL CAPITAL TABLE
 // ════════════════════════════════════════════════════
-let capitalData = {}; // legacy global (kept for system-wise reports)
-let capitalDataAll = {}; // per-account: { clientId: { 'YYYY-MM': amount } }
+let capitalData = {}; // legacy global — no longer written to; kept blank for fallback safety
+let capitalDataAll = {}; // DERIVED per-account: { clientId: { 'YYYY-MM': amount } } — computed from journal/allocations
 // Get capital for a specific account+month. For ALL, sum across accounts.
 function getCapital(clientId, ym) {
   if (!ym) return 0;
@@ -6167,6 +6393,319 @@ function getGlobalCapital(ym) {
   const fromAll = Object.values(capitalDataAll).reduce((s,d)=>s+(d[ym]||0),0);
   if (fromAll > 0) return fromAll;
   return capitalData[ym] || 0; // legacy fallback
+}
+
+// ════════════════════════════════════════════════════
+//  ALLOCATIONS (v22.0) — replaces manual Capital Deployed entry
+//  journal/allocations/{YYYY-MM}/rows/{rowId} = { client_id, basket, lots, created_at }
+//  journal/allocations/{YYYY-MM}/incomplete   = true/false
+// ════════════════════════════════════════════════════
+let allocations = {}; // { 'YYYY-MM': { rows: {rowId: {...}}, incomplete: bool } }
+
+// Rebuilds capitalDataAll (per-account) and capitalBasket (per-basket) from allocations ×
+// each basket's capital_per_lot. Months flagged "incomplete" are skipped entirely (their
+// capital contributes nothing, so they fall out of every capital-based metric).
+function recomputeCapitalFromAllocations() {
+  const newDataAll = {};
+  const newBasket = {};
+  Object.entries(allocations).forEach(([ym, m]) => {
+    if (!m || m.incomplete) return;
+    const rows = m.rows || {};
+    Object.values(rows).forEach(r => {
+      if (!r || !r.client_id || !r.basket || !r.lots) return;
+      const grp = Object.values(algoGroups).find(g => g.name === r.basket);
+      const perLot = (grp && grp.capital_per_lot) || 0;
+      const margin = (parseFloat(r.lots) || 0) * perLot;
+      if (!newDataAll[r.client_id]) newDataAll[r.client_id] = {};
+      newDataAll[r.client_id][ym] = (newDataAll[r.client_id][ym] || 0) + margin;
+      if (!newBasket[r.basket]) newBasket[r.basket] = {};
+      newBasket[r.basket][ym] = (newBasket[r.basket][ym] || 0) + margin;
+    });
+  });
+  capitalDataAll = newDataAll;
+  capitalBasket = newBasket;
+}
+
+function isAllocationIncomplete(ym) {
+  return !!(allocations[ym] && allocations[ym].incomplete);
+}
+
+// v22.0: journal/capital, journal/capital_v2 and journal/capital_basket are retired —
+// Allocations fully replaces manual Capital Deployed entry. Delete the old nodes once.
+let _oldCapitalNodesCleaned = false;
+function cleanupOldCapitalNodes() {
+  if (!db || _oldCapitalNodesCleaned) return;
+  _oldCapitalNodesCleaned = true;
+  db.ref('journal/capital').remove().catch(()=>{});
+  db.ref('journal/capital_v2').remove().catch(()=>{});
+  db.ref('journal/capital_basket').remove().catch(()=>{});
+}
+
+// ════════════════════════════════════════════════════
+//  ALL ALLOCATIONS PAGE (v22.0)
+// ════════════════════════════════════════════════════
+let allocCurrentYM = null;
+
+function getAllAccountIds() {
+  const tradeIds  = [...new Set((allTrades||[]).map(t => t.client_id).filter(Boolean))];
+  const manualIds = Object.keys(typeof manualAccounts !== 'undefined' ? manualAccounts : {});
+  const nickIds   = Object.keys(typeof accountNicknames !== 'undefined' ? accountNicknames : {});
+  return [...new Set([...tradeIds, ...manualIds, ...nickIds])].sort();
+}
+
+function generateAllocMonths() {
+  // April 2026 onward through a few years ahead, so future months are always selectable
+  const months = [];
+  let d = new Date(2026, 3, 1); // Apr 2026
+  const end = new Date(2032, 2, 1);
+  while (d <= end) {
+    months.push(d.toISOString().slice(0,7));
+    d.setMonth(d.getMonth() + 1);
+  }
+  return months;
+}
+
+function initAllocationsPage() {
+  const sel = document.getElementById('alloc-month-select');
+  if (sel && !sel.dataset.built) {
+    const months = generateAllocMonths();
+    const todayYM = new Date().toISOString().slice(0,7);
+    const defaultYM = months.includes(todayYM) ? todayYM : months[0];
+    sel.innerHTML = months.map(ym => {
+      const [y,m] = ym.split('-');
+      return `<option value="${ym}">${MONTH_NAMES[parseInt(m)-1]} ${y}</option>`;
+    }).join('');
+    sel.value = defaultYM;
+    allocCurrentYM = defaultYM;
+    sel.dataset.built = '1';
+  }
+  if (!allocCurrentYM) allocCurrentYM = sel ? sel.value : new Date().toISOString().slice(0,7);
+
+  // Populate account + basket dropdowns
+  const accSel = document.getElementById('alloc-new-account');
+  if (accSel) {
+    const accounts = getAllAccountIds();
+    accSel.innerHTML = '<option value="">Select account…</option>' +
+      accounts.map(a => `<option value="${a}">${getClientLabel(a)}</option>`).join('');
+  }
+  const bskSel = document.getElementById('alloc-new-basket');
+  if (bskSel) {
+    const baskets = Object.values(algoGroups).sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+    bskSel.innerHTML = '<option value="">Select basket…</option>' +
+      baskets.map(g => `<option value="${g.name}">${g.name}${g.capital_per_lot?` (₹${Number(g.capital_per_lot).toLocaleString('en-IN')}/lot)`:' (capital/lot not set)'}</option>`).join('');
+  }
+
+  renderAllocationsPage();
+}
+
+function onAllocMonthChange() {
+  const sel = document.getElementById('alloc-month-select');
+  allocCurrentYM = sel ? sel.value : allocCurrentYM;
+  renderAllocationsPage();
+}
+
+function allocMonthApplicable(ym) {
+  // Allocation tracking only meaningful from Apr 2026 onward, and only for the
+  // current month or a past month — future months are never expected/required.
+  const todayYM = new Date().toISOString().slice(0,7);
+  return ym >= '2026-04' && ym <= todayYM;
+}
+
+function renderAllocationsPage() {
+  const ym = allocCurrentYM;
+  if (!ym) return;
+  const monthData = allocations[ym] || {};
+  const rows = monthData.rows || {};
+  const incomplete = !!monthData.incomplete;
+
+  // Incomplete tag + button label
+  const tag = document.getElementById('alloc-incomplete-tag');
+  if (tag) tag.style.display = incomplete ? 'inline-block' : 'none';
+  const btn = document.getElementById('alloc-incomplete-btn');
+  if (btn) btn.textContent = incomplete ? '✅ Unmark Incomplete' : '⚠️ Mark Incomplete';
+
+  // Carry-forward checkbox — only meaningful/checkable if this month is empty
+  const cfBox = document.getElementById('alloc-carry-fwd');
+  if (cfBox) {
+    cfBox.checked = false;
+    cfBox.disabled = Object.keys(rows).length > 0;
+  }
+
+  const rowEntries = Object.entries(rows);
+  let totalLots = 0, totalMargin = 0;
+  const accountsSet = new Set(), basketsSet = new Set();
+
+  const tbody = document.getElementById('alloc-rows-tbody');
+  if (!rowEntries.length) {
+    tbody.innerHTML = `<tr><td colspan="6" style="padding:24px;text-align:center;color:var(--text3);">No allocations for this month yet${allocMonthApplicable(ym) && !incomplete ? ' — <span style="color:#d97706;font-weight:600;">⚠️ required</span>' : ''}</td></tr>`;
+  } else {
+    tbody.innerHTML = rowEntries
+      .sort((a,b) => (a[1].client_id||'').localeCompare(b[1].client_id||''))
+      .map(([rowId, r]) => {
+        const grp = Object.values(algoGroups).find(g => g.name === r.basket);
+        const perLot = (grp && grp.capital_per_lot) || 0;
+        const lots = parseFloat(r.lots) || 0;
+        const margin = lots * perLot;
+        totalLots += lots; totalMargin += margin;
+        accountsSet.add(r.client_id); basketsSet.add(r.basket);
+        return `
+        <tr style="border-bottom:1px solid var(--border);">
+          <td style="padding:8px 12px;font-weight:600;color:var(--text0);">${getClientLabel(r.client_id)}</td>
+          <td style="padding:8px 12px;">${r.basket}</td>
+          <td style="padding:8px 12px;text-align:right;">
+            <input type="number" value="${lots}" min="0" step="1"
+              style="width:70px;padding:4px 6px;border:1px solid var(--border);border-radius:5px;font-size:0.8rem;text-align:right;outline:none;"
+              onchange="allocUpdateLots('${ym}','${rowId}',this.value)">
+          </td>
+          <td style="padding:8px 12px;text-align:right;color:var(--text2);">${perLot ? '₹'+perLot.toLocaleString('en-IN') : '—'}</td>
+          <td style="padding:8px 12px;text-align:right;font-weight:700;color:var(--blue);">₹${margin.toLocaleString('en-IN')}</td>
+          <td style="padding:8px 12px;text-align:center;">
+            <button onclick="allocDeleteRow('${ym}','${rowId}')" class="btn btn-sm" style="background:var(--red-lt);color:var(--red);border:none;">🗑</button>
+          </td>
+        </tr>`;
+      }).join('');
+  }
+
+  document.getElementById('alloc-sum-accounts').textContent = accountsSet.size;
+  document.getElementById('alloc-sum-baskets').textContent  = basketsSet.size;
+  document.getElementById('alloc-sum-lots').textContent     = totalLots;
+  document.getElementById('alloc-sum-margin').textContent   = '₹' + totalMargin.toLocaleString('en-IN');
+}
+
+async function allocAddRow() {
+  const ym = allocCurrentYM;
+  const clientId = document.getElementById('alloc-new-account')?.value;
+  const basket   = document.getElementById('alloc-new-basket')?.value;
+  const lots     = parseFloat(document.getElementById('alloc-new-lots')?.value);
+  if (!clientId) { toast('Select an account', 'error'); return; }
+  if (!basket)   { toast('Select a basket', 'error'); return; }
+  if (!lots || lots <= 0) { toast('Enter lots (> 0)', 'error'); return; }
+
+  const rowId = 'r' + Date.now() + Math.random().toString(36).slice(2,6);
+  const row = { client_id: clientId, basket, lots, created_at: new Date().toISOString() };
+  if (!allocations[ym]) allocations[ym] = { rows: {}, incomplete: false };
+  if (!allocations[ym].rows) allocations[ym].rows = {};
+  allocations[ym].rows[rowId] = row;
+
+  if (db) await db.ref('journal/allocations/' + ym + '/rows/' + rowId).set(row);
+  recomputeCapitalFromAllocations();
+  document.getElementById('alloc-new-lots').value = '';
+  renderAllocationsPage();
+  renderDashboard();
+  toast('✓ Allocation added', 'success');
+}
+
+async function allocUpdateLots(ym, rowId, value) {
+  const lots = parseFloat(value) || 0;
+  if (!allocations[ym] || !allocations[ym].rows || !allocations[ym].rows[rowId]) return;
+  allocations[ym].rows[rowId].lots = lots;
+  if (db) await db.ref('journal/allocations/' + ym + '/rows/' + rowId + '/lots').set(lots);
+  recomputeCapitalFromAllocations();
+  renderAllocationsPage();
+  renderDashboard();
+}
+
+async function allocDeleteRow(ym, rowId) {
+  if (!confirm('Delete this allocation row?')) return;
+  if (allocations[ym] && allocations[ym].rows) delete allocations[ym].rows[rowId];
+  if (db) await db.ref('journal/allocations/' + ym + '/rows/' + rowId).remove();
+  recomputeCapitalFromAllocations();
+  renderAllocationsPage();
+  renderDashboard();
+  toast('Allocation row deleted', 'info');
+}
+
+async function allocToggleIncomplete() {
+  const ym = allocCurrentYM;
+  if (!allocations[ym]) allocations[ym] = { rows: {}, incomplete: false };
+  const newVal = !allocations[ym].incomplete;
+  allocations[ym].incomplete = newVal;
+  if (db) await db.ref('journal/allocations/' + ym + '/incomplete').set(newVal);
+  recomputeCapitalFromAllocations();
+  renderAllocationsPage();
+  renderDashboard();
+  toast(newVal ? `${ym} marked Incomplete` : `${ym} unmarked`, 'info');
+}
+
+async function allocCarryForwardToggle() {
+  const box = document.getElementById('alloc-carry-fwd');
+  if (!box || !box.checked) return;
+  const ym = allocCurrentYM;
+  const [y, m] = ym.split('-').map(Number);
+  const prevDate = new Date(y, m - 2, 1);
+  const prevYM = prevDate.toISOString().slice(0,7);
+  const prevRows = (allocations[prevYM] && allocations[prevYM].rows) || {};
+  if (!Object.keys(prevRows).length) {
+    toast(`No allocation found for ${prevYM} to carry forward`, 'warning');
+    box.checked = false;
+    return;
+  }
+  if (!allocations[ym]) allocations[ym] = { rows: {}, incomplete: false };
+  const newRows = {};
+  Object.values(prevRows).forEach(r => {
+    const rowId = 'r' + Date.now() + Math.random().toString(36).slice(2,6);
+    newRows[rowId] = { client_id: r.client_id, basket: r.basket, lots: r.lots, created_at: new Date().toISOString() };
+  });
+  allocations[ym].rows = { ...(allocations[ym].rows||{}), ...newRows };
+  if (db) await db.ref('journal/allocations/' + ym + '/rows').update(newRows);
+  recomputeCapitalFromAllocations();
+  renderAllocationsPage();
+  renderDashboard();
+  toast(`✓ Carried forward ${Object.keys(newRows).length} row(s) from ${prevYM}`, 'success');
+}
+
+function allocExportCSV() {
+  const ym = allocCurrentYM;
+  const rows = (allocations[ym] && allocations[ym].rows) || {};
+  let csv = 'Month,Account,Basket,Lots,CapitalPerLot,Margin\n';
+  Object.values(rows).forEach(r => {
+    const grp = Object.values(algoGroups).find(g => g.name === r.basket);
+    const perLot = (grp && grp.capital_per_lot) || 0;
+    const lots = parseFloat(r.lots) || 0;
+    csv += `${ym},${r.client_id},${r.basket},${lots},${perLot},${lots*perLot}\n`;
+  });
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `allocations_${ym}.csv`;
+  a.click();
+}
+
+async function allocImportCSV(file) {
+  if (!file) return;
+  const text = await file.text();
+  const lines = text.split(/\r?\n/).filter(l => l.trim());
+  if (lines.length < 2) { toast('CSV appears empty', 'error'); return; }
+  const header = lines[0].split(',').map(h => h.trim().toLowerCase());
+  const idxAccount = header.findIndex(h => h.includes('account') || h.includes('client'));
+  const idxBasket  = header.findIndex(h => h.includes('basket'));
+  const idxLots    = header.findIndex(h => h.includes('lot'));
+  const idxMonth   = header.findIndex(h => h.includes('month'));
+  if (idxAccount === -1 || idxBasket === -1 || idxLots === -1) {
+    toast('CSV must have Account, Basket, Lots columns (Month optional)', 'error');
+    return;
+  }
+  let added = 0;
+  for (let i = 1; i < lines.length; i++) {
+    const cols = lines[i].split(',').map(c => c.trim());
+    const clientId = cols[idxAccount];
+    const basket   = cols[idxBasket];
+    const lots     = parseFloat(cols[idxLots]);
+    const ym       = idxMonth !== -1 && cols[idxMonth] ? cols[idxMonth] : allocCurrentYM;
+    if (!clientId || !basket || !lots) continue;
+    const rowId = 'r' + Date.now() + Math.random().toString(36).slice(2,6) + i;
+    const row = { client_id: clientId, basket, lots, created_at: new Date().toISOString() };
+    if (!allocations[ym]) allocations[ym] = { rows: {}, incomplete: false };
+    if (!allocations[ym].rows) allocations[ym].rows = {};
+    allocations[ym].rows[rowId] = row;
+    if (db) await db.ref('journal/allocations/' + ym + '/rows/' + rowId).set(row);
+    added++;
+  }
+  recomputeCapitalFromAllocations();
+  renderAllocationsPage();
+  renderDashboard();
+  document.getElementById('alloc-import-input').value = '';
+  toast(`✓ Imported ${added} allocation row(s)`, 'success');
 }
 
 function generateCapitalMonths() {
@@ -6597,7 +7136,7 @@ function buildNicknameList() {
           <input type="text" id="cid-${cid}" value="${cid}" placeholder="Client ID"
             style="flex:1;padding:5px 10px;border:1px solid var(--border);border-radius:6px;font-size:0.82rem;outline:none;font-weight:600;"
             onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--border)'">
-          <button onclick="renameClientId('${cid}')" class="btn btn-ghost btn-sm" style="white-space:nowrap;padding:4px 8px;" title="${tradeCount} trade(s) will be updated">✏️</button>
+          <button onclick="renameClientId('${cid}')" class="btn btn-ghost btn-sm" style="white-space:nowrap;padding:4px 8px;" title="${tradeCount} trade(s) will be updated">💾 Rename</button>
         </div>
         <input type="text" id="nick-${cid}" value="${nick}" placeholder="Nickname…"
           style="padding:5px 10px;border:1px solid var(--border);border-radius:6px;font-size:0.82rem;outline:none;"
@@ -6652,17 +7191,18 @@ async function renameClientId(oldId) {
     });
     if (Object.keys(updates).length && db) await db.ref().update(updates);
 
-    // 2. Migrate capital_v2: copy oldId data to newId, then remove oldId
+    // 2. Migrate allocation rows referencing oldId → newId (v22.0: capital_v2 retired)
     if (db) {
-      const capSnap = await db.ref('journal/capital_v2/' + oldId).get();
-      if (capSnap.exists()) {
-        await db.ref('journal/capital_v2/' + newId).set(capSnap.val());
-        await db.ref('journal/capital_v2/' + oldId).remove();
-        if (capitalDataAll[oldId]) {
-          capitalDataAll[newId] = capitalDataAll[oldId];
-          delete capitalDataAll[oldId];
+      for (const [ym, monthData] of Object.entries(allocations)) {
+        const rows = monthData?.rows || {};
+        for (const [rowId, r] of Object.entries(rows)) {
+          if (r && r.client_id === oldId) {
+            allocations[ym].rows[rowId].client_id = newId;
+            await db.ref('journal/allocations/' + ym + '/rows/' + rowId + '/client_id').set(newId);
+          }
         }
       }
+      recomputeCapitalFromAllocations();
     }
 
     // 3. Migrate nickname entry
@@ -6767,7 +7307,7 @@ async function estimateDBSize() {
     { key:'journal/uploads',          label:'Upload History',   icon:'📤' },
     { key:'journal/sm_uploads',       label:'SM Upload History',icon:'📥' },
     { key:'journal/sm_reviewed',      label:'SM Reviewed Flags',icon:'🔵' },
-    { key:'journal/capital',          label:'Capital Data',     icon:'💰' },
+    { key:'journal/allocations',      label:'Allocations',       icon:'🧮' },
     { key:'journal/nicknames',        label:'Nicknames',        icon:'🏷️' },
     { key:'journal/settings',         label:'Settings',         icon:'🔧' },
     { key:'journal/last_updated',     label:'Last Updated',     icon:'🕐' },
@@ -6929,88 +7469,8 @@ async function executeBrokerClear() {
   toast(`✓ Deleted ${deleted} trades`, 'success');
 }
 
-function buildCapitalTable() {
-  const grid = document.getElementById('capital-grid');
-  if (!grid) return;
-  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  const years = [];
-  for (let y = 2026; y <= 2036; y++) years.push(y);
-
-  // Account selector for capital table
-  const junk = new Set(['tradetron','quantleap','quantiply','zebu','upstox','']);
-  const accounts = [...new Set(allTrades.map(t=>t.client_id||'').filter(id=>id&&!junk.has(id.toLowerCase())))].sort();
-  const curAcct = document.getElementById('cap-acct-select')?.value || accounts[0] || '';
-  const acctData = curAcct ? (capitalDataAll[curAcct]||{}) : capitalData;
-
-  let acctSel = `<div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
-    <label style="font-size:0.78rem;font-weight:600;color:var(--text1);">Account:</label>
-    <select id="cap-acct-select" onchange="buildCapitalTable()" style="padding:5px 10px;border:1.5px solid var(--border);border-radius:7px;font-size:0.82rem;outline:none;min-width:180px;">
-      ${accounts.map(a=>`<option value="${a}"${a===curAcct?' selected':''}>${getClientLabel(a)}</option>`).join('')}
-    </select>
-  </div>`;
-
-  let html = acctSel + `<table style="border-collapse:collapse;font-size:0.78rem;width:100%;">
-    <thead>
-      <tr style="background:var(--bg2);">
-        <th style="padding:6px 10px;text-align:left;font-weight:700;color:var(--text1);border:1px solid var(--border);min-width:52px;">Year</th>
-        ${months.map(m=>`<th style="padding:6px 8px;text-align:center;font-weight:600;color:var(--text1);border:1px solid var(--border);min-width:80px;">${m}</th>`).join('')}
-      </tr>
-    </thead>
-    <tbody>
-    ${years.map(y=>`
-      <tr>
-        <td style="padding:5px 10px;font-weight:700;color:var(--text0);background:var(--bg2);border:1px solid var(--border);">${y}</td>
-        ${months.map((m,i)=>{
-          const key = `${y}-${String(i+1).padStart(2,'0')}`;
-          const val = acctData[key] || '';
-          return `<td style="padding:3px 4px;border:1px solid var(--border);">
-            <input type="number" id="cap-${key}" value="${val}" placeholder="—"
-              style="width:100%;padding:3px 5px;border:1px solid transparent;border-radius:4px;font-size:0.75rem;text-align:right;outline:none;background:transparent;"
-              onfocus="this.style.borderColor='var(--blue)';this.style.background='#fff'"
-              onblur="this.style.borderColor='transparent';this.style.background='transparent'">
-          </td>`;
-        }).join('')}
-      </tr>`).join('')}
-    </tbody>
-  </table>`;
-  grid.innerHTML = html;
-}
-
-async function saveCapitalTable() {
-  const acctId = document.getElementById('cap-acct-select')?.value || '';
-  const newData = {};
-  for (let y = 2026; y <= 2036; y++) {
-    for (let m = 1; m <= 12; m++) {
-      const key = `${y}-${String(m).padStart(2,'0')}`;
-      const inp = document.getElementById('cap-' + key);
-      if (inp && inp.value) newData[key] = parseFloat(inp.value) || 0;
-    }
-  }
-  if (acctId) {
-    if (!capitalDataAll[acctId]) capitalDataAll[acctId] = {};
-    capitalDataAll[acctId] = { ...capitalDataAll[acctId], ...newData };
-    if (db) await db.ref('journal/capital_v2/' + acctId).update(newData);
-  } else {
-    capitalData = newData;
-    if (db) await db.ref('journal/capital').set(newData);
-  }
-  toast('✓ Capital saved', 'success');
-}
-
-function loadCapitalTable() {
-  if (db) {
-    db.ref('journal/capital').on('value', snap => {
-      capitalData = snap.val() || {};
-      buildCapitalTable();
-    });
-    db.ref('journal/capital_v2').on('value', snap => {
-      capitalDataAll = snap.val() || {};
-      buildCapitalTable();
-    });
-  } else {
-    buildCapitalTable();
-  }
-}
+// v22.0: buildCapitalTable/saveCapitalTable/loadCapitalTable removed — Capital Deployed
+// is now computed entirely from journal/allocations (see recomputeCapitalFromAllocations).
 
 // ════════════════════════════════════════════════════
 //  STOCKMOCK COMPARISON
@@ -8152,6 +8612,7 @@ function openAddGroupModal() {
   el('g-color').value = '#1a73e8';
   el('g-category').value = '';
   el('g-notes').value = '';
+  el('g-capital-per-lot').value = '';
   el('modal-group-title').textContent = 'Create Basket';
   buildGroupAlgoCheckboxes(null);
   openModal('modal-group');
@@ -8163,6 +8624,7 @@ function editGroup(name) {
   el('g-color').value = g.color || '#1a73e8';
   el('g-category').value = g.category || '';
   el('g-notes').value = g.notes || '';
+  el('g-capital-per-lot').value = g.capital_per_lot || '';
   el('modal-group-title').textContent = 'Edit Group: ' + name;
   buildGroupAlgoCheckboxes(g.algos || []);
   openModal('modal-group');
@@ -8190,11 +8652,13 @@ async function saveGroup() {
     category: el('g-category').value.trim(),
     color: el('g-color').value,
     notes: el('g-notes').value.trim(),
+    capital_per_lot: parseFloat(el('g-capital-per-lot').value) || 0,
     algos,
     created_at: algoGroups[name]?.created_at || new Date().toISOString()
   };
   algoGroups[name] = group;
   if (db) await db.ref('journal/groups/' + safeKey(name)).set(group);
+  recomputeCapitalFromAllocations();
   renderGroupList();
   renderDashboard();
   closeModal('modal-group');
@@ -9129,13 +9593,14 @@ function asRenderGroups() {
   list.innerHTML = groups.map((g, idx) => {
     const color = g.color || '#1a73e8';
     const members = (g.algos || []).length;
+    const capLabel = g.capital_per_lot ? `₹${Number(g.capital_per_lot).toLocaleString('en-IN')}/lot` : 'capital/lot not set';
     return `
       <div style="display:flex;align-items:center;gap:12px;padding:10px 14px;border:1px solid var(--border);border-radius:8px;margin-bottom:8px;">
         <span style="min-width:24px;text-align:center;font-size:0.75rem;font-weight:700;color:var(--text3);">${idx+1}</span>
         <span style="width:14px;height:14px;border-radius:50%;background:${color};flex-shrink:0;display:inline-block;"></span>
         <div style="flex:1;">
           <div style="font-size:0.85rem;font-weight:600;color:var(--text0);">${g.name}</div>
-          <div style="font-size:0.72rem;color:var(--text2);">${members} system${members!==1?'s':''}</div>
+          <div style="font-size:0.72rem;color:var(--text2);">${members} system${members!==1?'s':''} · ${capLabel}</div>
         </div>
         <button onclick="asEditGroup('${g.name}')" class="btn btn-ghost btn-sm">✏️ Edit</button>
         <button onclick="asConvertToGroup('${g.name}')" class="btn btn-ghost btn-sm" style="color:#0d9488;border-color:#0d9488;" title="Convert this Basket to a Group">⇄ To Group</button>
