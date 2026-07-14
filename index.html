@@ -2,6 +2,31 @@
 ==========================================================
   SKVK TRADING JOURNAL — VERSION HISTORY
 ==========================================================
+  v22.3 | 2026-07-14 | App-wide: all rupee figures now shown in compact k/L/Cr format
+         |            | (e.g. ₹2,45,331 → -₹2.45L) via the central fmt() helper. Monthly
+         |            | Performance and Yearly Performance (renamed from "Yearly P&L
+         |            | Data") tiles rearranged so shared metrics (Net P&L, Win Rate,
+         |            | Profit Factor, Total Trades, Max Drawdown, Max Drawdown %,
+         |            | Capital Deployed) line up in the same order across both cards;
+         |            | Yearly Performance row 1 is now Capital Deployed/Net P&L/Net
+         |            | P&L %/Max Drawdown/Max Drawdown %, row 2 is Win Rate/Total
+         |            | Trades/Sharpe Ratio/Profit Factor/CAGR. "Daily P&L" table
+         |            | renamed "Daily Performance"; "Monthly P&L" chart renamed
+         |            | "Monthly P&L Chart". Analytics — Account wise: Capital Deployed
+         |            | is now a table (Month/Account/Basket/Lots/Capital-per-Lot/Total,
+         |            | one row per basket-allocation) with a Current Month / Select
+         |            | Month radio (Current Month default, no future months
+         |            | selectable), current month highlighted, all figures in L format.
+         |            | All Allocations REDESIGNED again: replaced the stacked month
+         |            | cards with a single 12-row table (one row per FY month, always
+         |            | showing all 12), each row summarizing its basket/lot allocations
+         |            | and total margin, with a big 🚫/⬜ toggle icon for Exclude (was
+         |            | "Mark Incomplete") and an ✏️ Edit button opening a popup modal
+         |            | with that month's add/edit/delete basket-row controls and
+         |            | "Copy to other months". Future months shown but greyed out/
+         |            | disabled. Renamed "All Allocations" → "Allocations" in the nav
+         |            | tab, page title/subtitle, and all "Set via / Computed from" hints.
+==========================================================
   v22.2 | 2026-07-14 | All Allocations REDESIGNED: now account-first — select an
          |            | Account first, then see all 12 FY months (Apr–Mar) as stacked
          |            | sections for that account, each with its own Basket/Lots rows,
@@ -837,7 +862,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>SKVK Trading Journal v22.2</title>
+<title>SKVK Trading Journal v22.3</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -1796,7 +1821,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div class="login-logo">📋</div>
     <div class="login-title">
       SKVK Trading Journal
-      <span class="login-vbadge">v22.2</span>
+      <span class="login-vbadge">v22.3</span>
     </div>
     <div class="login-sub">Sign in with your authorised Google account to access the journal.</div>
     <button class="google-signin-btn" id="googleSignInBtn" onclick="signInWithGoogle()">
@@ -1836,7 +1861,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
         <i class="ti ti-chart-candle brand-icon"></i>
         <span class="brand-skvk">SKVK</span>
         <span class="brand-appname">Trading Journal</span>
-        <span class="brand-vbadge">v22.2</span>
+        <span class="brand-vbadge">v22.3</span>
       </div>
     </div>
     <div id="topbar-right-wrap">
@@ -1859,7 +1884,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
       <button class="nav-tab" onclick="showPage('acctreport')"            data-page="acctreport">👤 Analytics — Account wise</button>
       <button class="nav-tab" onclick="showPage('upload')"                data-page="upload">⬆ Upload Trade Reports</button>
       <button class="nav-tab" onclick="showPage('stockmock')"             data-page="stockmock">📊 Analytics-Execution</button>
-      <button class="nav-tab" onclick="showPage('allocations')"           data-page="allocations"><i class="ti ti-sitemap"></i>&nbsp;All Allocations</button>
+      <button class="nav-tab" onclick="showPage('allocations')"           data-page="allocations"><i class="ti ti-sitemap"></i>&nbsp;Allocations</button>
       <button class="nav-tab" onclick="showPage('taxation')" data-page="taxation" style="line-height:1.2;">🧾 Taxation/<br>Expenses</button>
       <button class="nav-tab" onclick="showPage('appsettings')"           data-page="appsettings">🛠️ App Settings</button>
     </nav>
@@ -1995,12 +2020,12 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
 
   <!-- Monthly bar chart (current year Jan-Dec) -->
   <div style="background:var(--bg);border:1.5px solid var(--border);border-radius:14px;padding:16px 20px;margin-bottom:28px;">
-    <div style="font-size:0.78rem;font-weight:700;color:var(--text1);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:10px;">Monthly P&L</div>
+    <div style="font-size:0.78rem;font-weight:700;color:var(--text1);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:10px;">Monthly P&L Chart</div>
     <canvas id="chart-monthly" style="max-height:200px;"></canvas>
   </div>
 
   <div style="border-top:3px solid #6366f1;padding-top:10px;margin-bottom:16px;">
-    <span style="font-size:1.05rem;font-weight:800;font-family:var(--display);color:#6366f1;">📊 Yearly P&L Data</span>
+    <span style="font-size:1.05rem;font-weight:800;font-family:var(--display);color:#6366f1;">📊 Yearly Performance</span>
   </div>
 
   <!-- Period selector: All Time / FY -->
@@ -2023,16 +2048,16 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
       <span id="dash-date-range" style="font-size:0.75rem;background:#eef2ff;color:#3730a3;padding:4px 12px;border-radius:20px;font-weight:600;"></span>
     </div>
     <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:16px 24px;">
-      <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Total Return</div><div id="s-return" style="font-size:1.1rem;font-weight:800;color:var(--green);">—</div></div>
-      <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">CAGR</div><div id="s-cagr" style="font-size:1.1rem;font-weight:800;color:var(--green);">—</div></div>
-      <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Net P&L</div><div id="s-pnl" style="font-size:1.1rem;font-weight:800;">—</div></div>
-      <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Win Rate</div><div id="s-wr" style="font-size:1.1rem;font-weight:800;">—</div></div>
-      <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Sharpe Ratio</div><div id="s-sharpe" style="font-size:1.1rem;font-weight:800;">—</div></div>
-      <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Max Drawdown</div><div id="s-dd" style="font-size:1.1rem;font-weight:800;color:var(--red);">—</div></div>
-      <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Drawdown %</div><div id="s-dd-pct" style="font-size:1.1rem;font-weight:800;color:var(--red);">—</div></div>
-      <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Profit Factor</div><div id="s-pf" style="font-size:1.1rem;font-weight:800;">—</div></div>
-      <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Total Trades</div><div id="s-trades" style="font-size:1.1rem;font-weight:800;">—</div></div>
       <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Capital Deployed</div><div id="s-algos" style="font-size:1.1rem;font-weight:800;">—</div></div>
+      <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Net P&L</div><div id="s-pnl" style="font-size:1.1rem;font-weight:800;">—</div></div>
+      <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Net P&L %</div><div id="s-return" style="font-size:1.1rem;font-weight:800;color:var(--green);">—</div></div>
+      <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Max Drawdown</div><div id="s-dd" style="font-size:1.1rem;font-weight:800;color:var(--red);">—</div></div>
+      <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Max Drawdown %</div><div id="s-dd-pct" style="font-size:1.1rem;font-weight:800;color:var(--red);">—</div></div>
+      <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Win Rate</div><div id="s-wr" style="font-size:1.1rem;font-weight:800;">—</div></div>
+      <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Total Trades</div><div id="s-trades" style="font-size:1.1rem;font-weight:800;">—</div></div>
+      <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Sharpe Ratio</div><div id="s-sharpe" style="font-size:1.1rem;font-weight:800;">—</div></div>
+      <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Profit Factor</div><div id="s-pf" style="font-size:1.1rem;font-weight:800;">—</div></div>
+      <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">CAGR</div><div id="s-cagr" style="font-size:1.1rem;font-weight:800;color:var(--green);">—</div></div>
     </div>
   </div>
 
@@ -2040,7 +2065,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
   <div style="display:grid;grid-template-columns:420px 1fr;gap:24px;margin-bottom:28px;">
     <!-- LEFT: Daily P&L table -->
     <div style="background:var(--bg);border:1.5px solid var(--border);border-radius:14px;overflow:hidden;">
-      <div style="padding:14px 18px;border-bottom:1px solid var(--border);font-size:0.95rem;font-weight:800;font-family:var(--display);">Daily P&L</div>
+      <div style="padding:14px 18px;border-bottom:1px solid var(--border);font-size:0.95rem;font-weight:800;font-family:var(--display);">Daily Performance</div>
       <table style="width:100%;border-collapse:collapse;font-size:0.8rem;">
         <thead id="dash-table-thead">
           <tr style="background:var(--bg2);">
@@ -2089,7 +2114,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
   <div style="background:var(--bg);border:1.5px solid var(--border);border-radius:14px;padding:20px 24px;margin-bottom:28px;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
       <div style="font-size:0.95rem;font-weight:800;font-family:var(--display);">💰 Capital Deployed</div>
-      <span style="font-size:0.72rem;color:var(--text3);">Set via 🧮 All Allocations</span>
+      <span style="font-size:0.72rem;color:var(--text3);">Set via 🔗 Allocations</span>
     </div>
     <div id="dash-capital-grid"></div>
   </div>
@@ -2222,7 +2247,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
 
     <!-- 12-month bar chart -->
     <div id="acct-monthly-chart-wrap" style="background:var(--bg);border:1.5px solid var(--border);border-radius:14px;padding:16px 20px;">
-      <div style="font-size:0.78rem;font-weight:700;color:var(--text1);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:10px;">Monthly P&L</div>
+      <div style="font-size:0.78rem;font-weight:700;color:var(--text1);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:10px;">Monthly P&L Chart</div>
       <canvas id="acct-chart-monthly-top" style="max-height:200px;"></canvas>
     </div>
   </div>
@@ -2234,7 +2259,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
   <!-- ══ BLOCK 2: Yearly P&L Data ══ -->
   <div id="acct-yearly-block-hdr" style="display:none;margin-bottom:16px;">
     <div style="border-top:3px solid #6366f1;padding-top:10px;">
-      <span style="font-size:1.05rem;font-weight:800;font-family:var(--display);color:#6366f1;">📊 Yearly P&L Data</span>
+      <span style="font-size:1.05rem;font-weight:800;font-family:var(--display);color:#6366f1;">📊 Yearly Performance</span>
     </div>
   </div>
 
@@ -2260,16 +2285,16 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
         <span id="acct-date-range" style="font-size:0.75rem;background:#eef2ff;color:#3730a3;padding:4px 12px;border-radius:20px;font-weight:600;"></span>
       </div>
       <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:16px 24px;">
-        <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Total Return</div><div id="acct-lp-return" style="font-size:1.1rem;font-weight:800;color:var(--green);">—</div></div>
-        <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">CAGR</div><div id="acct-lp-cagr" style="font-size:1.1rem;font-weight:800;color:var(--green);">—</div></div>
-        <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Net P&L</div><div id="acct-lp-pnl" style="font-size:1.1rem;font-weight:800;">—</div></div>
-        <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Win Rate</div><div id="acct-lp-wr" style="font-size:1.1rem;font-weight:800;">—</div></div>
-        <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Sharpe Ratio</div><div id="acct-lp-sharpe" style="font-size:1.1rem;font-weight:800;">—</div></div>
-        <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Max Drawdown</div><div id="acct-lp-dd" style="font-size:1.1rem;font-weight:800;color:var(--red);">—</div></div>
-        <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Drawdown %</div><div id="acct-lp-dd-pct" style="font-size:1.1rem;font-weight:800;color:var(--red);">—</div></div>
-        <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Profit Factor</div><div id="acct-lp-pf" style="font-size:1.1rem;font-weight:800;">—</div></div>
-        <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Total Trades</div><div id="acct-lp-trades" style="font-size:1.1rem;font-weight:800;">—</div></div>
         <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Capital Deployed</div><div id="acct-lp-cap" style="font-size:1.1rem;font-weight:800;">—</div></div>
+        <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Net P&L</div><div id="acct-lp-pnl" style="font-size:1.1rem;font-weight:800;">—</div></div>
+        <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Net P&L %</div><div id="acct-lp-return" style="font-size:1.1rem;font-weight:800;color:var(--green);">—</div></div>
+        <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Max Drawdown</div><div id="acct-lp-dd" style="font-size:1.1rem;font-weight:800;color:var(--red);">—</div></div>
+        <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Max Drawdown %</div><div id="acct-lp-dd-pct" style="font-size:1.1rem;font-weight:800;color:var(--red);">—</div></div>
+        <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Win Rate</div><div id="acct-lp-wr" style="font-size:1.1rem;font-weight:800;">—</div></div>
+        <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Total Trades</div><div id="acct-lp-trades" style="font-size:1.1rem;font-weight:800;">—</div></div>
+        <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Sharpe Ratio</div><div id="acct-lp-sharpe" style="font-size:1.1rem;font-weight:800;">—</div></div>
+        <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Profit Factor</div><div id="acct-lp-pf" style="font-size:1.1rem;font-weight:800;">—</div></div>
+        <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">CAGR</div><div id="acct-lp-cagr" style="font-size:1.1rem;font-weight:800;color:var(--green);">—</div></div>
       </div>
     </div>
 
@@ -2278,7 +2303,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
 
         <!-- LEFT: Daily P&L / Counter P&L table -->
         <div style="background:var(--bg);border:1.5px solid var(--border);border-radius:14px;overflow:hidden;">
-          <div id="acct-table-title" style="padding:14px 18px;border-bottom:1px solid var(--border);font-size:0.95rem;font-weight:800;font-family:var(--display);">Daily P&L</div>
+          <div id="acct-table-title" style="padding:14px 18px;border-bottom:1px solid var(--border);font-size:0.95rem;font-weight:800;font-family:var(--display);">Daily Performance</div>
           <table style="width:100%;border-collapse:collapse;font-size:0.8rem;">
             <thead id="acct-table-thead">
               <tr style="background:var(--bg2);">
@@ -2328,9 +2353,18 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
 
     <!-- ── Capital Deployed (read-only, computed from Allocations) ── -->
     <div id="acct-capital-section" style="background:var(--bg);border:1.5px solid var(--border);border-radius:14px;padding:20px 24px;margin-bottom:28px;">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px;">
         <div style="font-size:0.95rem;font-weight:800;font-family:var(--display);">💰 Capital Deployed</div>
-        <span style="font-size:0.72rem;color:var(--text3);">Set via 🧮 All Allocations</span>
+        <span style="font-size:0.72rem;color:var(--text3);">Set via 🔗 Allocations</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:16px;margin-bottom:14px;flex-wrap:wrap;">
+        <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:0.82rem;font-weight:600;color:var(--text0);">
+          <input type="radio" autocomplete="off" name="acct-cap-mode" value="current" checked onchange="renderAcctCapitalGrid()" style="accent-color:var(--blue);width:14px;height:14px;"> Current Month
+        </label>
+        <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:0.82rem;font-weight:600;color:var(--text0);">
+          <input type="radio" autocomplete="off" name="acct-cap-mode" value="select" onchange="renderAcctCapitalGrid()" style="accent-color:var(--blue);width:14px;height:14px;"> Select Month
+          <select id="acct-cap-month-select" class="form-select" onchange="renderAcctCapitalGrid()" style="min-width:150px;margin-left:4px;"></select>
+        </label>
       </div>
       <div id="acct-capital-grid"></div>
     </div>
@@ -2653,7 +2687,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
 <div id="page-allocations" class="page">
   <div class="page-header">
     <div>
-      <div class="page-title">All Allocations</div>
+      <div class="page-title">Allocations</div>
       <div class="page-subtitle">Account → Basket → Lots, by month · drives Capital Deployed across the app</div>
     </div>
     <div style="display:flex;gap:8px;">
@@ -2671,12 +2705,56 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
   </div>
 
   <div id="alloc-empty-state" class="empty-state">
-    <span class="eicon">🧮</span>
+    <span class="eicon">🔗</span>
     <h3>Select an account to view its allocations</h3>
     <p>Once selected, you'll see all 12 months of the current FY for that account</p>
   </div>
 
-  <div id="alloc-fy-sections" style="display:none;"></div>
+  <div id="alloc-table-wrap" style="display:none;background:#fff;border:1px solid var(--border);border-radius:12px;overflow:hidden;box-shadow:var(--shadow-sm);">
+    <table style="width:100%;border-collapse:collapse;font-size:0.84rem;">
+      <thead>
+        <tr style="background:var(--bg2);">
+          <th style="padding:10px 14px;text-align:left;font-weight:700;color:var(--text1);border-bottom:1px solid var(--border);">Month</th>
+          <th style="padding:10px 14px;text-align:left;font-weight:700;color:var(--text1);border-bottom:1px solid var(--border);">Allocations (Basket · Lots)</th>
+          <th style="padding:10px 14px;text-align:right;font-weight:700;color:var(--text1);border-bottom:1px solid var(--border);">Total Margin</th>
+          <th style="padding:10px 14px;text-align:center;font-weight:700;color:var(--text1);border-bottom:1px solid var(--border);">Exclude</th>
+          <th style="padding:10px 14px;text-align:center;font-weight:700;color:var(--text1);border-bottom:1px solid var(--border);">Actions</th>
+        </tr>
+      </thead>
+      <tbody id="alloc-table-tbody"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Edit month modal: add / edit / delete basket-rows for one month -->
+<div class="modal-overlay" id="modal-alloc-month">
+  <div class="modal" style="max-width:640px;">
+    <button class="modal-close" onclick="closeModal('modal-alloc-month')">✕</button>
+    <h2 id="alloc-month-modal-title">Edit Month</h2>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin:14px 0;background:#fafbff;border:1px solid var(--border);border-radius:10px;padding:12px;">
+      <div class="form-group" style="min-width:220px;margin:0;">
+        <label class="form-label">Basket</label>
+        <select class="form-select" id="alloc-modal-add-basket"><option value="">Select basket…</option></select>
+      </div>
+      <div class="form-group" style="min-width:90px;margin:0;">
+        <label class="form-label">Lots</label>
+        <input type="number" class="form-input" id="alloc-modal-add-lots" min="0" step="1" placeholder="e.g. 3">
+      </div>
+      <button class="btn btn-primary btn-sm" onclick="allocModalAddRow()">+ Add</button>
+    </div>
+    <table style="width:100%;border-collapse:collapse;font-size:0.82rem;">
+      <thead>
+        <tr style="background:var(--bg2);">
+          <th style="padding:8px 10px;text-align:left;font-weight:700;color:var(--text1);border-bottom:1px solid var(--border);">Basket</th>
+          <th style="padding:8px 10px;text-align:right;font-weight:700;color:var(--text1);border-bottom:1px solid var(--border);">Lots</th>
+          <th style="padding:8px 10px;text-align:right;font-weight:700;color:var(--text1);border-bottom:1px solid var(--border);">Capital/Lot</th>
+          <th style="padding:8px 10px;text-align:right;font-weight:700;color:var(--text1);border-bottom:1px solid var(--border);">Margin</th>
+          <th style="padding:8px 10px;text-align:center;font-weight:700;color:var(--text1);border-bottom:1px solid var(--border);">Actions</th>
+        </tr>
+      </thead>
+      <tbody id="alloc-modal-rows-tbody"></tbody>
+    </table>
+  </div>
 </div>
 
 <!-- Copy-to-other-months panel -->
@@ -2890,7 +2968,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
         <span style="font-size:1.3rem;">💰</span>
         <div>
           <div style="font-size:0.95rem;font-weight:700;color:var(--text0);">Capital Deployed</div>
-          <div style="font-size:0.72rem;color:var(--text2);margin-top:2px;">No longer entered manually — computed automatically from 🧮 All Allocations (lots × capital/lot per basket). Go to the All Allocations tab to set account/basket/lot allocations.</div>
+          <div style="font-size:0.72rem;color:var(--text2);margin-top:2px;">No longer entered manually — computed automatically from 🔗 Allocations (lots × capital/lot per basket). Go to the Allocations tab to set account/basket/lot allocations.</div>
         </div>
       </div>
     </div>
@@ -3819,7 +3897,7 @@ function renderAcctCounterTable(tr) {
 
 function renderAcctDateTable(tr) {
   // Update headers for date view
-  document.getElementById('acct-table-title').textContent = 'Daily P&L';
+  document.getElementById('acct-table-title').textContent = 'Daily Performance';
   document.getElementById('acct-table-thead').innerHTML = `
     <tr style="background:var(--bg2);">
       <th style="padding:8px 14px;text-align:left;font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;">DATE</th>
@@ -4206,24 +4284,82 @@ function renderAcctMonthlyPerfPanel(tr) {
 
 // v22.0: acctCapInlineEdit removed — Capital Deployed is read-only, computed from Allocations.
 
-// v22.0: read-only — Capital Deployed is computed from Allocations, not entered here.
+// v22.3: table view — Month / Account / Basket / Lots / Capital-per-Lot / Total,
+// scoped to a single month at a time (Current Month by default) to stay compact
+// even when "All Accounts" is selected. Read-only — computed from Allocations.
 function renderAcctCapitalGrid() {
   const grid = document.getElementById('acct-capital-grid');
   if (!grid) return;
+
   const fyKeys = getFYMonthKeys(getCurrentFYStartYear());
-  const acctCap = capitalDataAll[currentAcct] || {};
-  let html = `<div style="font-size:0.7rem;color:var(--text3);margin-bottom:8px;font-style:italic;">Computed from 🧮 All Allocations — read-only</div><div style="display:flex;gap:10px;flex-wrap:wrap;">`;
-  fyKeys.forEach(ym => {
-    const [y,mo] = ym.split('-');
-    const m = MONTH_NAMES[parseInt(mo)-1];
-    const incomplete = isAllocationIncomplete(ym);
-    const val = incomplete ? '—' : (acctCap[ym] ? acctCap[ym].toLocaleString('en-IN') : '—');
-    html += `<div style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:8px 10px;min-width:90px;text-align:center;">
-      <div style="font-size:0.65rem;font-weight:700;color:var(--text2);margin-bottom:4px;">${m} ${y}</div>
-      <div style="font-size:0.78rem;font-weight:700;color:${incomplete?'var(--text3)':'var(--text0)'};">${val}</div>
-    </div>`;
-  });
-  html += '</div>';
+  const todayYM = new Date().toISOString().slice(0,7);
+  const pastKeys = fyKeys.filter(k => k <= todayYM);
+
+  const monthSel = document.getElementById('acct-cap-month-select');
+  if (monthSel && !monthSel.dataset.built) {
+    monthSel.innerHTML = pastKeys.map(ym => {
+      const [y,mo] = ym.split('-');
+      return `<option value="${ym}">${MONTH_NAMES[parseInt(mo)-1]} ${y}</option>`;
+    }).join('');
+    monthSel.dataset.built = '1';
+  }
+
+  const mode = document.querySelector('input[name="acct-cap-mode"]:checked')?.value || 'current';
+  const ym = mode === 'current' ? (pastKeys.includes(todayYM) ? todayYM : pastKeys[pastKeys.length-1]) : (monthSel?.value || todayYM);
+  if (monthSel) monthSel.disabled = (mode !== 'select');
+
+  const [y, mo] = (ym || '').split('-');
+  const monthLabel = ym ? `${MONTH_NAMES[parseInt(mo)-1]} ${y}` : '—';
+  const isCurrent = ym === todayYM;
+  const incomplete = isAllocationIncomplete(ym);
+
+  const rows = (allocations[ym] && allocations[ym].rows) || {};
+  const filtered = Object.values(rows).filter(r => currentAcct === '__ALL__' ? true : r.client_id === currentAcct);
+
+  let html = `<div style="font-size:0.7rem;color:var(--text3);margin-bottom:8px;font-style:italic;">Computed from 🔗 Allocations — read-only${incomplete ? ' · ⚠️ month marked Incomplete (excluded from metrics)' : ''}</div>`;
+
+  if (!filtered.length) {
+    html += `<div style="padding:16px;text-align:center;color:var(--text3);font-size:0.82rem;background:var(--bg2);border-radius:8px;">No allocations for ${monthLabel}</div>`;
+    grid.innerHTML = html;
+    return;
+  }
+
+  let totalMargin = 0;
+  const rowsHtml = filtered.map(r => {
+    const grp = Object.values(algoGroups).find(g => g.name === r.basket);
+    const perLot = (grp && grp.capital_per_lot) || 0;
+    const lots = parseFloat(r.lots) || 0;
+    const margin = lots * perLot;
+    totalMargin += margin;
+    return `<tr style="${isCurrent ? 'background:#eff6ff;' : ''}border-bottom:1px solid var(--border);">
+      <td style="padding:7px 10px;">${monthLabel}</td>
+      <td style="padding:7px 10px;">${getClientLabel(r.client_id)}</td>
+      <td style="padding:7px 10px;">${r.basket}</td>
+      <td style="padding:7px 10px;text-align:right;">${lots}</td>
+      <td style="padding:7px 10px;text-align:right;color:var(--text2);">${perLot ? fmtINRShort(perLot) : '—'}</td>
+      <td style="padding:7px 10px;text-align:right;font-weight:700;color:var(--blue);">${fmtINRShort(margin)}</td>
+    </tr>`;
+  }).join('');
+
+  html += `<table style="width:100%;border-collapse:collapse;font-size:0.8rem;">
+    <thead>
+      <tr style="background:var(--bg2);">
+        <th style="padding:7px 10px;text-align:left;font-weight:700;color:var(--text1);border-bottom:1px solid var(--border);">Month</th>
+        <th style="padding:7px 10px;text-align:left;font-weight:700;color:var(--text1);border-bottom:1px solid var(--border);">Account</th>
+        <th style="padding:7px 10px;text-align:left;font-weight:700;color:var(--text1);border-bottom:1px solid var(--border);">Basket</th>
+        <th style="padding:7px 10px;text-align:right;font-weight:700;color:var(--text1);border-bottom:1px solid var(--border);">Lots</th>
+        <th style="padding:7px 10px;text-align:right;font-weight:700;color:var(--text1);border-bottom:1px solid var(--border);">Capital/Lot</th>
+        <th style="padding:7px 10px;text-align:right;font-weight:700;color:var(--text1);border-bottom:1px solid var(--border);">Total</th>
+      </tr>
+    </thead>
+    <tbody>${rowsHtml}</tbody>
+    <tfoot>
+      <tr style="background:var(--bg2);">
+        <td colspan="5" style="padding:7px 10px;font-weight:700;color:var(--text0);text-align:right;">Total Margin</td>
+        <td style="padding:7px 10px;text-align:right;font-weight:800;color:var(--blue);">${fmtINRShort(totalMargin)}</td>
+      </tr>
+    </tfoot>
+  </table>`;
   grid.innerHTML = html;
 }
 
@@ -5530,7 +5666,7 @@ function renderDashCapitalGrid() {
   }
   const basketVal = document.getElementById('dash-basket-select')?.value || '__ALL__';
   const fyKeys=getFYMonthKeys(getCurrentFYStartYear());
-  let html=`<div style="font-size:0.7rem;color:var(--text3);margin-bottom:8px;font-style:italic;">Computed from 🧮 All Allocations — read-only</div><div style="display:flex;gap:10px;flex-wrap:wrap;">`;
+  let html=`<div style="font-size:0.7rem;color:var(--text3);margin-bottom:8px;font-style:italic;">Computed from 🔗 Allocations — read-only</div><div style="display:flex;gap:10px;flex-wrap:wrap;">`;
   fyKeys.forEach(ym=>{
     const [y,mo]=ym.split('-');
     const m=MONTH_NAMES[parseInt(mo)-1];
@@ -6444,10 +6580,11 @@ function cleanupOldCapitalNodes() {
 }
 
 // ════════════════════════════════════════════════════
-//  ALL ALLOCATIONS PAGE (v22.2 — account-first, FY month sections)
+//  ALLOCATIONS PAGE (v22.3 — account-first, 12-row table, edit-in-modal)
 // ════════════════════════════════════════════════════
 let allocSelectedAccount = '';
 let allocCopySource = null; // {ym, rowId}
+let allocModalYM = null;    // month currently open in the edit modal
 
 function getAllAccountIds() {
   const tradeIds  = [...new Set((allTrades||[]).map(t => t.client_id).filter(Boolean))];
@@ -6484,37 +6621,90 @@ function onAllocAccountChange() {
 
 function renderAllocationsPage() {
   const emptyState = document.getElementById('alloc-empty-state');
-  const sectionsEl  = document.getElementById('alloc-fy-sections');
-  if (!sectionsEl) return;
+  const tableWrap  = document.getElementById('alloc-table-wrap');
+  if (!tableWrap) return;
 
   if (!allocSelectedAccount) {
     emptyState.style.display = '';
-    sectionsEl.style.display = 'none';
-    sectionsEl.innerHTML = '';
+    tableWrap.style.display = 'none';
     return;
   }
   emptyState.style.display = 'none';
-  sectionsEl.style.display = '';
+  tableWrap.style.display = '';
 
   const fyKeys = getFYMonthKeys(getCurrentFYStartYear());
-  sectionsEl.innerHTML = fyKeys.map(ym => renderAllocMonthSection(ym)).join('');
+  const todayYM = new Date().toISOString().slice(0,7);
+  const tbody = document.getElementById('alloc-table-tbody');
+
+  tbody.innerHTML = fyKeys.map(ym => {
+    const [y, mo] = ym.split('-');
+    const monthLabel = `${MONTH_NAMES[parseInt(mo)-1]} ${y}`;
+    const isFuture = ym > todayYM;
+    const isCurrent = ym === todayYM;
+    const monthData = allocations[ym] || {};
+    const incomplete = !!monthData.incomplete;
+    const rows = monthData.rows || {};
+    const acctRows = Object.values(rows).filter(r => r && r.client_id === allocSelectedAccount);
+
+    let totalMargin = 0;
+    const allocSummary = acctRows.length
+      ? acctRows.map(r => {
+          const grp = Object.values(algoGroups).find(g => g.name === r.basket);
+          const perLot = (grp && grp.capital_per_lot) || 0;
+          const lots = parseFloat(r.lots) || 0;
+          totalMargin += lots * perLot;
+          return `<div>${r.basket} · ${lots} lot${lots!==1?'s':''}</div>`;
+        }).join('')
+      : (isFuture ? '<span style="color:var(--text3);">—</span>' : `<span style="color:${allocMonthApplicable(ym) && !incomplete ? '#dc2626' : 'var(--text3)'};">${allocMonthApplicable(ym) && !incomplete ? '⚠️ Allocation not set' : '— none —'}</span>`);
+
+    const rowBg = isFuture ? 'background:var(--bg2);opacity:0.55;' : (isCurrent ? 'background:#eff6ff;' : '');
+    const excludeIcon = incomplete ? '🚫' : '⬜';
+    const excludeTitle = incomplete ? 'Excluded — click to include' : 'Included — click to exclude from capital metrics';
+
+    return `
+      <tr style="${rowBg}border-bottom:1px solid var(--border);">
+        <td style="padding:10px 14px;font-weight:700;color:var(--text0);white-space:nowrap;">${monthLabel}${isCurrent ? ' <span style="font-size:0.65rem;font-weight:700;color:var(--blue);">● current</span>' : ''}</td>
+        <td style="padding:10px 14px;font-size:0.8rem;color:var(--text1);">${allocSummary}</td>
+        <td style="padding:10px 14px;text-align:right;font-weight:700;color:var(--blue);">${totalMargin ? fmtINRShort(totalMargin) : '—'}</td>
+        <td style="padding:10px 14px;text-align:center;">
+          ${isFuture ? '<span style="color:var(--text3);">—</span>' : `<button onclick="allocToggleIncomplete('${ym}')" title="${excludeTitle}" style="background:none;border:none;cursor:pointer;font-size:1.3rem;line-height:1;">${excludeIcon}</button>`}
+        </td>
+        <td style="padding:10px 14px;text-align:center;">
+          ${isFuture ? '<span style="color:var(--text3);">—</span>' : `<button onclick="allocOpenMonthModal('${ym}')" class="btn btn-ghost btn-sm">✏️ Edit</button>`}
+        </td>
+      </tr>`;
+  }).join('');
 }
 
-function renderAllocMonthSection(ym) {
+// ── Edit-month modal ──
+function allocOpenMonthModal(ym) {
+  allocModalYM = ym;
   const [y, mo] = ym.split('-');
-  const monthLabel = `${MONTH_NAMES[parseInt(mo)-1]} ${y}`;
-  const monthData = allocations[ym] || {};
-  const incomplete = !!monthData.incomplete;
-  const rows = monthData.rows || {};
-  const acctRows = Object.entries(rows).filter(([, r]) => r && r.client_id === allocSelectedAccount);
+  document.getElementById('alloc-month-modal-title').textContent = `Edit ${MONTH_NAMES[parseInt(mo)-1]} ${y} — ${getClientLabel(allocSelectedAccount)}`;
+  const bskSel = document.getElementById('alloc-modal-add-basket');
+  const baskets = Object.values(algoGroups).sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+  bskSel.innerHTML = '<option value="">Select basket…</option>' +
+    baskets.map(g => `<option value="${g.name}">${g.name}${g.capital_per_lot?` (${fmtINRShort(g.capital_per_lot)}/lot)`:' (capital/lot not set)'}</option>`).join('');
+  document.getElementById('alloc-modal-add-lots').value = '';
+  renderAllocModalRows();
+  openModal('modal-alloc-month');
+}
 
-  let totalLots = 0, totalMargin = 0;
-  const rowsHtml = acctRows.map(([rowId, r]) => {
+function renderAllocModalRows() {
+  const ym = allocModalYM;
+  const tbody = document.getElementById('alloc-modal-rows-tbody');
+  const rows = (allocations[ym] && allocations[ym].rows) || {};
+  const entries = Object.entries(rows).filter(([, r]) => r && r.client_id === allocSelectedAccount);
+
+  if (!entries.length) {
+    tbody.innerHTML = `<tr><td colspan="5" style="padding:16px;text-align:center;color:var(--text3);">No allocations yet for this month</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = entries.map(([rowId, r]) => {
     const grp = Object.values(algoGroups).find(g => g.name === r.basket);
     const perLot = (grp && grp.capital_per_lot) || 0;
     const lots = parseFloat(r.lots) || 0;
     const margin = lots * perLot;
-    totalLots += lots; totalMargin += margin;
     return `
       <tr style="border-bottom:1px solid var(--border);">
         <td style="padding:7px 10px;">${r.basket}</td>
@@ -6531,81 +6721,13 @@ function renderAllocMonthSection(ym) {
         </td>
       </tr>`;
   }).join('');
-
-  const applicable = allocMonthApplicable(ym);
-  const showWarning = applicable && !incomplete && acctRows.length === 0;
-
-  const tableHtml = acctRows.length
-    ? `<table style="width:100%;border-collapse:collapse;font-size:0.8rem;">
-        <thead>
-          <tr style="background:var(--bg2);">
-            <th style="padding:7px 10px;text-align:left;font-weight:700;color:var(--text1);border-bottom:1px solid var(--border);">Basket</th>
-            <th style="padding:7px 10px;text-align:right;font-weight:700;color:var(--text1);border-bottom:1px solid var(--border);">Lots</th>
-            <th style="padding:7px 10px;text-align:right;font-weight:700;color:var(--text1);border-bottom:1px solid var(--border);">Capital/Lot</th>
-            <th style="padding:7px 10px;text-align:right;font-weight:700;color:var(--text1);border-bottom:1px solid var(--border);">Margin</th>
-            <th style="padding:7px 10px;text-align:center;font-weight:700;color:var(--text1);border-bottom:1px solid var(--border);">Actions</th>
-          </tr>
-        </thead>
-        <tbody>${rowsHtml}</tbody>
-        <tfoot>
-          <tr style="background:var(--bg2);">
-            <td style="padding:7px 10px;font-weight:700;color:var(--text0);">Total</td>
-            <td style="padding:7px 10px;text-align:right;font-weight:700;">${totalLots}</td>
-            <td></td>
-            <td style="padding:7px 10px;text-align:right;font-weight:800;color:var(--blue);">${fmtINRShort(totalMargin)}</td>
-            <td></td>
-          </tr>
-        </tfoot>
-      </table>`
-    : `<div style="padding:16px;text-align:center;color:var(--text3);font-size:0.82rem;">No allocations for ${monthLabel}${incomplete ? '' : ''}</div>`;
-
-  return `
-    <div style="background:#fff;border:1px solid var(--border);border-radius:12px;overflow:hidden;box-shadow:var(--shadow-sm);margin-bottom:16px;">
-      <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:${incomplete ? '#fffbeb' : 'var(--bg2)'};border-bottom:1px solid var(--border);flex-wrap:wrap;gap:8px;">
-        <div style="display:flex;align-items:center;gap:10px;">
-          <span style="font-weight:800;font-size:0.9rem;color:var(--text0);">${monthLabel}</span>
-          ${incomplete ? `<span style="font-size:0.68rem;font-weight:700;color:#d97706;background:#fef3c7;border:1px solid #fde68a;border-radius:6px;padding:2px 8px;">⚠️ Incomplete — excluded from capital metrics</span>` : ''}
-          ${showWarning ? `<span style="font-size:0.68rem;font-weight:700;color:#dc2626;background:#fef2f2;border:1px solid #fecaca;border-radius:6px;padding:2px 8px;">⚠️ Allocation not set</span>` : ''}
-        </div>
-        <div style="display:flex;gap:6px;">
-          <button onclick="allocToggleIncomplete('${ym}')" class="btn btn-ghost btn-sm" style="font-size:0.72rem;">${incomplete ? '✅ Unmark Incomplete' : '⚠️ Mark Incomplete'}</button>
-          <button onclick="allocShowAddForm('${ym}')" class="btn btn-primary btn-sm" style="font-size:0.72rem;">+ Add</button>
-        </div>
-      </div>
-      <div id="alloc-add-form-${ym}" style="display:none;padding:12px 16px;border-bottom:1px solid var(--border);background:#fafbff;">
-        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;">
-          <div class="form-group" style="min-width:220px;margin:0;">
-            <label class="form-label">Basket</label>
-            <select class="form-select" id="alloc-add-basket-${ym}">
-              <option value="">Select basket…</option>
-              ${Object.values(algoGroups).sort((a,b)=>(a.name||'').localeCompare(b.name||'')).map(g=>`<option value="${g.name}">${g.name}${g.capital_per_lot?` (${fmtINRShort(g.capital_per_lot)}/lot)`:' (capital/lot not set)'}</option>`).join('')}
-            </select>
-          </div>
-          <div class="form-group" style="min-width:90px;margin:0;">
-            <label class="form-label">Lots</label>
-            <input type="number" class="form-input" id="alloc-add-lots-${ym}" min="0" step="1" placeholder="e.g. 3">
-          </div>
-          <button class="btn btn-primary btn-sm" onclick="allocAddRow('${ym}')">Save</button>
-          <button class="btn btn-ghost btn-sm" onclick="allocHideAddForm('${ym}')">Cancel</button>
-        </div>
-      </div>
-      ${tableHtml}
-    </div>`;
 }
 
-function allocShowAddForm(ym) {
-  const form = document.getElementById('alloc-add-form-' + ym);
-  if (form) form.style.display = 'block';
-}
-function allocHideAddForm(ym) {
-  const form = document.getElementById('alloc-add-form-' + ym);
-  if (form) form.style.display = 'none';
-}
-
-async function allocAddRow(ym) {
-  if (!allocSelectedAccount) { toast('Select an account first', 'error'); return; }
-  const basket = document.getElementById('alloc-add-basket-' + ym)?.value;
-  const lots   = parseFloat(document.getElementById('alloc-add-lots-' + ym)?.value);
+async function allocModalAddRow() {
+  const ym = allocModalYM;
+  if (!allocSelectedAccount || !ym) return;
+  const basket = document.getElementById('alloc-modal-add-basket')?.value;
+  const lots   = parseFloat(document.getElementById('alloc-modal-add-lots')?.value);
   if (!basket) { toast('Select a basket', 'error'); return; }
   if (!lots || lots <= 0) { toast('Enter lots (> 0)', 'error'); return; }
 
@@ -6617,6 +6739,8 @@ async function allocAddRow(ym) {
 
   if (db) await db.ref('journal/allocations/' + ym + '/rows/' + rowId).set(row);
   recomputeCapitalFromAllocations();
+  document.getElementById('alloc-modal-add-lots').value = '';
+  renderAllocModalRows();
   renderAllocationsPage();
   renderDashboard();
   toast('✓ Allocation added', 'success');
@@ -6628,6 +6752,7 @@ async function allocUpdateLots(ym, rowId, value) {
   allocations[ym].rows[rowId].lots = lots;
   if (db) await db.ref('journal/allocations/' + ym + '/rows/' + rowId + '/lots').set(lots);
   recomputeCapitalFromAllocations();
+  renderAllocModalRows();
   renderAllocationsPage();
   renderDashboard();
 }
@@ -6637,6 +6762,7 @@ async function allocDeleteRow(ym, rowId) {
   if (allocations[ym] && allocations[ym].rows) delete allocations[ym].rows[rowId];
   if (db) await db.ref('journal/allocations/' + ym + '/rows/' + rowId).remove();
   recomputeCapitalFromAllocations();
+  renderAllocModalRows();
   renderAllocationsPage();
   renderDashboard();
   toast('Allocation row deleted', 'info');
@@ -6650,7 +6776,7 @@ async function allocToggleIncomplete(ym) {
   recomputeCapitalFromAllocations();
   renderAllocationsPage();
   renderDashboard();
-  toast(newVal ? `${ym} marked Incomplete` : `${ym} unmarked`, 'info');
+  toast(newVal ? `${ym} excluded from capital metrics` : `${ym} included again`, 'info');
 }
 
 // ── Copy to other months ──
@@ -6691,6 +6817,7 @@ async function allocApplyCopy() {
   }
   recomputeCapitalFromAllocations();
   closeModal('modal-alloc-copy');
+  renderAllocModalRows();
   renderAllocationsPage();
   renderDashboard();
   toast(`✓ Copied to ${checked.length} month(s)`, 'success');
@@ -8575,7 +8702,7 @@ function renderEditedValue(field, val) {
 // ════════════════════════════════════════════════════
 //  FORMAT HELPERS
 // ════════════════════════════════════════════════════
-function fmt(v) { if(v==null) return '—'; const n=parseFloat(v); if(isNaN(n)) return '—'; return (n<0?'-₹':'₹')+Math.abs(n).toLocaleString('en-IN',{maximumFractionDigits:0}); }
+function fmt(v) { if(v==null) return '—'; const n=parseFloat(v); if(isNaN(n)) return '—'; return fmtINRShort(n); }
 
 // Report formatter — blue/dark colors + optional % 
 function fmtRpt(v, month, forceColor) {
