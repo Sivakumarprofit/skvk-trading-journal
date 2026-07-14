@@ -2,6 +2,22 @@
 ==========================================================
   SKVK TRADING JOURNAL — VERSION HISTORY
 ==========================================================
+  v22.2 | 2026-07-14 | All Allocations REDESIGNED: now account-first — select an
+         |            | Account first, then see all 12 FY months (Apr–Mar) as stacked
+         |            | sections for that account, each with its own Basket/Lots rows,
+         |            | a "+ Add" button, and a per-month "⚠️ Mark Incomplete" toggle.
+         |            | Months ≤ today with zero rows show a "⚠️ Allocation not set"
+         |            | banner (future months silent). New "📋 Copy to…" control on
+         |            | each row lets you duplicate its Basket+Lots into any number of
+         |            | other FY months at once. Old page-level month selector, summary
+         |            | cards, and "Carry forward last month" checkbox removed.
+         |            | Basket Management: Capital/Lot now shown as its own pill/badge
+         |            | next to the basket name (previously buried in the subtitle).
+         |            | All rupee amounts in Basket Management and All Allocations now
+         |            | shown in k / L / Cr format (e.g. ₹8,00,000 → 8.00L).
+         |            | Safety: every delete action app-wide now requires typing DELETE
+         |            | in a follow-up prompt after the existing confirmation dialog.
+==========================================================
   v22.1 | 2026-07-13 | Bug fix: editGroup(name) now finds a basket by matching its
          |            | .name field across algoGroups (like asDeleteGroup already did)
          |            | instead of assuming the Firebase key equals the display name —
@@ -821,7 +837,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>SKVK Trading Journal v22.1</title>
+<title>SKVK Trading Journal v22.2</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -1780,7 +1796,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div class="login-logo">📋</div>
     <div class="login-title">
       SKVK Trading Journal
-      <span class="login-vbadge">v22.1</span>
+      <span class="login-vbadge">v22.2</span>
     </div>
     <div class="login-sub">Sign in with your authorised Google account to access the journal.</div>
     <button class="google-signin-btn" id="googleSignInBtn" onclick="signInWithGoogle()">
@@ -1820,7 +1836,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
         <i class="ti ti-chart-candle brand-icon"></i>
         <span class="brand-skvk">SKVK</span>
         <span class="brand-appname">Trading Journal</span>
-        <span class="brand-vbadge">v22.1</span>
+        <span class="brand-vbadge">v22.2</span>
       </div>
     </div>
     <div id="topbar-right-wrap">
@@ -2638,83 +2654,39 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
   <div class="page-header">
     <div>
       <div class="page-title">All Allocations</div>
-      <div class="page-subtitle">Account → Basket → Lots per month · drives Capital Deployed across the app</div>
+      <div class="page-subtitle">Account → Basket → Lots, by month · drives Capital Deployed across the app</div>
     </div>
     <div style="display:flex;gap:8px;">
-      <label style="display:flex;align-items:center;gap:6px;font-size:0.8rem;color:var(--text2);cursor:pointer;background:var(--bg2);border:1px solid var(--border);border-radius:7px;padding:6px 12px;">
-        <input type="checkbox" id="alloc-carry-fwd" onchange="allocCarryForwardToggle()" style="accent-color:var(--blue);width:14px;height:14px;">
-        Carry forward last month's allocation
-      </label>
-      <button class="btn btn-ghost btn-sm" id="alloc-incomplete-btn" onclick="allocToggleIncomplete()">⚠️ Mark Incomplete</button>
       <input type="file" id="alloc-import-input" accept=".csv" style="display:none" onchange="allocImportCSV(this.files[0])">
       <button class="btn btn-ghost btn-sm" onclick="document.getElementById('alloc-import-input').click()">⬆ Import CSV</button>
       <button class="btn btn-ghost btn-sm" onclick="allocExportCSV()">⬇ Export CSV</button>
     </div>
   </div>
 
-  <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px;flex-wrap:wrap;">
-    <label style="font-size:0.8rem;font-weight:700;color:var(--text1);">Month</label>
-    <select id="alloc-month-select" class="form-select" onchange="onAllocMonthChange()" style="min-width:160px;"></select>
-    <span id="alloc-incomplete-tag" style="display:none;font-size:0.72rem;font-weight:700;color:#d97706;background:#fffbeb;border:1px solid #fde68a;border-radius:6px;padding:4px 10px;">⚠️ Marked Incomplete — warnings suppressed, excluded from capital metrics (P&L still shown)</span>
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:22px;flex-wrap:wrap;">
+    <label style="font-size:0.8rem;font-weight:700;color:var(--text1);">Account</label>
+    <select id="alloc-account-select" class="form-select" onchange="onAllocAccountChange()" style="min-width:260px;">
+      <option value="">Select an account…</option>
+    </select>
   </div>
 
-  <!-- Summary -->
-  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:22px;">
-    <div style="background:var(--bg);border:1.5px solid var(--border);border-radius:12px;padding:14px 16px;">
-      <div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Accounts Allocated</div>
-      <div id="alloc-sum-accounts" style="font-size:1.2rem;font-weight:800;">0</div>
-    </div>
-    <div style="background:var(--bg);border:1.5px solid var(--border);border-radius:12px;padding:14px 16px;">
-      <div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Baskets Allocated</div>
-      <div id="alloc-sum-baskets" style="font-size:1.2rem;font-weight:800;">0</div>
-    </div>
-    <div style="background:var(--bg);border:1.5px solid var(--border);border-radius:12px;padding:14px 16px;">
-      <div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Total Lots</div>
-      <div id="alloc-sum-lots" style="font-size:1.2rem;font-weight:800;">0</div>
-    </div>
-    <div style="background:var(--bg);border:1.5px solid var(--border);border-radius:12px;padding:14px 16px;">
-      <div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Total Margin</div>
-      <div id="alloc-sum-margin" style="font-size:1.2rem;font-weight:800;color:var(--blue);">₹0</div>
-    </div>
+  <div id="alloc-empty-state" class="empty-state">
+    <span class="eicon">🧮</span>
+    <h3>Select an account to view its allocations</h3>
+    <p>Once selected, you'll see all 12 months of the current FY for that account</p>
   </div>
 
-  <!-- Add row -->
-  <div style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:18px;box-shadow:var(--shadow-sm);">
-    <div style="font-size:0.82rem;font-weight:700;color:var(--text0);margin-bottom:10px;">+ Add Allocation Row</div>
-    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;">
-      <div class="form-group" style="min-width:200px;">
-        <label class="form-label">Account (Client ID)</label>
-        <select class="form-select" id="alloc-new-account"><option value="">Select account…</option></select>
-      </div>
-      <div class="form-group" style="min-width:200px;">
-        <label class="form-label">Basket</label>
-        <select class="form-select" id="alloc-new-basket"><option value="">Select basket…</option></select>
-      </div>
-      <div class="form-group" style="min-width:100px;">
-        <label class="form-label">Lots</label>
-        <input type="number" class="form-input" id="alloc-new-lots" min="0" step="1" placeholder="e.g. 3">
-      </div>
-      <button class="btn btn-primary" onclick="allocAddRow()">+ Add Row</button>
-    </div>
-  </div>
+  <div id="alloc-fy-sections" style="display:none;"></div>
+</div>
 
-  <!-- Rows table -->
-  <div style="background:#fff;border:1px solid var(--border);border-radius:12px;overflow:hidden;box-shadow:var(--shadow-sm);">
-    <table style="width:100%;border-collapse:collapse;font-size:0.82rem;">
-      <thead>
-        <tr style="background:var(--bg2);">
-          <th style="padding:9px 12px;text-align:left;font-weight:700;color:var(--text1);border-bottom:1px solid var(--border);">Account</th>
-          <th style="padding:9px 12px;text-align:left;font-weight:700;color:var(--text1);border-bottom:1px solid var(--border);">Basket</th>
-          <th style="padding:9px 12px;text-align:right;font-weight:700;color:var(--text1);border-bottom:1px solid var(--border);">Lots</th>
-          <th style="padding:9px 12px;text-align:right;font-weight:700;color:var(--text1);border-bottom:1px solid var(--border);">Capital/Lot</th>
-          <th style="padding:9px 12px;text-align:right;font-weight:700;color:var(--text1);border-bottom:1px solid var(--border);">Margin</th>
-          <th style="padding:9px 12px;text-align:center;font-weight:700;color:var(--text1);border-bottom:1px solid var(--border);">Actions</th>
-        </tr>
-      </thead>
-      <tbody id="alloc-rows-tbody">
-        <tr><td colspan="6" style="padding:24px;text-align:center;color:var(--text3);">No allocations for this month yet</td></tr>
-      </tbody>
-    </table>
+<!-- Copy-to-other-months panel -->
+<div class="modal-overlay" id="modal-alloc-copy">
+  <div class="modal" style="max-width:420px;">
+    <button class="modal-close" onclick="closeModal('modal-alloc-copy')">✕</button>
+    <h2>📋 Copy Allocation To Other Months</h2>
+    <div id="alloc-copy-source-label" style="font-size:0.82rem;color:var(--text2);margin:8px 0 14px;"></div>
+    <div id="alloc-copy-month-list" style="display:flex;flex-direction:column;gap:6px;max-height:280px;overflow-y:auto;margin-bottom:16px;"></div>
+    <button class="btn btn-primary" onclick="allocApplyCopy()" style="width:100%;">Copy to Selected Months</button>
   </div>
 </div>
 
@@ -5200,6 +5172,25 @@ function normExit(r) {
 function guessUnderlying(a='') { a=a.toUpperCase(); return a.startsWith('NF_')?'NIFTY':a.startsWith('BNF_')?'BANKNIFTY':a.startsWith('SX_')?'SENSEX':a.includes('GOLD')?'GOLD':a.includes('SILVER')?'SILVER':'MULTI'; }
 function guessType(a='') { a=a.toUpperCase(); return a.includes('0DTE')?'0DTE':a.includes('1DTE')?'1DTE':a.includes('HEDGE')?'HEDGE':'POSITIONAL'; }
 function safeKey(s) { return s.replace(/[^a-z0-9_]/gi,'_'); }
+
+// v22.2: extra confirmation layer for every delete action app-wide — after the
+// existing warning, the user must type DELETE exactly to proceed.
+function confirmDeleteTyped(message) {
+  if (!confirm(message)) return false;
+  const typed = prompt('Type DELETE to confirm this action:');
+  return typed === 'DELETE';
+}
+
+// v22.2: compact ₹ formatter — k / L / Cr — used in Basket Management + All Allocations
+function fmtINRShort(n) {
+  n = Number(n) || 0;
+  const sign = n < 0 ? '-' : '';
+  n = Math.abs(n);
+  if (n >= 1e7) return sign + '₹' + (n/1e7).toFixed(2) + 'Cr';
+  if (n >= 1e5) return sign + '₹' + (n/1e5).toFixed(2) + 'L';
+  if (n >= 1e3) return sign + '₹' + (n/1e3).toFixed(2) + 'k';
+  return sign + '₹' + n.toFixed(0);
+}
 const COLORS=['#1a73e8','#1a9e5c','#e67e22','#7c3aed','#0891b2','#d93025','#0d6efd','#6f42c1'];
 let ci=0; function nextColor(){return COLORS[ci++%COLORS.length];}
 
@@ -6453,66 +6444,16 @@ function cleanupOldCapitalNodes() {
 }
 
 // ════════════════════════════════════════════════════
-//  ALL ALLOCATIONS PAGE (v22.0)
+//  ALL ALLOCATIONS PAGE (v22.2 — account-first, FY month sections)
 // ════════════════════════════════════════════════════
-let allocCurrentYM = null;
+let allocSelectedAccount = '';
+let allocCopySource = null; // {ym, rowId}
 
 function getAllAccountIds() {
   const tradeIds  = [...new Set((allTrades||[]).map(t => t.client_id).filter(Boolean))];
   const manualIds = Object.keys(typeof manualAccounts !== 'undefined' ? manualAccounts : {});
   const nickIds   = Object.keys(typeof accountNicknames !== 'undefined' ? accountNicknames : {});
   return [...new Set([...tradeIds, ...manualIds, ...nickIds])].sort();
-}
-
-function generateAllocMonths() {
-  // April 2026 onward through a few years ahead, so future months are always selectable
-  const months = [];
-  let d = new Date(2026, 3, 1); // Apr 2026
-  const end = new Date(2032, 2, 1);
-  while (d <= end) {
-    months.push(d.toISOString().slice(0,7));
-    d.setMonth(d.getMonth() + 1);
-  }
-  return months;
-}
-
-function initAllocationsPage() {
-  const sel = document.getElementById('alloc-month-select');
-  if (sel && !sel.dataset.built) {
-    const months = generateAllocMonths();
-    const todayYM = new Date().toISOString().slice(0,7);
-    const defaultYM = months.includes(todayYM) ? todayYM : months[0];
-    sel.innerHTML = months.map(ym => {
-      const [y,m] = ym.split('-');
-      return `<option value="${ym}">${MONTH_NAMES[parseInt(m)-1]} ${y}</option>`;
-    }).join('');
-    sel.value = defaultYM;
-    allocCurrentYM = defaultYM;
-    sel.dataset.built = '1';
-  }
-  if (!allocCurrentYM) allocCurrentYM = sel ? sel.value : new Date().toISOString().slice(0,7);
-
-  // Populate account + basket dropdowns
-  const accSel = document.getElementById('alloc-new-account');
-  if (accSel) {
-    const accounts = getAllAccountIds();
-    accSel.innerHTML = '<option value="">Select account…</option>' +
-      accounts.map(a => `<option value="${a}">${getClientLabel(a)}</option>`).join('');
-  }
-  const bskSel = document.getElementById('alloc-new-basket');
-  if (bskSel) {
-    const baskets = Object.values(algoGroups).sort((a,b)=>(a.name||'').localeCompare(b.name||''));
-    bskSel.innerHTML = '<option value="">Select basket…</option>' +
-      baskets.map(g => `<option value="${g.name}">${g.name}${g.capital_per_lot?` (₹${Number(g.capital_per_lot).toLocaleString('en-IN')}/lot)`:' (capital/lot not set)'}</option>`).join('');
-  }
-
-  renderAllocationsPage();
-}
-
-function onAllocMonthChange() {
-  const sel = document.getElementById('alloc-month-select');
-  allocCurrentYM = sel ? sel.value : allocCurrentYM;
-  renderAllocationsPage();
 }
 
 function allocMonthApplicable(ym) {
@@ -6522,85 +6463,160 @@ function allocMonthApplicable(ym) {
   return ym >= '2026-04' && ym <= todayYM;
 }
 
-function renderAllocationsPage() {
-  const ym = allocCurrentYM;
-  if (!ym) return;
-  const monthData = allocations[ym] || {};
-  const rows = monthData.rows || {};
-  const incomplete = !!monthData.incomplete;
-
-  // Incomplete tag + button label
-  const tag = document.getElementById('alloc-incomplete-tag');
-  if (tag) tag.style.display = incomplete ? 'inline-block' : 'none';
-  const btn = document.getElementById('alloc-incomplete-btn');
-  if (btn) btn.textContent = incomplete ? '✅ Unmark Incomplete' : '⚠️ Mark Incomplete';
-
-  // Carry-forward checkbox — only meaningful/checkable if this month is empty
-  const cfBox = document.getElementById('alloc-carry-fwd');
-  if (cfBox) {
-    cfBox.checked = false;
-    cfBox.disabled = Object.keys(rows).length > 0;
+function initAllocationsPage() {
+  const accSel = document.getElementById('alloc-account-select');
+  if (accSel) {
+    const accounts = getAllAccountIds();
+    const prev = allocSelectedAccount;
+    accSel.innerHTML = '<option value="">Select an account…</option>' +
+      accounts.map(a => `<option value="${a}">${getClientLabel(a)}</option>`).join('');
+    accSel.value = accounts.includes(prev) ? prev : '';
+    allocSelectedAccount = accSel.value;
   }
-
-  const rowEntries = Object.entries(rows);
-  let totalLots = 0, totalMargin = 0;
-  const accountsSet = new Set(), basketsSet = new Set();
-
-  const tbody = document.getElementById('alloc-rows-tbody');
-  if (!rowEntries.length) {
-    tbody.innerHTML = `<tr><td colspan="6" style="padding:24px;text-align:center;color:var(--text3);">No allocations for this month yet${allocMonthApplicable(ym) && !incomplete ? ' — <span style="color:#d97706;font-weight:600;">⚠️ required</span>' : ''}</td></tr>`;
-  } else {
-    tbody.innerHTML = rowEntries
-      .sort((a,b) => (a[1].client_id||'').localeCompare(b[1].client_id||''))
-      .map(([rowId, r]) => {
-        const grp = Object.values(algoGroups).find(g => g.name === r.basket);
-        const perLot = (grp && grp.capital_per_lot) || 0;
-        const lots = parseFloat(r.lots) || 0;
-        const margin = lots * perLot;
-        totalLots += lots; totalMargin += margin;
-        accountsSet.add(r.client_id); basketsSet.add(r.basket);
-        return `
-        <tr style="border-bottom:1px solid var(--border);">
-          <td style="padding:8px 12px;font-weight:600;color:var(--text0);">${getClientLabel(r.client_id)}</td>
-          <td style="padding:8px 12px;">${r.basket}</td>
-          <td style="padding:8px 12px;text-align:right;">
-            <input type="number" value="${lots}" min="0" step="1"
-              style="width:70px;padding:4px 6px;border:1px solid var(--border);border-radius:5px;font-size:0.8rem;text-align:right;outline:none;"
-              onchange="allocUpdateLots('${ym}','${rowId}',this.value)">
-          </td>
-          <td style="padding:8px 12px;text-align:right;color:var(--text2);">${perLot ? '₹'+perLot.toLocaleString('en-IN') : '—'}</td>
-          <td style="padding:8px 12px;text-align:right;font-weight:700;color:var(--blue);">₹${margin.toLocaleString('en-IN')}</td>
-          <td style="padding:8px 12px;text-align:center;">
-            <button onclick="allocDeleteRow('${ym}','${rowId}')" class="btn btn-sm" style="background:var(--red-lt);color:var(--red);border:none;">🗑</button>
-          </td>
-        </tr>`;
-      }).join('');
-  }
-
-  document.getElementById('alloc-sum-accounts').textContent = accountsSet.size;
-  document.getElementById('alloc-sum-baskets').textContent  = basketsSet.size;
-  document.getElementById('alloc-sum-lots').textContent     = totalLots;
-  document.getElementById('alloc-sum-margin').textContent   = '₹' + totalMargin.toLocaleString('en-IN');
+  renderAllocationsPage();
 }
 
-async function allocAddRow() {
-  const ym = allocCurrentYM;
-  const clientId = document.getElementById('alloc-new-account')?.value;
-  const basket   = document.getElementById('alloc-new-basket')?.value;
-  const lots     = parseFloat(document.getElementById('alloc-new-lots')?.value);
-  if (!clientId) { toast('Select an account', 'error'); return; }
-  if (!basket)   { toast('Select a basket', 'error'); return; }
+function onAllocAccountChange() {
+  const sel = document.getElementById('alloc-account-select');
+  allocSelectedAccount = sel ? sel.value : '';
+  renderAllocationsPage();
+}
+
+function renderAllocationsPage() {
+  const emptyState = document.getElementById('alloc-empty-state');
+  const sectionsEl  = document.getElementById('alloc-fy-sections');
+  if (!sectionsEl) return;
+
+  if (!allocSelectedAccount) {
+    emptyState.style.display = '';
+    sectionsEl.style.display = 'none';
+    sectionsEl.innerHTML = '';
+    return;
+  }
+  emptyState.style.display = 'none';
+  sectionsEl.style.display = '';
+
+  const fyKeys = getFYMonthKeys(getCurrentFYStartYear());
+  sectionsEl.innerHTML = fyKeys.map(ym => renderAllocMonthSection(ym)).join('');
+}
+
+function renderAllocMonthSection(ym) {
+  const [y, mo] = ym.split('-');
+  const monthLabel = `${MONTH_NAMES[parseInt(mo)-1]} ${y}`;
+  const monthData = allocations[ym] || {};
+  const incomplete = !!monthData.incomplete;
+  const rows = monthData.rows || {};
+  const acctRows = Object.entries(rows).filter(([, r]) => r && r.client_id === allocSelectedAccount);
+
+  let totalLots = 0, totalMargin = 0;
+  const rowsHtml = acctRows.map(([rowId, r]) => {
+    const grp = Object.values(algoGroups).find(g => g.name === r.basket);
+    const perLot = (grp && grp.capital_per_lot) || 0;
+    const lots = parseFloat(r.lots) || 0;
+    const margin = lots * perLot;
+    totalLots += lots; totalMargin += margin;
+    return `
+      <tr style="border-bottom:1px solid var(--border);">
+        <td style="padding:7px 10px;">${r.basket}</td>
+        <td style="padding:7px 10px;text-align:right;">
+          <input type="number" value="${lots}" min="0" step="1"
+            style="width:64px;padding:3px 5px;border:1px solid var(--border);border-radius:5px;font-size:0.78rem;text-align:right;outline:none;"
+            onchange="allocUpdateLots('${ym}','${rowId}',this.value)">
+        </td>
+        <td style="padding:7px 10px;text-align:right;color:var(--text2);">${perLot ? fmtINRShort(perLot) : '—'}</td>
+        <td style="padding:7px 10px;text-align:right;font-weight:700;color:var(--blue);">${fmtINRShort(margin)}</td>
+        <td style="padding:7px 10px;text-align:center;white-space:nowrap;">
+          <button onclick="allocOpenCopyPanel('${ym}','${rowId}')" class="btn btn-ghost btn-sm" title="Copy to other months" style="padding:3px 8px;">📋</button>
+          <button onclick="allocDeleteRow('${ym}','${rowId}')" class="btn btn-sm" style="background:var(--red-lt);color:var(--red);border:none;padding:3px 8px;">🗑</button>
+        </td>
+      </tr>`;
+  }).join('');
+
+  const applicable = allocMonthApplicable(ym);
+  const showWarning = applicable && !incomplete && acctRows.length === 0;
+
+  const tableHtml = acctRows.length
+    ? `<table style="width:100%;border-collapse:collapse;font-size:0.8rem;">
+        <thead>
+          <tr style="background:var(--bg2);">
+            <th style="padding:7px 10px;text-align:left;font-weight:700;color:var(--text1);border-bottom:1px solid var(--border);">Basket</th>
+            <th style="padding:7px 10px;text-align:right;font-weight:700;color:var(--text1);border-bottom:1px solid var(--border);">Lots</th>
+            <th style="padding:7px 10px;text-align:right;font-weight:700;color:var(--text1);border-bottom:1px solid var(--border);">Capital/Lot</th>
+            <th style="padding:7px 10px;text-align:right;font-weight:700;color:var(--text1);border-bottom:1px solid var(--border);">Margin</th>
+            <th style="padding:7px 10px;text-align:center;font-weight:700;color:var(--text1);border-bottom:1px solid var(--border);">Actions</th>
+          </tr>
+        </thead>
+        <tbody>${rowsHtml}</tbody>
+        <tfoot>
+          <tr style="background:var(--bg2);">
+            <td style="padding:7px 10px;font-weight:700;color:var(--text0);">Total</td>
+            <td style="padding:7px 10px;text-align:right;font-weight:700;">${totalLots}</td>
+            <td></td>
+            <td style="padding:7px 10px;text-align:right;font-weight:800;color:var(--blue);">${fmtINRShort(totalMargin)}</td>
+            <td></td>
+          </tr>
+        </tfoot>
+      </table>`
+    : `<div style="padding:16px;text-align:center;color:var(--text3);font-size:0.82rem;">No allocations for ${monthLabel}${incomplete ? '' : ''}</div>`;
+
+  return `
+    <div style="background:#fff;border:1px solid var(--border);border-radius:12px;overflow:hidden;box-shadow:var(--shadow-sm);margin-bottom:16px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:${incomplete ? '#fffbeb' : 'var(--bg2)'};border-bottom:1px solid var(--border);flex-wrap:wrap;gap:8px;">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span style="font-weight:800;font-size:0.9rem;color:var(--text0);">${monthLabel}</span>
+          ${incomplete ? `<span style="font-size:0.68rem;font-weight:700;color:#d97706;background:#fef3c7;border:1px solid #fde68a;border-radius:6px;padding:2px 8px;">⚠️ Incomplete — excluded from capital metrics</span>` : ''}
+          ${showWarning ? `<span style="font-size:0.68rem;font-weight:700;color:#dc2626;background:#fef2f2;border:1px solid #fecaca;border-radius:6px;padding:2px 8px;">⚠️ Allocation not set</span>` : ''}
+        </div>
+        <div style="display:flex;gap:6px;">
+          <button onclick="allocToggleIncomplete('${ym}')" class="btn btn-ghost btn-sm" style="font-size:0.72rem;">${incomplete ? '✅ Unmark Incomplete' : '⚠️ Mark Incomplete'}</button>
+          <button onclick="allocShowAddForm('${ym}')" class="btn btn-primary btn-sm" style="font-size:0.72rem;">+ Add</button>
+        </div>
+      </div>
+      <div id="alloc-add-form-${ym}" style="display:none;padding:12px 16px;border-bottom:1px solid var(--border);background:#fafbff;">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;">
+          <div class="form-group" style="min-width:220px;margin:0;">
+            <label class="form-label">Basket</label>
+            <select class="form-select" id="alloc-add-basket-${ym}">
+              <option value="">Select basket…</option>
+              ${Object.values(algoGroups).sort((a,b)=>(a.name||'').localeCompare(b.name||'')).map(g=>`<option value="${g.name}">${g.name}${g.capital_per_lot?` (${fmtINRShort(g.capital_per_lot)}/lot)`:' (capital/lot not set)'}</option>`).join('')}
+            </select>
+          </div>
+          <div class="form-group" style="min-width:90px;margin:0;">
+            <label class="form-label">Lots</label>
+            <input type="number" class="form-input" id="alloc-add-lots-${ym}" min="0" step="1" placeholder="e.g. 3">
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="allocAddRow('${ym}')">Save</button>
+          <button class="btn btn-ghost btn-sm" onclick="allocHideAddForm('${ym}')">Cancel</button>
+        </div>
+      </div>
+      ${tableHtml}
+    </div>`;
+}
+
+function allocShowAddForm(ym) {
+  const form = document.getElementById('alloc-add-form-' + ym);
+  if (form) form.style.display = 'block';
+}
+function allocHideAddForm(ym) {
+  const form = document.getElementById('alloc-add-form-' + ym);
+  if (form) form.style.display = 'none';
+}
+
+async function allocAddRow(ym) {
+  if (!allocSelectedAccount) { toast('Select an account first', 'error'); return; }
+  const basket = document.getElementById('alloc-add-basket-' + ym)?.value;
+  const lots   = parseFloat(document.getElementById('alloc-add-lots-' + ym)?.value);
+  if (!basket) { toast('Select a basket', 'error'); return; }
   if (!lots || lots <= 0) { toast('Enter lots (> 0)', 'error'); return; }
 
   const rowId = 'r' + Date.now() + Math.random().toString(36).slice(2,6);
-  const row = { client_id: clientId, basket, lots, created_at: new Date().toISOString() };
+  const row = { client_id: allocSelectedAccount, basket, lots, created_at: new Date().toISOString() };
   if (!allocations[ym]) allocations[ym] = { rows: {}, incomplete: false };
   if (!allocations[ym].rows) allocations[ym].rows = {};
   allocations[ym].rows[rowId] = row;
 
   if (db) await db.ref('journal/allocations/' + ym + '/rows/' + rowId).set(row);
   recomputeCapitalFromAllocations();
-  document.getElementById('alloc-new-lots').value = '';
   renderAllocationsPage();
   renderDashboard();
   toast('✓ Allocation added', 'success');
@@ -6617,7 +6633,7 @@ async function allocUpdateLots(ym, rowId, value) {
 }
 
 async function allocDeleteRow(ym, rowId) {
-  if (!confirm('Delete this allocation row?')) return;
+  if (!confirmDeleteTyped('Delete this allocation row?')) return;
   if (allocations[ym] && allocations[ym].rows) delete allocations[ym].rows[rowId];
   if (db) await db.ref('journal/allocations/' + ym + '/rows/' + rowId).remove();
   recomputeCapitalFromAllocations();
@@ -6626,8 +6642,7 @@ async function allocDeleteRow(ym, rowId) {
   toast('Allocation row deleted', 'info');
 }
 
-async function allocToggleIncomplete() {
-  const ym = allocCurrentYM;
+async function allocToggleIncomplete(ym) {
   if (!allocations[ym]) allocations[ym] = { rows: {}, incomplete: false };
   const newVal = !allocations[ym].incomplete;
   allocations[ym].incomplete = newVal;
@@ -6638,47 +6653,66 @@ async function allocToggleIncomplete() {
   toast(newVal ? `${ym} marked Incomplete` : `${ym} unmarked`, 'info');
 }
 
-async function allocCarryForwardToggle() {
-  const box = document.getElementById('alloc-carry-fwd');
-  if (!box || !box.checked) return;
-  const ym = allocCurrentYM;
-  const [y, m] = ym.split('-').map(Number);
-  const prevDate = new Date(y, m - 2, 1);
-  const prevYM = prevDate.toISOString().slice(0,7);
-  const prevRows = (allocations[prevYM] && allocations[prevYM].rows) || {};
-  if (!Object.keys(prevRows).length) {
-    toast(`No allocation found for ${prevYM} to carry forward`, 'warning');
-    box.checked = false;
-    return;
-  }
-  if (!allocations[ym]) allocations[ym] = { rows: {}, incomplete: false };
-  const newRows = {};
-  Object.values(prevRows).forEach(r => {
+// ── Copy to other months ──
+function allocOpenCopyPanel(ym, rowId) {
+  const r = allocations[ym]?.rows?.[rowId];
+  if (!r) return;
+  allocCopySource = { ym, rowId };
+  document.getElementById('alloc-copy-source-label').textContent =
+    `Copying "${r.basket}" · ${r.lots} lot(s) · ${getClientLabel(r.client_id)} — choose target month(s):`;
+  const fyKeys = getFYMonthKeys(getCurrentFYStartYear()).filter(k => k !== ym);
+  const list = document.getElementById('alloc-copy-month-list');
+  list.innerHTML = fyKeys.map(k => {
+    const [y, mo] = k.split('-');
+    const label = `${MONTH_NAMES[parseInt(mo)-1]} ${y}`;
+    return `<label style="display:flex;align-items:center;gap:8px;font-size:0.82rem;cursor:pointer;padding:5px 8px;border:1px solid var(--border);border-radius:6px;">
+      <input type="checkbox" value="${k}" style="accent-color:var(--blue);width:14px;height:14px;">
+      ${label}
+    </label>`;
+  }).join('');
+  openModal('modal-alloc-copy');
+}
+
+async function allocApplyCopy() {
+  if (!allocCopySource) return;
+  const { ym: srcYm, rowId: srcRowId } = allocCopySource;
+  const srcRow = allocations[srcYm]?.rows?.[srcRowId];
+  if (!srcRow) { closeModal('modal-alloc-copy'); return; }
+  const checked = [...document.querySelectorAll('#alloc-copy-month-list input:checked')].map(el => el.value);
+  if (!checked.length) { toast('Select at least one month', 'error'); return; }
+
+  for (const ym of checked) {
     const rowId = 'r' + Date.now() + Math.random().toString(36).slice(2,6);
-    newRows[rowId] = { client_id: r.client_id, basket: r.basket, lots: r.lots, created_at: new Date().toISOString() };
-  });
-  allocations[ym].rows = { ...(allocations[ym].rows||{}), ...newRows };
-  if (db) await db.ref('journal/allocations/' + ym + '/rows').update(newRows);
+    const row = { client_id: srcRow.client_id, basket: srcRow.basket, lots: srcRow.lots, created_at: new Date().toISOString() };
+    if (!allocations[ym]) allocations[ym] = { rows: {}, incomplete: false };
+    if (!allocations[ym].rows) allocations[ym].rows = {};
+    allocations[ym].rows[rowId] = row;
+    if (db) await db.ref('journal/allocations/' + ym + '/rows/' + rowId).set(row);
+  }
   recomputeCapitalFromAllocations();
+  closeModal('modal-alloc-copy');
   renderAllocationsPage();
   renderDashboard();
-  toast(`✓ Carried forward ${Object.keys(newRows).length} row(s) from ${prevYM}`, 'success');
+  toast(`✓ Copied to ${checked.length} month(s)`, 'success');
 }
 
 function allocExportCSV() {
-  const ym = allocCurrentYM;
-  const rows = (allocations[ym] && allocations[ym].rows) || {};
+  if (!allocSelectedAccount) { toast('Select an account first', 'error'); return; }
+  const fyKeys = getFYMonthKeys(getCurrentFYStartYear());
   let csv = 'Month,Account,Basket,Lots,CapitalPerLot,Margin\n';
-  Object.values(rows).forEach(r => {
-    const grp = Object.values(algoGroups).find(g => g.name === r.basket);
-    const perLot = (grp && grp.capital_per_lot) || 0;
-    const lots = parseFloat(r.lots) || 0;
-    csv += `${ym},${r.client_id},${r.basket},${lots},${perLot},${lots*perLot}\n`;
+  fyKeys.forEach(ym => {
+    const rows = (allocations[ym] && allocations[ym].rows) || {};
+    Object.values(rows).filter(r => r.client_id === allocSelectedAccount).forEach(r => {
+      const grp = Object.values(algoGroups).find(g => g.name === r.basket);
+      const perLot = (grp && grp.capital_per_lot) || 0;
+      const lots = parseFloat(r.lots) || 0;
+      csv += `${ym},${r.client_id},${r.basket},${lots},${perLot},${lots*perLot}\n`;
+    });
   });
   const blob = new Blob([csv], { type: 'text/csv' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = `allocations_${ym}.csv`;
+  a.download = `allocations_${allocSelectedAccount}.csv`;
   a.click();
 }
 
@@ -6692,8 +6726,8 @@ async function allocImportCSV(file) {
   const idxBasket  = header.findIndex(h => h.includes('basket'));
   const idxLots    = header.findIndex(h => h.includes('lot'));
   const idxMonth   = header.findIndex(h => h.includes('month'));
-  if (idxAccount === -1 || idxBasket === -1 || idxLots === -1) {
-    toast('CSV must have Account, Basket, Lots columns (Month optional)', 'error');
+  if (idxAccount === -1 || idxBasket === -1 || idxLots === -1 || idxMonth === -1) {
+    toast('CSV must have Month, Account, Basket, Lots columns', 'error');
     return;
   }
   let added = 0;
@@ -6702,8 +6736,8 @@ async function allocImportCSV(file) {
     const clientId = cols[idxAccount];
     const basket   = cols[idxBasket];
     const lots     = parseFloat(cols[idxLots]);
-    const ym       = idxMonth !== -1 && cols[idxMonth] ? cols[idxMonth] : allocCurrentYM;
-    if (!clientId || !basket || !lots) continue;
+    const ym       = cols[idxMonth];
+    if (!clientId || !basket || !lots || !ym) continue;
     const rowId = 'r' + Date.now() + Math.random().toString(36).slice(2,6) + i;
     const row = { client_id: clientId, basket, lots, created_at: new Date().toISOString() };
     if (!allocations[ym]) allocations[ym] = { rows: {}, incomplete: false };
@@ -7006,7 +7040,7 @@ async function saveExpense() {
   toast('✓ Expense saved', 'success');
 }
 async function deleteExpense(id) {
-  if (!confirm('Delete this expense?')) return;
+  if (!confirmDeleteTyped('Delete this expense?')) return;
   if (expensesData[selectedExpPerson]) delete expensesData[selectedExpPerson][id];
   if (db) await db.ref('journal/expenses/' + encodeURIComponent(selectedExpPerson) + '/' + id).remove();
   renderExpensesSection();
@@ -7257,6 +7291,7 @@ async function addManualAccount() {
 }
 
 async function removeManualAccount(cid) {
+  if (!confirmDeleteTyped(`Remove account "${cid}"? This does not delete its trades, only the manual account entry.`)) return;
   delete manualAccounts[cid];
   delete accountNicknames[cid];
   if (db) await db.ref('journal/nicknames/' + cid).remove();
@@ -7394,6 +7429,7 @@ async function executeSMClear() {
   if (!from || !to) return;
   const matches = smTrades.filter(t => t.trade_date >= from && t.trade_date <= to);
   if (!matches.length) return;
+  if (!confirmDeleteTyped(`Delete ${matches.length} Stockmock leg(s) from ${from} to ${to}? This cannot be undone.`)) return;
   preview.innerHTML='<span style="color:var(--text2);">⏳ Deleting…</span>';
   btn.style.display='none';
   let deleted=0;
@@ -7470,6 +7506,7 @@ async function executeBrokerClear() {
   const btn = document.getElementById('brk-clear-btn');
   const res = brokerClearMatches();
   if (res.error || !res.matches || !res.matches.length) return;
+  if (!confirmDeleteTyped(`Delete ${res.matches.length} broker trade(s)? This cannot be undone.`)) return;
   preview.innerHTML='<span style="color:var(--text2);">⏳ Deleting…</span>';
   btn.style.display='none';
   let deleted=0;
@@ -8008,7 +8045,7 @@ async function archiveTrade(hash, isArchived) {
 }
 
 async function deleteTrade(hash) {
-  if (!confirm('Delete this trade? This cannot be undone.')) return;
+  if (!confirmDeleteTyped('Delete this trade? This cannot be undone.')) return;
   if (db) {
     await db.ref('journal/trades/' + hash).remove();
   } else {
@@ -8286,7 +8323,7 @@ async function saveAlgo() {
   if(db) await db.ref('journal/algos/'+safeKey(name)).set(meta);
   renderAlgoPage(); populateAlgoDropdowns(); closeModal('modal-algo'); toast(`"${name}" saved`,'success');
 }
-async function delAlgo(name) { if(!confirm(`Delete "${name}"?`))return; delete algoMeta[name]; if(db) await db.ref('journal/algos/'+safeKey(name)).remove(); renderAlgoPage(); toast(`Deleted`,'info'); }
+async function delAlgo(name) { if(!confirmDeleteTyped(`Delete "${name}"?`))return; delete algoMeta[name]; if(db) await db.ref('journal/algos/'+safeKey(name)).remove(); renderAlgoPage(); toast(`Deleted`,'info'); }
 
 // ════════════════════════════════════════════════════
 //  MANUAL TRADE
@@ -8678,7 +8715,7 @@ async function saveGroup() {
 }
 
 async function deleteGroup(name) {
-  if (!confirm(`Delete group "${name}"?`)) return;
+  if (!confirmDeleteTyped(`Delete group "${name}"?`)) return;
   delete algoGroups[name];
   if (db) await db.ref('journal/groups/' + safeKey(name)).remove();
   renderGroupList();
@@ -8838,7 +8875,7 @@ async function agSaveGroup(name, color, oldName) {
 }
 
 async function agDeleteGroup(name) {
-  if (!confirm(`Delete group "${name}"? Strategies in this group will show NA.`)) return;
+  if (!confirmDeleteTyped(`Delete group "${name}"? Strategies in this group will show NA.`)) return;
   const gk = Object.keys(algoGroupsData).find(k=>algoGroupsData[k].name===name) || safeKey(name);
   delete algoGroupsData[gk];
   if (db) await db.ref('journal/algo_groups/' + gk).remove();
@@ -9605,15 +9642,18 @@ function asRenderGroups() {
   list.innerHTML = groups.map((g, idx) => {
     const color = g.color || '#1a73e8';
     const members = (g.algos || []).length;
-    const capLabel = g.capital_per_lot ? `₹${Number(g.capital_per_lot).toLocaleString('en-IN')}/lot` : 'capital/lot not set';
+    const capPill = g.capital_per_lot
+      ? `<span style="font-size:0.74rem;font-weight:700;color:var(--blue);background:#eff6ff;border:1px solid #bfdbfe;border-radius:6px;padding:3px 10px;white-space:nowrap;">${fmtINRShort(g.capital_per_lot)}/lot</span>`
+      : `<span style="font-size:0.72rem;font-weight:600;color:var(--text3);background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:3px 10px;white-space:nowrap;">capital/lot not set</span>`;
     return `
       <div style="display:flex;align-items:center;gap:12px;padding:10px 14px;border:1px solid var(--border);border-radius:8px;margin-bottom:8px;">
         <span style="min-width:24px;text-align:center;font-size:0.75rem;font-weight:700;color:var(--text3);">${idx+1}</span>
         <span style="width:14px;height:14px;border-radius:50%;background:${color};flex-shrink:0;display:inline-block;"></span>
         <div style="flex:1;">
           <div style="font-size:0.85rem;font-weight:600;color:var(--text0);">${g.name}</div>
-          <div style="font-size:0.72rem;color:var(--text2);">${members} system${members!==1?'s':''} · ${capLabel}</div>
+          <div style="font-size:0.72rem;color:var(--text2);">${members} system${members!==1?'s':''}</div>
         </div>
+        ${capPill}
         <button onclick="asEditGroup('${g.name}')" class="btn btn-ghost btn-sm">✏️ Edit</button>
         <button onclick="asConvertToGroup('${g.name}')" class="btn btn-ghost btn-sm" style="color:#0d9488;border-color:#0d9488;" title="Convert this Basket to a Group">⇄ To Group</button>
         <button onclick="asDeleteGroup('${g.name}')" class="btn btn-sm" style="background:var(--red-lt);color:var(--red);border:none;">🗑</button>
@@ -9793,7 +9833,7 @@ async function asAssignGroup(algoName, groupName) {
 }
 
 async function asDeleteSystem(name) {
-  if (!confirm(`Delete system "${name}"? This only removes the system definition — existing trades are kept.`)) return;
+  if (!confirmDeleteTyped(`Delete system "${name}"? This only removes the system definition — existing trades are kept.`)) return;
   delete algoMeta[name];
   if (db) await db.ref('journal/algos/' + safeKey(name)).remove();
   asRenderSystems();
@@ -9812,7 +9852,7 @@ async function asEditGroup(name) {
 }
 
 async function asDeleteGroup(name) {
-  if (!confirm(`Delete group "${name}"? Systems in this group will be unassigned.`)) return;
+  if (!confirmDeleteTyped(`Delete group "${name}"? Systems in this group will be unassigned.`)) return;
   const gk = Object.keys(algoGroups).find(k => algoGroups[k].name === name);
   if (!gk) return;
   delete algoGroups[gk];
@@ -9989,7 +10029,7 @@ function acAddEmail() {
 }
 
 function acRemoveEmail(key, email) {
-  if (!confirm('Remove ' + email + ' from allowed list?')) return;
+  if (!confirmDeleteTyped('Remove ' + email + ' from allowed list?')) return;
   if (!db) return;
   db.ref('allowed_emails/' + key).remove().then(() => {
     acLoadEmails();
