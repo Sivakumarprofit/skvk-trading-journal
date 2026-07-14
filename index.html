@@ -2,6 +2,27 @@
 ==========================================================
   SKVK TRADING JOURNAL — VERSION HISTORY
 ==========================================================
+  v22.5 | 2026-07-14 | P&L DATE ATTRIBUTION switched to Zebu's entry-date convention:
+         |            | pnlDate() now books every trade's P&L to its ENTRY date instead
+         |            | of its exit date. This propagates everywhere (Daily Performance
+         |            | tables, calendar heatmaps, equity/drawdown curves, monthly
+         |            | charts and stats, yearly stats). STBT positions now book to the
+         |            | day they were entered — matching Zebu Analytics exactly — so
+         |            | the current day's row stays partial until the next morning's
+         |            | upload brings in overnight exits (same behavior as Zebu).
+         |            | Daily Performance table (Analytics — Basket and Analytics —
+         |            | Account wise): Daily P&L and Cumulative columns now show full
+         |            | comma-separated rupees (e.g. -₹10,792) instead of k/L/Cr,
+         |            | matching Zebu's Daily P&L table style; rest of the app keeps
+         |            | compact k/L/Cr. Account wise: "Baskets Traded:" panel renamed
+         |            | "Baskets Allocated:" and now sourced from the CURRENT month's
+         |            | Allocations data for the selected account (no fallback to
+         |            | earlier months; empty when nothing allocated this month) —
+         |            | previously derived from trade history. Analytics — Basket:
+         |            | new mirror "Accounts Allocated:" panel beside the basket
+         |            | selector, showing which client IDs are allocated to the
+         |            | selected basket in the current month.
+==========================================================
   v22.4 | 2026-07-14 | "📆 Daily P&L" section header renamed "📆 Daily Performance"
          |            | (its "DAILY P&L — [Month]" sub-heading is unchanged). Swapped
          |            | the Monthly section titles: outer header "📅 Monthly P&L Data"
@@ -886,7 +907,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>SKVK Trading Journal v22.4</title>
+<title>SKVK Trading Journal v22.5</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -1845,7 +1866,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div class="login-logo">📋</div>
     <div class="login-title">
       SKVK Trading Journal
-      <span class="login-vbadge">v22.4</span>
+      <span class="login-vbadge">v22.5</span>
     </div>
     <div class="login-sub">Sign in with your authorised Google account to access the journal.</div>
     <button class="google-signin-btn" id="googleSignInBtn" onclick="signInWithGoogle()">
@@ -1885,7 +1906,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
         <i class="ti ti-chart-candle brand-icon"></i>
         <span class="brand-skvk">SKVK</span>
         <span class="brand-appname">Trading Journal</span>
-        <span class="brand-vbadge">v22.4</span>
+        <span class="brand-vbadge">v22.5</span>
       </div>
     </div>
     <div id="topbar-right-wrap">
@@ -1970,6 +1991,8 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
           </div>
         </label>
       </div>
+      <!-- Accounts Allocated (v22.5) — mirror of the Account page's Baskets Allocated panel -->
+      <div id="dash-accounts-allocated" style="text-align:left;"></div>
     </div>
   </div>
 
@@ -3677,28 +3700,46 @@ function renderAcctReport() {
   document.getElementById('acct-heatmap').innerHTML = buildOneHeatmap(label, tr, '#1a73e8');
 }
 
-// ── Baskets Traded panel (v21.2) — shown only for a single selected account,
-// hidden for "All Accounts" since the list would be too long to be useful.
-function getBasketsTradedForAccount(cid) {
+// ── Baskets Allocated panel (v22.5) — shown only for a single selected account.
+// Sourced from the CURRENT calendar month's Allocations data (not trade history);
+// no fallback to earlier months — empty if nothing is allocated this month.
+function getBasketsAllocatedForAccount(cid) {
   if (!cid || cid === '__ALL__') return [];
-  const algosInAcct = new Set(
-    allTrades.filter(t => !t.archived && t.client_id === cid).map(t => t.algo_name).filter(Boolean)
+  const todayYM = new Date().toISOString().slice(0,7);
+  const rows = (allocations[todayYM] && allocations[todayYM].rows) || {};
+  const basketNames = new Set(
+    Object.values(rows).filter(r => r && r.client_id === cid).map(r => r.basket).filter(Boolean)
   );
-  const basketNames = new Set();
-  Object.values(algoGroups).forEach(g => {
-    if ((g.algos || []).some(a => algosInAcct.has(a))) basketNames.add(g.name);
-  });
   return [...basketNames].sort();
 }
 function renderAcctBasketsTraded() {
   const el = document.getElementById('acct-baskets-traded');
   if (!el) return;
   if (!currentAcct || currentAcct === '__ALL__') { el.innerHTML = ''; return; }
-  const baskets = getBasketsTradedForAccount(currentAcct);
+  const baskets = getBasketsAllocatedForAccount(currentAcct);
   if (!baskets.length) { el.innerHTML = ''; return; }
   el.innerHTML =
-    `<div style="font-size:0.7rem;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;">Baskets Traded:</div>` +
+    `<div style="font-size:0.7rem;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;">Baskets Allocated:</div>` +
     baskets.map(b => `<div style="font-size:0.8rem;font-weight:700;color:var(--text0);padding:2px 0;">${b}</div>`).join('');
+}
+
+// v22.5: mirror panel on Analytics — Basket: which accounts are allocated to the
+// selected basket in the CURRENT month (from Allocations data).
+function renderDashAccountsAllocated() {
+  const el = document.getElementById('dash-accounts-allocated');
+  if (!el) return;
+  const mode = document.querySelector('input[name="dash-sel-mode"]:checked')?.value || 'basket';
+  const basketVal = document.getElementById('dash-basket-select')?.value || '__ALL__';
+  if (mode !== 'basket' || basketVal === '__ALL__') { el.innerHTML = ''; return; }
+  const todayYM = new Date().toISOString().slice(0,7);
+  const rows = (allocations[todayYM] && allocations[todayYM].rows) || {};
+  const accounts = [...new Set(
+    Object.values(rows).filter(r => r && r.basket === basketVal).map(r => r.client_id).filter(Boolean)
+  )].sort();
+  if (!accounts.length) { el.innerHTML = ''; return; }
+  el.innerHTML =
+    `<div style="font-size:0.7rem;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;">Accounts Allocated:</div>` +
+    accounts.map(a => `<div style="font-size:0.8rem;font-weight:700;color:var(--text0);padding:2px 0;">${getClientLabel(a)}</div>`).join('');
 }
 
 function acctWeekNav(dir) {
@@ -3936,25 +3977,25 @@ function renderAcctDailyPage() {
 
   tbody.innerHTML = page.map(r => {
     if (r.isDate) {
-      // Date-based row (Quantleap)
+      // Date-based row (Quantleap) — v22.5: full rupees (Zebu style), not k/L/Cr
       return `<tr style="border-top:1px solid var(--border);">
         <td style="padding:8px 14px;font-size:0.78rem;color:var(--text1);">${r.date}</td>
         <td style="padding:8px 8px;font-size:0.72rem;color:var(--text2);">${r.day}</td>
         <td style="padding:8px 8px;text-align:right;font-weight:700;color:${r.pnl>=0?'var(--green)':'var(--red)'};">
-          ${r.pnl>=0?'+':''}${fmt(r.pnl)}</td>
+          ${r.pnl>=0?'+':''}${fmtINRFull(r.pnl)}</td>
         <td style="padding:8px 8px;text-align:right;font-size:0.78rem;color:var(--text2);">${r.trades}</td>
         <td style="padding:8px 14px;text-align:right;font-size:0.78rem;font-weight:600;color:${r.cum>=0?'var(--green)':'var(--red)'};">
-          ${r.cum>=0?'+':''}${fmt(r.cum)}</td>
+          ${r.cum>=0?'+':''}${fmtINRFull(r.cum)}</td>
       </tr>`;
     } else {
-      // Counter-based row (Tradetron)
+      // Counter-based row (Tradetron) — v22.5: full rupees (Zebu style)
       const dateRange = r.entryD && r.exitD && r.entryD !== r.exitD
         ? `${r.entryD.slice(5)} → ${r.exitD.slice(5)}`
         : r.entryD ? r.entryD.slice(5) : '—';
       const statusBg  = r.status==='OPEN' ? '#fef3c7' : '#f0fdf4';
       const statusCol = r.status==='OPEN' ? '#d97706' : '#16a34a';
       const pnlColor  = r.status==='OPEN' ? 'var(--text2)' : r.pnl>=0 ? 'var(--green)' : 'var(--red)';
-      const pnlText   = r.status==='OPEN' ? '—' : `${r.pnl>=0?'+':''}${fmt(r.pnl)}`;
+      const pnlText   = r.status==='OPEN' ? '—' : `${r.pnl>=0?'+':''}${fmtINRFull(r.pnl)}`;
       return `<tr style="border-top:1px solid var(--border);">
         <td style="padding:8px 14px;">
           <span style="background:#EEEDFE;color:#3C3489;font-size:0.72rem;font-weight:700;padding:3px 9px;border-radius:20px;">Cntr${r.rc}</span>
@@ -5298,7 +5339,10 @@ function normDate(d) {
   return d.slice(0,10);
 }
 // P&L attribution date: use exit_date if available (handles STBT/BTST), else entry_date
-function pnlDate(t) { return (t.exit_date && t.exit_date >= t.entry_date) ? t.exit_date : t.entry_date; }
+// v22.5: Zebu entry-date convention — P&L books to the day the trade was ENTERED,
+// not the day it exited. STBT trades entered today therefore book to today once
+// they close tomorrow, exactly matching Zebu Analytics' Daily P&L grouping.
+function pnlDate(t) { return t.entry_date || t.exit_date; }
 function isoTime(s) { const m=(s||'').match(/T(\d{2}:\d{2})/); return m?m[1]:''; }
 function optType(s) { s=s.toUpperCase(); return s.endsWith('CE')?'CE':s.endsWith('PE')?'PE':s.includes('FUT')?'FUT':'OPT'; }
 function normExit(r) {
@@ -5331,6 +5375,14 @@ function fmtINRShort(n) {
   if (n >= 1e5) return sign + '₹' + (n/1e5).toFixed(2) + 'L';
   if (n >= 1e3) return sign + '₹' + (n/1e3).toFixed(2) + 'k';
   return sign + '₹' + n.toFixed(0);
+}
+
+// v22.5: full comma-separated ₹ (Zebu Daily P&L style, e.g. -₹10,792) —
+// used ONLY in the Daily Performance tables on both Analytics pages.
+function fmtINRFull(n) {
+  n = Number(n) || 0;
+  const sign = n < 0 ? '-' : '';
+  return sign + '₹' + Math.abs(Math.round(n)).toLocaleString('en-IN');
 }
 const COLORS=['#1a73e8','#1a9e5c','#e67e22','#7c3aed','#0891b2','#d93025','#0d6efd','#6f42c1'];
 let ci=0; function nextColor(){return COLORS[ci++%COLORS.length];}
@@ -5418,6 +5470,7 @@ function renderDashFiltered() {
   drawDashCapitalChart(trPeriod);
   // v22.4: Monthly Returns section removed (redundant with Monthly P&L Chart)
   renderDashCapitalGrid();
+  renderDashAccountsAllocated();
   renderDashHeatmap();
 }
 
@@ -5620,9 +5673,9 @@ function renderDashDailyPage() {
   tbody.innerHTML=page.map(r=>`<tr style="border-top:1px solid var(--border);">
     <td style="padding:8px 14px;font-size:0.78rem;color:var(--text1);">${r.date}</td>
     <td style="padding:8px 8px;font-size:0.72rem;color:var(--text2);">${r.day}</td>
-    <td style="padding:8px 8px;text-align:right;font-weight:700;color:${r.pnl>=0?'var(--green)':'var(--red)'};">${r.pnl>=0?'+':''}${fmt(r.pnl)}</td>
+    <td style="padding:8px 8px;text-align:right;font-weight:700;color:${r.pnl>=0?'var(--green)':'var(--red)'};">${r.pnl>=0?'+':''}${fmtINRFull(r.pnl)}</td>
     <td style="padding:8px 8px;text-align:right;font-size:0.78rem;color:var(--text2);">${r.trades}</td>
-    <td style="padding:8px 14px;text-align:right;font-size:0.78rem;font-weight:600;color:${r.cum>=0?'var(--green)':'var(--red)'};">${r.cum>=0?'+':''}${fmt(r.cum)}</td>
+    <td style="padding:8px 14px;text-align:right;font-size:0.78rem;font-weight:600;color:${r.cum>=0?'var(--green)':'var(--red)'};">${r.cum>=0?'+':''}${fmtINRFull(r.cum)}</td>
   </tr>`).join('');
   const total=dashDailyRows.length;
   const info=document.getElementById('dash-daily-info');
