@@ -2,6 +2,30 @@
 ==========================================================
   SKVK TRADING JOURNAL — VERSION HISTORY
 ==========================================================
+  v22.4 | 2026-07-14 | "📆 Daily P&L" section header renamed "📆 Daily Performance"
+         |            | (its "DAILY P&L — [Month]" sub-heading is unchanged). Swapped
+         |            | the Monthly section titles: outer header "📅 Monthly P&L Data"
+         |            | is now "📅 Monthly Performance", and the inner card (formerly
+         |            | "📈 Monthly Performance") is now "📈 Monthly P&L Data" — and its
+         |            | stats were replaced to match Yearly Performance (Capital
+         |            | Deployed, Net P&L, Net P&L %, Max Drawdown, Max Drawdown %, Win
+         |            | Rate, Total Trades, Sharpe Ratio, Profit Factor; Sharpe Ratio
+         |            | shows NA for a single month; old Winning/Losing Days, Best/
+         |            | Worst Day, Avg Daily P&L tiles removed). "Monthly Returns"
+         |            | section removed entirely (redundant with Monthly P&L Chart).
+         |            | Monthly P&L Chart: hover tooltip now shows P&L, P&L %, Max DD,
+         |            | Max DD % together; the permanent on-bar label stays P&L-only.
+         |            | Allocations page: Account dropdown now visually highlighted
+         |            | once a selection is made; table "Exclude" column renamed
+         |            | "Exclude For Calculations"; added a "📋 Copy To" button per row
+         |            | (copies that month's entire basket/lot set to picked target
+         |            | months in one shot); future months are now fully functional
+         |            | (Edit / Copy To / Exclude all active, row still shown faded).
+         |            | Analytics — Account wise: Capital Deployed table now always
+         |            | shows all 12 FY months (Current Month/Select Month radio
+         |            | removed) — empty months show "Excluded" if flagged Incomplete
+         |            | in Allocations, else "Update Required".
+==========================================================
   v22.3 | 2026-07-14 | App-wide: all rupee figures now shown in compact k/L/Cr format
          |            | (e.g. ₹2,45,331 → -₹2.45L) via the central fmt() helper. Monthly
          |            | Performance and Yearly Performance (renamed from "Yearly P&L
@@ -862,7 +886,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>SKVK Trading Journal v22.3</title>
+<title>SKVK Trading Journal v22.4</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -1821,7 +1845,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div class="login-logo">📋</div>
     <div class="login-title">
       SKVK Trading Journal
-      <span class="login-vbadge">v22.3</span>
+      <span class="login-vbadge">v22.4</span>
     </div>
     <div class="login-sub">Sign in with your authorised Google account to access the journal.</div>
     <button class="google-signin-btn" id="googleSignInBtn" onclick="signInWithGoogle()">
@@ -1861,7 +1885,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
         <i class="ti ti-chart-candle brand-icon"></i>
         <span class="brand-skvk">SKVK</span>
         <span class="brand-appname">Trading Journal</span>
-        <span class="brand-vbadge">v22.3</span>
+        <span class="brand-vbadge">v22.4</span>
       </div>
     </div>
     <div id="topbar-right-wrap">
@@ -1951,7 +1975,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
 
   <!-- ══ Daily P&L ══ -->
   <div style="border-top:3px solid var(--blue);padding-top:10px;margin-bottom:16px;">
-    <span style="font-size:1.05rem;font-weight:800;font-family:var(--display);color:var(--blue);">📆 Daily P&L</span>
+    <span style="font-size:1.05rem;font-weight:800;font-family:var(--display);color:var(--blue);">📆 Daily Performance</span>
   </div>
   <div style="display:flex;align-items:center;gap:16px;margin-bottom:14px;flex-wrap:wrap;">
     <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:0.85rem;font-weight:600;color:var(--text0);">
@@ -1976,9 +2000,9 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div id="dash-cal-heatmap"></div>
   </div>
 
-  <!-- ══ BLOCK 1: Monthly P&L Data ══ -->
+  <!-- ══ BLOCK 1: Monthly Performance ══ -->
   <div style="border-top:3px solid var(--blue);padding-top:10px;margin-bottom:16px;">
-    <span style="font-size:1.05rem;font-weight:800;font-family:var(--display);color:var(--blue);">📅 Monthly P&L Data</span>
+    <span style="font-size:1.05rem;font-weight:800;font-family:var(--display);color:var(--blue);">📅 Monthly Performance</span>
   </div>
 
   <!-- Month selector -->
@@ -1993,28 +2017,25 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     </select>
   </div>
 
-  <!-- Monthly Live Performance tiles (Basket tab) -->
+  <!-- Monthly P&L Data tiles (Basket tab) -->
   <div id="dash-monthly-perf-wrap" style="background:var(--bg);border:1.5px solid var(--border);border-radius:14px;padding:20px 24px;margin-bottom:18px;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
       <div style="display:flex;align-items:center;gap:8px;">
         <span style="font-size:1rem;">📈</span>
-        <span style="font-size:1rem;font-weight:800;font-family:var(--display);">Monthly Performance</span>
+        <span style="font-size:1rem;font-weight:800;font-family:var(--display);">Monthly P&L Data</span>
       </div>
       <span id="dash-monthly-perf-label" style="font-size:0.75rem;background:#eef2ff;color:#3730a3;padding:4px 12px;border-radius:20px;font-weight:600;"></span>
     </div>
-    <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:16px 24px;">
+    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:16px 24px;">
+      <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Capital Deployed</div><div id="dash-mp-cap" style="font-size:1.1rem;font-weight:800;">—</div></div>
       <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Net P&L</div><div id="dash-mp-pnl" style="font-size:1.1rem;font-weight:800;">—</div></div>
-      <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Win Rate</div><div id="dash-mp-wr" style="font-size:1.1rem;font-weight:800;">—</div></div>
-      <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Profit Factor</div><div id="dash-mp-pf" style="font-size:1.1rem;font-weight:800;">—</div></div>
-      <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Total Trades</div><div id="dash-mp-trades" style="font-size:1.1rem;font-weight:800;">—</div></div>
+      <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Net P&L %</div><div id="dash-mp-return" style="font-size:1.1rem;font-weight:800;">—</div></div>
       <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Max Drawdown</div><div id="dash-mp-dd" style="font-size:1.1rem;font-weight:800;color:var(--red);">—</div></div>
       <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Max Drawdown %</div><div id="dash-mp-dd-pct" style="font-size:1.1rem;font-weight:800;color:var(--red);">—</div></div>
-      <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Capital Deployed</div><div id="dash-mp-cap" style="font-size:1.1rem;font-weight:800;">—</div></div>
-      <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Winning Days</div><div id="dash-mp-wdays" style="font-size:1.1rem;font-weight:800;color:var(--green);">—</div></div>
-      <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Losing Days</div><div id="dash-mp-ldays" style="font-size:1.1rem;font-weight:800;color:var(--red);">—</div></div>
-      <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Best Day</div><div id="dash-mp-best" style="font-size:1.1rem;font-weight:800;color:var(--green);">—</div></div>
-      <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Worst Day</div><div id="dash-mp-worst" style="font-size:1.1rem;font-weight:800;color:var(--red);">—</div></div>
-      <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Avg Daily P&L</div><div id="dash-mp-avg" style="font-size:1.1rem;font-weight:800;">—</div></div>
+      <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Win Rate</div><div id="dash-mp-wr" style="font-size:1.1rem;font-weight:800;">—</div></div>
+      <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Total Trades</div><div id="dash-mp-trades" style="font-size:1.1rem;font-weight:800;">—</div></div>
+      <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Sharpe Ratio</div><div id="dash-mp-sharpe" style="font-size:1.1rem;font-weight:800;">—</div></div>
+      <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Profit Factor</div><div id="dash-mp-pf" style="font-size:1.1rem;font-weight:800;">—</div></div>
     </div>
   </div>
 
@@ -2104,12 +2125,6 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     </div>
   </div>
 
-  <!-- ── Monthly Returns table ── -->
-  <div style="background:var(--bg);border:1.5px solid var(--border);border-radius:14px;padding:20px 24px;margin-bottom:28px;">
-    <div style="font-size:0.95rem;font-weight:800;font-family:var(--display);margin-bottom:16px;">Monthly Returns</div>
-    <div id="dash-monthly-returns" style="overflow-x:auto;"></div>
-  </div>
-
   <!-- ── Capital Deployed ── -->
   <div style="background:var(--bg);border:1.5px solid var(--border);border-radius:14px;padding:20px 24px;margin-bottom:28px;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
@@ -2176,7 +2191,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
   <!-- ══ Daily P&L ══ -->
   <div id="acct-daily-block" style="display:none;margin-bottom:28px;">
     <div style="border-top:3px solid var(--blue);padding-top:10px;margin-bottom:16px;">
-      <span style="font-size:1.05rem;font-weight:800;font-family:var(--display);color:var(--blue);">📆 Daily P&L</span>
+      <span style="font-size:1.05rem;font-weight:800;font-family:var(--display);color:var(--blue);">📆 Daily Performance</span>
     </div>
     <div style="display:flex;align-items:center;gap:16px;margin-bottom:14px;flex-wrap:wrap;">
       <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:0.85rem;font-weight:600;color:var(--text0);">
@@ -2202,10 +2217,10 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
   </div>
   </div>
 
-  <!-- ══ BLOCK 1: Monthly P&L Data ══ -->
+  <!-- ══ BLOCK 1: Monthly Performance ══ -->
   <div id="acct-monthly-block" style="display:none;margin-bottom:28px;">
     <div style="border-top:3px solid var(--blue);padding-top:10px;margin-bottom:16px;">
-      <span style="font-size:1.05rem;font-weight:800;font-family:var(--display);color:var(--blue);">📅 Monthly P&L Data</span>
+      <span style="font-size:1.05rem;font-weight:800;font-family:var(--display);color:var(--blue);">📅 Monthly Performance</span>
     </div>
 
     <!-- Month selector -->
@@ -2220,28 +2235,25 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
       </select>
     </div>
 
-    <!-- Monthly Live Performance tiles (Account wise tab) -->
+    <!-- Monthly P&L Data tiles (Account wise tab) -->
     <div id="acct-monthly-perf-wrap" style="background:var(--bg);border:1.5px solid var(--border);border-radius:14px;padding:20px 24px;margin-bottom:18px;">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
         <div style="display:flex;align-items:center;gap:8px;">
           <span style="font-size:1rem;">📈</span>
-          <span style="font-size:1rem;font-weight:800;font-family:var(--display);">Monthly Performance</span>
+          <span style="font-size:1rem;font-weight:800;font-family:var(--display);">Monthly P&L Data</span>
         </div>
         <span id="acct-monthly-perf-label" style="font-size:0.75rem;background:#eef2ff;color:#3730a3;padding:4px 12px;border-radius:20px;font-weight:600;"></span>
       </div>
-      <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:16px 24px;">
+      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:16px 24px;">
+        <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Capital Deployed</div><div id="acct-mp-cap" style="font-size:1.1rem;font-weight:800;">—</div></div>
         <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Net P&L</div><div id="acct-mp-pnl" style="font-size:1.1rem;font-weight:800;">—</div></div>
-        <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Win Rate</div><div id="acct-mp-wr" style="font-size:1.1rem;font-weight:800;">—</div></div>
-        <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Profit Factor</div><div id="acct-mp-pf" style="font-size:1.1rem;font-weight:800;">—</div></div>
-        <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Total Trades</div><div id="acct-mp-trades" style="font-size:1.1rem;font-weight:800;">—</div></div>
+        <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Net P&L %</div><div id="acct-mp-return" style="font-size:1.1rem;font-weight:800;">—</div></div>
         <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Max Drawdown</div><div id="acct-mp-dd" style="font-size:1.1rem;font-weight:800;color:var(--red);">—</div></div>
         <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Max Drawdown %</div><div id="acct-mp-dd-pct" style="font-size:1.1rem;font-weight:800;color:var(--red);">—</div></div>
-        <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Capital Deployed</div><div id="acct-mp-cap" style="font-size:1.1rem;font-weight:800;">—</div></div>
-        <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Winning Days</div><div id="acct-mp-wdays" style="font-size:1.1rem;font-weight:800;color:var(--green);">—</div></div>
-        <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Losing Days</div><div id="acct-mp-ldays" style="font-size:1.1rem;font-weight:800;color:var(--red);">—</div></div>
-        <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Best Day</div><div id="acct-mp-best" style="font-size:1.1rem;font-weight:800;color:var(--green);">—</div></div>
-        <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Worst Day</div><div id="acct-mp-worst" style="font-size:1.1rem;font-weight:800;color:var(--red);">—</div></div>
-        <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Avg Daily P&L</div><div id="acct-mp-avg" style="font-size:1.1rem;font-weight:800;">—</div></div>
+        <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Win Rate</div><div id="acct-mp-wr" style="font-size:1.1rem;font-weight:800;">—</div></div>
+        <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Total Trades</div><div id="acct-mp-trades" style="font-size:1.1rem;font-weight:800;">—</div></div>
+        <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Sharpe Ratio</div><div id="acct-mp-sharpe" style="font-size:1.1rem;font-weight:800;">—</div></div>
+        <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Profit Factor</div><div id="acct-mp-pf" style="font-size:1.1rem;font-weight:800;">—</div></div>
       </div>
     </div>
 
@@ -2345,26 +2357,11 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
         </div>
       </div>
 
-    <!-- ── Monthly Returns table ── -->
-    <div style="background:var(--bg);border:1.5px solid var(--border);border-radius:14px;padding:20px 24px;margin-bottom:28px;">
-      <div style="font-size:0.95rem;font-weight:800;font-family:var(--display);margin-bottom:16px;">Monthly Returns</div>
-      <div id="acct-monthly-returns" style="overflow-x:auto;"></div>
-    </div>
-
     <!-- ── Capital Deployed (read-only, computed from Allocations) ── -->
     <div id="acct-capital-section" style="background:var(--bg);border:1.5px solid var(--border);border-radius:14px;padding:20px 24px;margin-bottom:28px;">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px;">
         <div style="font-size:0.95rem;font-weight:800;font-family:var(--display);">💰 Capital Deployed</div>
         <span style="font-size:0.72rem;color:var(--text3);">Set via 🔗 Allocations</span>
-      </div>
-      <div style="display:flex;align-items:center;gap:16px;margin-bottom:14px;flex-wrap:wrap;">
-        <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:0.82rem;font-weight:600;color:var(--text0);">
-          <input type="radio" autocomplete="off" name="acct-cap-mode" value="current" checked onchange="renderAcctCapitalGrid()" style="accent-color:var(--blue);width:14px;height:14px;"> Current Month
-        </label>
-        <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:0.82rem;font-weight:600;color:var(--text0);">
-          <input type="radio" autocomplete="off" name="acct-cap-mode" value="select" onchange="renderAcctCapitalGrid()" style="accent-color:var(--blue);width:14px;height:14px;"> Select Month
-          <select id="acct-cap-month-select" class="form-select" onchange="renderAcctCapitalGrid()" style="min-width:150px;margin-left:4px;"></select>
-        </label>
       </div>
       <div id="acct-capital-grid"></div>
     </div>
@@ -2699,7 +2696,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
 
   <div style="display:flex;align-items:center;gap:12px;margin-bottom:22px;flex-wrap:wrap;">
     <label style="font-size:0.8rem;font-weight:700;color:var(--text1);">Account</label>
-    <select id="alloc-account-select" class="form-select" onchange="onAllocAccountChange()" style="min-width:260px;">
+    <select id="alloc-account-select" class="form-select" onchange="onAllocAccountChange()" style="min-width:260px;transition:all 0.15s;">
       <option value="">Select an account…</option>
     </select>
   </div>
@@ -2717,7 +2714,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
           <th style="padding:10px 14px;text-align:left;font-weight:700;color:var(--text1);border-bottom:1px solid var(--border);">Month</th>
           <th style="padding:10px 14px;text-align:left;font-weight:700;color:var(--text1);border-bottom:1px solid var(--border);">Allocations (Basket · Lots)</th>
           <th style="padding:10px 14px;text-align:right;font-weight:700;color:var(--text1);border-bottom:1px solid var(--border);">Total Margin</th>
-          <th style="padding:10px 14px;text-align:center;font-weight:700;color:var(--text1);border-bottom:1px solid var(--border);">Exclude</th>
+          <th style="padding:10px 14px;text-align:center;font-weight:700;color:var(--text1);border-bottom:1px solid var(--border);">Exclude For Calculations</th>
           <th style="padding:10px 14px;text-align:center;font-weight:700;color:var(--text1);border-bottom:1px solid var(--border);">Actions</th>
         </tr>
       </thead>
@@ -3675,7 +3672,7 @@ function renderAcctReport() {
   renderAcctDailyTable(trPeriod);
   renderAcctCharts(trPeriod);
   renderAcctCapitalGrid();
-  renderAcctMonthlyReturns(tr);
+  // v22.4: Monthly Returns section removed (redundant with Monthly P&L Chart)
   renderAcctBasketsTraded();
   document.getElementById('acct-heatmap').innerHTML = buildOneHeatmap(label, tr, '#1a73e8');
 }
@@ -4183,6 +4180,24 @@ function renderAcctMonthlyTopChart(tr) {
       plugins:{
         legend:{display:false},
         currentMonthShade:{ index: keys.indexOf(curYM), color:'rgba(30,58,95,0.08)' },
+        tooltip:{
+          callbacks:{
+            label: (context) => {
+              const ym = keys[context.dataIndex];
+              const pnl = vals[context.dataIndex];
+              const cap = getCapital(currentAcct, ym);
+              const { maxDD } = computeMonthStats(tr, ym);
+              const pnlPct = cap > 0 ? (pnl/cap*100) : null;
+              const ddPct  = cap > 0 ? (maxDD/cap*100) : null;
+              return [
+                'P&L: '+fmtBarLabel(pnl).replace(/^([+-])/,'$1₹').replace('₹+','+₹'),
+                'P&L %: '+(pnlPct!==null ? pnlPct.toFixed(1)+'%' : 'NA'),
+                'Max DD: '+fmtBarLabel(maxDD).replace(/^([+-])/,'$1₹').replace('₹+','+₹'),
+                'Max DD %: '+(ddPct!==null ? ddPct.toFixed(1)+'%' : 'NA')
+              ];
+            }
+          }
+        },
         datalabels:{
           display: ctx2 => ctx2.dataset.data[ctx2.dataIndex]!==0,
           anchor:  ctx2 => ctx2.dataset.data[ctx2.dataIndex]>=0?'end':'start',
@@ -4293,52 +4308,46 @@ function renderAcctCapitalGrid() {
 
   const fyKeys = getFYMonthKeys(getCurrentFYStartYear());
   const todayYM = new Date().toISOString().slice(0,7);
-  const pastKeys = fyKeys.filter(k => k <= todayYM);
 
-  const monthSel = document.getElementById('acct-cap-month-select');
-  if (monthSel && !monthSel.dataset.built) {
-    monthSel.innerHTML = pastKeys.map(ym => {
-      const [y,mo] = ym.split('-');
-      return `<option value="${ym}">${MONTH_NAMES[parseInt(mo)-1]} ${y}</option>`;
+  let html = `<div style="font-size:0.7rem;color:var(--text3);margin-bottom:8px;font-style:italic;">Computed from 🔗 Allocations — read-only</div>`;
+
+  const bodyRows = fyKeys.map(ym => {
+    const [y, mo] = ym.split('-');
+    const monthLabel = `${MONTH_NAMES[parseInt(mo)-1]} ${y}`;
+    const isCurrent = ym === todayYM;
+    const incomplete = isAllocationIncomplete(ym);
+
+    const rows = (allocations[ym] && allocations[ym].rows) || {};
+    const filtered = Object.values(rows).filter(r => currentAcct === '__ALL__' ? true : r.client_id === currentAcct);
+
+    if (!filtered.length) {
+      const status = incomplete
+        ? `<span style="color:#d97706;font-weight:600;">Excluded</span>`
+        : `<span style="color:#dc2626;font-weight:600;">Update Required</span>`;
+      return `<tr style="${isCurrent ? 'background:#eff6ff;' : ''}border-bottom:1px solid var(--border);">
+        <td style="padding:7px 10px;font-weight:600;">${monthLabel}${isCurrent ? ' <span style="font-size:0.62rem;font-weight:700;color:var(--blue);">● current</span>' : ''}</td>
+        <td style="padding:7px 10px;" colspan="4">${status}</td>
+        <td style="padding:7px 10px;text-align:right;color:var(--text3);">—</td>
+      </tr>`;
+    }
+
+    let monthTotal = 0;
+    const inner = filtered.map((r, i) => {
+      const grp = Object.values(algoGroups).find(g => g.name === r.basket);
+      const perLot = (grp && grp.capital_per_lot) || 0;
+      const lots = parseFloat(r.lots) || 0;
+      const margin = lots * perLot;
+      monthTotal += margin;
+      return `<tr style="${isCurrent ? 'background:#eff6ff;' : ''}border-bottom:1px solid var(--border);">
+        <td style="padding:7px 10px;font-weight:600;">${i===0 ? monthLabel + (isCurrent ? ' <span style="font-size:0.62rem;font-weight:700;color:var(--blue);">● current</span>' : '') : ''}</td>
+        <td style="padding:7px 10px;">${getClientLabel(r.client_id)}</td>
+        <td style="padding:7px 10px;">${r.basket}</td>
+        <td style="padding:7px 10px;text-align:right;">${lots}</td>
+        <td style="padding:7px 10px;text-align:right;color:var(--text2);">${perLot ? fmtINRShort(perLot) : '—'}</td>
+        <td style="padding:7px 10px;text-align:right;font-weight:700;color:var(--blue);">${fmtINRShort(margin)}</td>
+      </tr>`;
     }).join('');
-    monthSel.dataset.built = '1';
-  }
-
-  const mode = document.querySelector('input[name="acct-cap-mode"]:checked')?.value || 'current';
-  const ym = mode === 'current' ? (pastKeys.includes(todayYM) ? todayYM : pastKeys[pastKeys.length-1]) : (monthSel?.value || todayYM);
-  if (monthSel) monthSel.disabled = (mode !== 'select');
-
-  const [y, mo] = (ym || '').split('-');
-  const monthLabel = ym ? `${MONTH_NAMES[parseInt(mo)-1]} ${y}` : '—';
-  const isCurrent = ym === todayYM;
-  const incomplete = isAllocationIncomplete(ym);
-
-  const rows = (allocations[ym] && allocations[ym].rows) || {};
-  const filtered = Object.values(rows).filter(r => currentAcct === '__ALL__' ? true : r.client_id === currentAcct);
-
-  let html = `<div style="font-size:0.7rem;color:var(--text3);margin-bottom:8px;font-style:italic;">Computed from 🔗 Allocations — read-only${incomplete ? ' · ⚠️ month marked Incomplete (excluded from metrics)' : ''}</div>`;
-
-  if (!filtered.length) {
-    html += `<div style="padding:16px;text-align:center;color:var(--text3);font-size:0.82rem;background:var(--bg2);border-radius:8px;">No allocations for ${monthLabel}</div>`;
-    grid.innerHTML = html;
-    return;
-  }
-
-  let totalMargin = 0;
-  const rowsHtml = filtered.map(r => {
-    const grp = Object.values(algoGroups).find(g => g.name === r.basket);
-    const perLot = (grp && grp.capital_per_lot) || 0;
-    const lots = parseFloat(r.lots) || 0;
-    const margin = lots * perLot;
-    totalMargin += margin;
-    return `<tr style="${isCurrent ? 'background:#eff6ff;' : ''}border-bottom:1px solid var(--border);">
-      <td style="padding:7px 10px;">${monthLabel}</td>
-      <td style="padding:7px 10px;">${getClientLabel(r.client_id)}</td>
-      <td style="padding:7px 10px;">${r.basket}</td>
-      <td style="padding:7px 10px;text-align:right;">${lots}</td>
-      <td style="padding:7px 10px;text-align:right;color:var(--text2);">${perLot ? fmtINRShort(perLot) : '—'}</td>
-      <td style="padding:7px 10px;text-align:right;font-weight:700;color:var(--blue);">${fmtINRShort(margin)}</td>
-    </tr>`;
+    return inner;
   }).join('');
 
   html += `<table style="width:100%;border-collapse:collapse;font-size:0.8rem;">
@@ -4352,13 +4361,7 @@ function renderAcctCapitalGrid() {
         <th style="padding:7px 10px;text-align:right;font-weight:700;color:var(--text1);border-bottom:1px solid var(--border);">Total</th>
       </tr>
     </thead>
-    <tbody>${rowsHtml}</tbody>
-    <tfoot>
-      <tr style="background:var(--bg2);">
-        <td colspan="5" style="padding:7px 10px;font-weight:700;color:var(--text0);text-align:right;">Total Margin</td>
-        <td style="padding:7px 10px;text-align:right;font-weight:800;color:var(--blue);">${fmtINRShort(totalMargin)}</td>
-      </tr>
-    </tfoot>
+    <tbody>${bodyRows}</tbody>
   </table>`;
   grid.innerHTML = html;
 }
@@ -4519,11 +4522,7 @@ function renderMonthlyPerfTiles(tr, ym, prefixId, labelId, getCapitalForMonth) {
   set(`${prefixId}-pf`,   pf);
   set(`${prefixId}-trades`, monthTrades.length || '—');
   set(`${prefixId}-dd`,   fmt(dd), 'var(--red)');
-  set(`${prefixId}-wdays`, winDays || '—', 'var(--green)');
-  set(`${prefixId}-ldays`, lossDays || '—', 'var(--red)');
-  set(`${prefixId}-best`,  bestDay!==null ? fmt(bestDay) : '—', 'var(--green)');
-  set(`${prefixId}-worst`, worstDay!==null ? fmt(worstDay) : '—', 'var(--red)');
-  set(`${prefixId}-avg`,   avgDay!==null ? fmt(avgDay) : '—', col(avgDay));
+  set(`${prefixId}-sharpe`, 'NA', 'var(--text3)'); // not statistically meaningful over a single month
 
   // Capital Deployed + Max Drawdown % — with warning/error for missing capital
   // (only flagged for current/past months within the current FY; future months are exempt)
@@ -4546,6 +4545,12 @@ function renderMonthlyPerfTiles(tr, ym, prefixId, labelId, getCapitalForMonth) {
       capEl.textContent = capEntered ? fmt(capVal).replace(/^[+-]/,'') : '—';
       capEl.style.color = 'var(--text0)';
     }
+  }
+  const returnEl = document.getElementById(`${prefixId}-return`);
+  if (returnEl) {
+    if (incomplete) { returnEl.textContent = '—'; returnEl.style.color = 'var(--text3)'; }
+    else if (capEntered && capVal > 0) { const pct = totalPnl/capVal*100; returnEl.textContent = (pct>=0?'+':'')+pct.toFixed(1)+'%'; returnEl.style.color = col(pct); }
+    else { returnEl.textContent = 'NA'; returnEl.style.color = 'var(--text3)'; }
   }
   const ddPctEl = document.getElementById(`${prefixId}-dd-pct`);
   if (ddPctEl) {
@@ -5404,14 +5409,14 @@ function renderDashFiltered() {
     : trFY;
 
   // Re-render all sections with filtered trades
-  drawMonthly(mMap);
+  drawMonthly(mMap, trFY);
   drawDashCalHeatmap(tr);
   renderDashMonthlyPerfPanel(tr);
   renderDashLivePerf(trPeriod, periodMode);
   renderDashDailyTable(trPeriod);
   drawDashEquityDD(trPeriod);
   drawDashCapitalChart(trPeriod);
-  renderDashMonthlyReturns(tr);
+  // v22.4: Monthly Returns section removed (redundant with Monthly P&L Chart)
   renderDashCapitalGrid();
   renderDashHeatmap();
 }
@@ -5719,7 +5724,17 @@ const currentMonthShadePlugin = {
   }
 };
 
-function drawMonthly(mMap) {
+// v22.4: cumulative-within-month drawdown, for the Monthly P&L Chart hover tooltip
+function computeMonthStats(tr, ym) {
+  const dayPnl = {};
+  (tr||[]).forEach(t => { const pd = pnlDate(t); if (pd && pd.startsWith(ym)) dayPnl[pd] = (dayPnl[pd]||0) + (t.pnl||0); });
+  const days = Object.keys(dayPnl).sort().map(d => dayPnl[d]);
+  let peak = 0, cum = 0, maxDD = 0;
+  days.forEach(v => { cum += v; peak = Math.max(peak, cum); maxDD = Math.min(maxDD, cum - peak); });
+  return { maxDD };
+}
+
+function drawMonthly(mMap, trFY) {
   const keys=Object.keys(mMap).sort();
   const vals=keys.map(k=>mMap[k]);
   const ctx=el('chart-monthly')?.getContext('2d');
@@ -5740,6 +5755,24 @@ function drawMonthly(mMap) {
       plugins:{
         legend:{display:false},
         currentMonthShade:{ index: keys.indexOf(curYM), color:'rgba(30,58,95,0.08)' },
+        tooltip:{
+          callbacks:{
+            label: (context) => {
+              const ym = keys[context.dataIndex];
+              const pnl = vals[context.dataIndex];
+              const cap = getGlobalCapital(ym);
+              const { maxDD } = computeMonthStats(trFY, ym);
+              const pnlPct = cap > 0 ? (pnl/cap*100) : null;
+              const ddPct  = cap > 0 ? (maxDD/cap*100) : null;
+              return [
+                'P&L: '+fmtKLCr(pnl),
+                'P&L %: '+(pnlPct!==null ? pnlPct.toFixed(1)+'%' : 'NA'),
+                'Max DD: '+fmtKLCr(maxDD),
+                'Max DD %: '+(ddPct!==null ? ddPct.toFixed(1)+'%' : 'NA')
+              ];
+            }
+          }
+        },
         datalabels:{
           display: ctx2=>ctx2.dataset.data[ctx2.dataIndex]!==0,
           anchor: ctx2=>ctx2.dataset.data[ctx2.dataIndex]>=0?'end':'start',
@@ -6609,13 +6642,31 @@ function initAllocationsPage() {
       accounts.map(a => `<option value="${a}">${getClientLabel(a)}</option>`).join('');
     accSel.value = accounts.includes(prev) ? prev : '';
     allocSelectedAccount = accSel.value;
+    allocStyleAccountSelect();
   }
   renderAllocationsPage();
+}
+
+function allocStyleAccountSelect() {
+  const sel = document.getElementById('alloc-account-select');
+  if (!sel) return;
+  if (allocSelectedAccount) {
+    sel.style.border = '2px solid var(--blue)';
+    sel.style.background = '#eff6ff';
+    sel.style.fontWeight = '700';
+    sel.style.color = 'var(--blue)';
+  } else {
+    sel.style.border = '';
+    sel.style.background = '';
+    sel.style.fontWeight = '';
+    sel.style.color = '';
+  }
 }
 
 function onAllocAccountChange() {
   const sel = document.getElementById('alloc-account-select');
   allocSelectedAccount = sel ? sel.value : '';
+  allocStyleAccountSelect();
   renderAllocationsPage();
 }
 
@@ -6657,20 +6708,22 @@ function renderAllocationsPage() {
         }).join('')
       : (isFuture ? '<span style="color:var(--text3);">—</span>' : `<span style="color:${allocMonthApplicable(ym) && !incomplete ? '#dc2626' : 'var(--text3)'};">${allocMonthApplicable(ym) && !incomplete ? '⚠️ Allocation not set' : '— none —'}</span>`);
 
-    const rowBg = isFuture ? 'background:var(--bg2);opacity:0.55;' : (isCurrent ? 'background:#eff6ff;' : '');
+    const rowBg = isFuture ? 'background:var(--bg2);opacity:0.6;' : (isCurrent ? 'background:#eff6ff;' : '');
     const excludeIcon = incomplete ? '🚫' : '⬜';
     const excludeTitle = incomplete ? 'Excluded — click to include' : 'Included — click to exclude from capital metrics';
+    const hasRows = acctRows.length > 0;
 
     return `
       <tr style="${rowBg}border-bottom:1px solid var(--border);">
-        <td style="padding:10px 14px;font-weight:700;color:var(--text0);white-space:nowrap;">${monthLabel}${isCurrent ? ' <span style="font-size:0.65rem;font-weight:700;color:var(--blue);">● current</span>' : ''}</td>
+        <td style="padding:10px 14px;font-weight:700;color:var(--text0);white-space:nowrap;">${monthLabel}${isCurrent ? ' <span style="font-size:0.65rem;font-weight:700;color:var(--blue);">● current</span>' : ''}${isFuture ? ' <span style="font-size:0.6rem;font-weight:600;color:var(--text3);">(future)</span>' : ''}</td>
         <td style="padding:10px 14px;font-size:0.8rem;color:var(--text1);">${allocSummary}</td>
         <td style="padding:10px 14px;text-align:right;font-weight:700;color:var(--blue);">${totalMargin ? fmtINRShort(totalMargin) : '—'}</td>
         <td style="padding:10px 14px;text-align:center;">
-          ${isFuture ? '<span style="color:var(--text3);">—</span>' : `<button onclick="allocToggleIncomplete('${ym}')" title="${excludeTitle}" style="background:none;border:none;cursor:pointer;font-size:1.3rem;line-height:1;">${excludeIcon}</button>`}
+          <button onclick="allocToggleIncomplete('${ym}')" title="${excludeTitle}" style="background:none;border:none;cursor:pointer;font-size:1.3rem;line-height:1;">${excludeIcon}</button>
         </td>
-        <td style="padding:10px 14px;text-align:center;">
-          ${isFuture ? '<span style="color:var(--text3);">—</span>' : `<button onclick="allocOpenMonthModal('${ym}')" class="btn btn-ghost btn-sm">✏️ Edit</button>`}
+        <td style="padding:10px 14px;text-align:center;white-space:nowrap;">
+          ${hasRows ? `<button onclick="allocOpenRowCopyPanel('${ym}')" class="btn btn-ghost btn-sm" title="Copy this month's whole allocation set to other months">📋 Copy To</button>` : ''}
+          <button onclick="allocOpenMonthModal('${ym}')" class="btn btn-ghost btn-sm">✏️ Edit</button>
         </td>
       </tr>`;
   }).join('');
@@ -6783,7 +6836,7 @@ async function allocToggleIncomplete(ym) {
 function allocOpenCopyPanel(ym, rowId) {
   const r = allocations[ym]?.rows?.[rowId];
   if (!r) return;
-  allocCopySource = { ym, rowId };
+  allocCopySource = { ym, rowId, wholeMonth: false };
   document.getElementById('alloc-copy-source-label').textContent =
     `Copying "${r.basket}" · ${r.lots} lot(s) · ${getClientLabel(r.client_id)} — choose target month(s):`;
   const fyKeys = getFYMonthKeys(getCurrentFYStartYear()).filter(k => k !== ym);
@@ -6799,13 +6852,60 @@ function allocOpenCopyPanel(ym, rowId) {
   openModal('modal-alloc-copy');
 }
 
+// v22.4: "Copy To" on a table row — copies the WHOLE month's basket/lot set
+// (all rows for the selected account in that month) to the picked target months.
+function allocOpenRowCopyPanel(ym) {
+  const rows = (allocations[ym] && allocations[ym].rows) || {};
+  const acctRows = Object.entries(rows).filter(([, r]) => r && r.client_id === allocSelectedAccount);
+  if (!acctRows.length) return;
+  allocCopySource = { ym, rowId: null, wholeMonth: true };
+  const summary = acctRows.map(([, r]) => `${r.basket} · ${r.lots} lot(s)`).join(', ');
+  document.getElementById('alloc-copy-source-label').textContent =
+    `Copying ALL allocations for ${getClientLabel(allocSelectedAccount)}: ${summary} — choose target month(s):`;
+  const fyKeys = getFYMonthKeys(getCurrentFYStartYear()).filter(k => k !== ym);
+  const list = document.getElementById('alloc-copy-month-list');
+  list.innerHTML = fyKeys.map(k => {
+    const [y, mo] = k.split('-');
+    const label = `${MONTH_NAMES[parseInt(mo)-1]} ${y}`;
+    return `<label style="display:flex;align-items:center;gap:8px;font-size:0.82rem;cursor:pointer;padding:5px 8px;border:1px solid var(--border);border-radius:6px;">
+      <input type="checkbox" value="${k}" style="accent-color:var(--blue);width:14px;height:14px;">
+      ${label}
+    </label>`;
+  }).join('');
+  openModal('modal-alloc-copy');
+}
+
 async function allocApplyCopy() {
   if (!allocCopySource) return;
+  const checked = [...document.querySelectorAll('#alloc-copy-month-list input:checked')].map(el => el.value);
+  if (!checked.length) { toast('Select at least one month', 'error'); return; }
+
+  if (allocCopySource.wholeMonth) {
+    const srcYm = allocCopySource.ym;
+    const rows = (allocations[srcYm] && allocations[srcYm].rows) || {};
+    const srcRows = Object.values(rows).filter(r => r && r.client_id === allocSelectedAccount);
+    if (!srcRows.length) { closeModal('modal-alloc-copy'); return; }
+    for (const ym of checked) {
+      if (!allocations[ym]) allocations[ym] = { rows: {}, incomplete: false };
+      if (!allocations[ym].rows) allocations[ym].rows = {};
+      for (const srcRow of srcRows) {
+        const rowId = 'r' + Date.now() + Math.random().toString(36).slice(2,6);
+        const row = { client_id: srcRow.client_id, basket: srcRow.basket, lots: srcRow.lots, created_at: new Date().toISOString() };
+        allocations[ym].rows[rowId] = row;
+        if (db) await db.ref('journal/allocations/' + ym + '/rows/' + rowId).set(row);
+      }
+    }
+    recomputeCapitalFromAllocations();
+    closeModal('modal-alloc-copy');
+    renderAllocationsPage();
+    renderDashboard();
+    toast(`✓ Copied ${srcRows.length} allocation(s) to ${checked.length} month(s)`, 'success');
+    return;
+  }
+
   const { ym: srcYm, rowId: srcRowId } = allocCopySource;
   const srcRow = allocations[srcYm]?.rows?.[srcRowId];
   if (!srcRow) { closeModal('modal-alloc-copy'); return; }
-  const checked = [...document.querySelectorAll('#alloc-copy-month-list input:checked')].map(el => el.value);
-  if (!checked.length) { toast('Select at least one month', 'error'); return; }
 
   for (const ym of checked) {
     const rowId = 'r' + Date.now() + Math.random().toString(36).slice(2,6);
