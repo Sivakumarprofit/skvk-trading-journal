@@ -2,6 +2,17 @@
 ==========================================================
   SKVK TRADING JOURNAL — VERSION HISTORY
 ==========================================================
+  v23.3 | 2026-09-03 | (1) PRIVACY TOGGLE: Account ID / Account Name switcher below the
+         |            | system selector panel. Account ID mode (default on fresh load)
+         |            | shows broker prefix + client_id (e.g. ZEBU_Z62987) instead of
+         |            | holder names — safe for showing to strangers. Session-only: resets
+         |            | to ID on page close/refresh, no Firebase persistence.
+         |            | (2) Removed duplicate month-stepper below the selector panel.
+         |            | (3) Visible styled horizontal scrollbar on the accounts area so
+         |            | it's obvious you can drag between accounts.
+         |            | (4) Month label shown BETWEEN the ‹ › arrows in Daily Performance
+         |            | on both Basket and Account-wise pages: [‹] Jun 2026 [›].
+==========================================================
   v23.2 | 2026-09-03 | (1) BUGFIX: shared-system checkbox cross-talk — exclusion key
          |            | changed from plain algo_name to 'nickname:algo_name' pair so each
          |            | account's checkboxes are fully independent. Two accounts trading
@@ -1024,7 +1035,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>SKVK Trading Journal v23.2</title>
+<title>SKVK Trading Journal v23.3</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -1149,6 +1160,12 @@ body {
 .nav-tabs::-webkit-scrollbar { height: 3px; }
 .nav-tabs::-webkit-scrollbar-thumb { background: var(--blue); border-radius: 2px; }
 .nav-tabs::-webkit-scrollbar-track { background: #0f2440; }
+/* v23.3 — visible drag scrollbar for accounts panel */
+#dash-acct-scroll { scrollbar-width: auto; scrollbar-color: var(--blue) var(--bg2); }
+#dash-acct-scroll::-webkit-scrollbar { height: 10px; }
+#dash-acct-scroll::-webkit-scrollbar-track { background: var(--bg2); border-radius: 5px; }
+#dash-acct-scroll::-webkit-scrollbar-thumb { background: var(--blue); border-radius: 5px; min-width: 60px; }
+#dash-acct-scroll::-webkit-scrollbar-thumb:hover { background: #1a5cd8; }
 .nav-tab {
   display: flex; align-items: center; justify-content: center; gap: 6px;
   padding: 0 20px;
@@ -1983,7 +2000,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div class="login-logo">📋</div>
     <div class="login-title">
       SKVK Trading Journal
-      <span class="login-vbadge">v23.2</span>
+      <span class="login-vbadge">v23.3</span>
     </div>
     <div class="login-sub">Sign in with your authorised Google account to access the journal.</div>
     <button class="google-signin-btn" id="googleSignInBtn" onclick="signInWithGoogle()">
@@ -2023,7 +2040,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
         <i class="ti ti-chart-candle brand-icon"></i>
         <span class="brand-skvk">SKVK</span>
         <span class="brand-appname">Trading Journal</span>
-        <span class="brand-vbadge">v23.2</span>
+        <span class="brand-vbadge">v23.3</span>
       </div>
     </div>
     <div id="topbar-right-wrap">
@@ -2092,6 +2109,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     </label>
     <select id="dash-daily-month-select" onchange="onDashDailyMonthSelectChange()" style="display:none;padding:6px 10px;border:1.5px solid var(--blue);border-radius:6px;font-size:0.82rem;outline:none;"></select>
     <button onclick="stepDailyMonth('dash-daily-month-mode','dash-daily-month-select',-1,renderDashboard)" title="Previous month" style="padding:5px 12px;border-radius:6px;border:1.5px solid var(--blue);background:var(--bg);color:var(--blue);font-size:0.92rem;font-weight:800;cursor:pointer;line-height:1;">‹</button>
+    <span id="dash-daily-month-label" style="font-size:0.78rem;font-weight:700;color:var(--blue);min-width:80px;text-align:center;"></span>
     <button onclick="stepDailyMonth('dash-daily-month-mode','dash-daily-month-select',+1,renderDashboard)" title="Next month" style="padding:5px 12px;border-radius:6px;border:1.5px solid var(--blue);background:var(--bg);color:var(--blue);font-size:0.92rem;font-weight:800;cursor:pointer;line-height:1;">›</button>
   </div>
 
@@ -2311,6 +2329,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
       </label>
       <select id="acct-daily-month-select" onchange="onAcctDailyMonthSelectChange()" style="display:none;padding:6px 10px;border:1.5px solid var(--blue);border-radius:6px;font-size:0.82rem;outline:none;"></select>
       <button onclick="stepDailyMonth('acct-daily-month-mode','acct-daily-month-select',-1,renderAcctReport)" title="Previous month" style="padding:5px 12px;border-radius:6px;border:1.5px solid var(--blue);background:var(--bg);color:var(--blue);font-size:0.92rem;font-weight:800;cursor:pointer;line-height:1;">‹</button>
+      <span id="acct-daily-month-label" style="font-size:0.78rem;font-weight:700;color:var(--blue);min-width:80px;text-align:center;"></span>
       <button onclick="stepDailyMonth('acct-daily-month-mode','acct-daily-month-select',+1,renderAcctReport)" title="Next month" style="padding:5px 12px;border-radius:6px;border:1.5px solid var(--blue);background:var(--bg);color:var(--blue);font-size:0.92rem;font-weight:800;cursor:pointer;line-height:1;">›</button>
     </div>
 
@@ -4623,7 +4642,27 @@ function stepDailyMonth(radioName, selId, dir, renderFn) {
   populateMonthSelect(selId, target);
   const sel = document.getElementById(selId);
   if (sel) { sel.value = target; sel.style.display = 'block'; }
+  updateDailyMonthLabels();
   renderFn();
+}
+
+// v23.3 — update the month label between ‹ › arrows on both pages
+function updateDailyMonthLabels() {
+  const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  // Basket page
+  const dashYM = getSelectedYM('dash-daily-month-mode', 'dash-daily-month-select');
+  const dashLabel = document.getElementById('dash-daily-month-label');
+  if (dashLabel && dashYM) {
+    const [y, m] = dashYM.split('-').map(Number);
+    dashLabel.textContent = MONTHS[m - 1] + ' ' + y;
+  }
+  // Account-wise page
+  const acctYM = getSelectedYM('acct-daily-month-mode', 'acct-daily-month-select');
+  const acctLabel = document.getElementById('acct-daily-month-label');
+  if (acctLabel && acctYM) {
+    const [y, m] = acctYM.split('-').map(Number);
+    acctLabel.textContent = MONTHS[m - 1] + ' ' + y;
+  }
 }
 
 // Basket tab month selector handlers
@@ -4644,7 +4683,7 @@ function onDashDailyMonthModeChange() {
   if (mode === 'select') populateMonthSelect('dash-daily-month-select');
   renderDashboard();
 }
-function onDashDailyMonthSelectChange() { renderDashboard(); }
+function onDashDailyMonthSelectChange() { updateDailyMonthLabels(); renderDashboard(); }
 
 // Account wise tab month selector handlers
 function onAcctMonthModeChange() {
@@ -4664,7 +4703,7 @@ function onAcctDailyMonthModeChange() {
   if (mode === 'select') populateMonthSelect('acct-daily-month-select');
   renderAcctReport();
 }
-function onAcctDailyMonthSelectChange() { renderAcctReport(); }
+function onAcctDailyMonthSelectChange() { updateDailyMonthLabels(); renderAcctReport(); }
 
 // Compute and render monthly performance tiles
 function renderMonthlyPerfTiles(tr, ym, prefixId, labelId, getCapitalForMonth) {
@@ -4965,6 +5004,7 @@ function refreshAll() {
   loadDailyQuote();
   loadDisplayPrefs();
   renderUnderlyingColorsSettings();  // v22.8
+  updateDailyMonthLabels();  // v23.3
 }
 
 // ════════════════════════════════════════════════════
@@ -5601,6 +5641,18 @@ function isSystemArchived(algoName) {
 // all filter through this set. Capital always uses '__ALL__' (hidden fallback select).
 let dashExcludedSystems = new Set();
 
+// v23.3 — Privacy toggle: 'id' shows broker+clientid, 'name' shows nickname (holder name)
+let dashLabelMode = 'id';  // default = ID on fresh load, session-only
+function getDashAcctLabel(nick, cids) {
+  if (dashLabelMode === 'name') return nick;
+  // ID mode: derive broker prefix from nickname, append first client_id
+  if (!cids || !cids.size) return nick;
+  const firstCid = [...cids].sort()[0];
+  const prefixMatch = nick.match(/^(ZEBU|IIFL|SHOONYA|ALICEBLUE|UPSTOX)_/i);
+  if (prefixMatch) return prefixMatch[0].toUpperCase() + firstCid;
+  return firstCid;
+}
+
 // Underlying colors (customizable from App Settings, persisted at journal/settings/underlying_colors)
 const DEFAULT_UNDERLYING_COLORS = {
   'NIFTY':'#b8860b','BANKNIFTY':'#dc2626','FINNIFTY':'#059669','MIDCPNIFTY':'#7c3aed',
@@ -5656,17 +5708,18 @@ function renderSystemSelectorPanel() {
     return;
   }
   window._dashNickCids = nickCids;
-  let html = '<div style="display:flex;gap:10px;overflow-x:auto;padding:10px 0;">';
+  // v23.3 — visible scrollbar via custom styling
+  let html = '<div id="dash-acct-scroll" style="display:flex;gap:10px;overflow-x:auto;padding:10px 0 14px 0;">';
   nicks.forEach((nick, idx) => {
     const systems = [...nickSystems[nick]].sort();
     const bg = ACCT_BG_COLORS[idx % ACCT_BG_COLORS.length];
-    // v23.2 — checked state uses nick:algo key
     const allChecked = systems.every(s => !dashExcludedSystems.has(nick + ':' + s));
     const safeNick = nick.replace(/'/g, "\\'");
+    const displayLabel = getDashAcctLabel(nick, nickCids[nick]);
     html += `<div style="min-width:210px;max-width:280px;flex-shrink:0;background:${bg};border-radius:10px;padding:10px 12px;border:1.5px solid var(--border);">`;
     html += `<label style="display:flex;align-items:center;gap:7px;cursor:pointer;margin-bottom:7px;padding-bottom:6px;border-bottom:1.5px solid var(--border);">`;
     html += `<input type="checkbox" ${allChecked ? 'checked ' : ''}onchange="toggleDashAccount('${safeNick}',this.checked)" style="width:15px;height:15px;cursor:pointer;accent-color:var(--blue);">`;
-    html += `<span style="font-size:0.75rem;font-weight:800;color:var(--text0);line-height:1.2;">${nick}</span>`;
+    html += `<span style="font-size:0.75rem;font-weight:800;color:var(--text0);line-height:1.2;" title="${nick}">${displayLabel}</span>`;
     html += `</label>`;
     systems.forEach((sysName, sysIdx) => {
       const exKey = nick + ':' + sysName;
@@ -5686,16 +5739,20 @@ function renderSystemSelectorPanel() {
     html += `</div>`;
   });
   html += '</div>';
-  // v23.2 — month-stepper buttons below the panel
-  html += `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;">`;
-  html += `<button onclick="stepDailyMonth('dash-daily-month-mode','dash-daily-month-select',-1,renderDashboard)" title="Previous month" style="padding:5px 14px;border-radius:6px;border:1.5px solid var(--blue);background:var(--bg);color:var(--blue);font-size:0.95rem;font-weight:800;cursor:pointer;line-height:1;">\u2039</button>`;
-  html += `<span style="font-size:0.72rem;color:var(--text2);font-weight:600;">Month</span>`;
-  html += `<button onclick="stepDailyMonth('dash-daily-month-mode','dash-daily-month-select',+1,renderDashboard)" title="Next month" style="padding:5px 14px;border-radius:6px;border:1.5px solid var(--blue);background:var(--bg);color:var(--blue);font-size:0.95rem;font-weight:800;cursor:pointer;line-height:1;">\u203a</button>`;
+  // v23.3 — privacy toggle below the panel
+  html += `<div style="display:flex;align-items:center;gap:10px;padding:4px 0 6px 0;">`;
+  html += `<span style="font-size:0.7rem;color:var(--text2);font-weight:600;">Display:</span>`;
+  html += `<button onclick="setDashLabelMode('id')" style="padding:4px 12px;border-radius:5px;font-size:0.7rem;font-weight:700;cursor:pointer;border:1.5px solid ${dashLabelMode==='id'?'var(--blue)':'var(--border)'};background:${dashLabelMode==='id'?'var(--blue)':'var(--bg)'};color:${dashLabelMode==='id'?'#fff':'var(--text2)'};">Account ID</button>`;
+  html += `<button onclick="setDashLabelMode('name')" style="padding:4px 12px;border-radius:5px;font-size:0.7rem;font-weight:700;cursor:pointer;border:1.5px solid ${dashLabelMode==='name'?'var(--blue)':'var(--border)'};background:${dashLabelMode==='name'?'var(--blue)':'var(--bg)'};color:${dashLabelMode==='name'?'#fff':'var(--text2)'};">Account Name</button>`;
   html += `</div>`;
   container.innerHTML = html;
 }
 
-// v23.2 — toggle uses nick:algo key for per-account independence
+function setDashLabelMode(mode) {
+  dashLabelMode = mode;
+  renderSystemSelectorPanel();
+}
+
 function toggleDashSystem(nick, name, checked) {
   const key = nick + ':' + name;
   if (checked) dashExcludedSystems.delete(key);
