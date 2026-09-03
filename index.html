@@ -2,6 +2,20 @@
 ==========================================================
   SKVK TRADING JOURNAL — VERSION HISTORY
 ==========================================================
+  v23.2 | 2026-09-03 | (1) BUGFIX: shared-system checkbox cross-talk — exclusion key
+         |            | changed from plain algo_name to 'nickname:algo_name' pair so each
+         |            | account's checkboxes are fully independent. Two accounts trading
+         |            | the same algo no longer sync each other's toggles.
+         |            | (2) MONTH-STEPPER ‹/› buttons duplicated below the system selector
+         |            | panel for quick month navigation without scrolling.
+         |            | (3) SHORT-FORM underlying labels in the selector panel: NIFTY→NF,
+         |            | BANKNIFTY→BNF, SENSEX→SX, FINNIFTY→FNF, MIDCPNIFTY→MC, etc.
+         |            | Customizable from App Settings; persisted at
+         |            | journal/settings/underlying_short.
+         |            | (4) App Settings "Underlying Colors" renamed to "Underlying
+         |            | Settings" — each underlying now has a color picker + a short-form
+         |            | text input side by side.
+==========================================================
   v23.1 | 2026-09-03 | SYSTEM SELECTOR PANEL fixes:
          |            | (1) BUGFIX: missing space between 'checked' and 'onchange' in
          |            | checkbox templates caused 'checkedonchange' — browser ignored
@@ -1010,7 +1024,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>SKVK Trading Journal v23.1</title>
+<title>SKVK Trading Journal v23.2</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -1969,7 +1983,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div class="login-logo">📋</div>
     <div class="login-title">
       SKVK Trading Journal
-      <span class="login-vbadge">v23.1</span>
+      <span class="login-vbadge">v23.2</span>
     </div>
     <div class="login-sub">Sign in with your authorised Google account to access the journal.</div>
     <button class="google-signin-btn" id="googleSignInBtn" onclick="signInWithGoogle()">
@@ -2009,7 +2023,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
         <i class="ti ti-chart-candle brand-icon"></i>
         <span class="brand-skvk">SKVK</span>
         <span class="brand-appname">Trading Journal</span>
-        <span class="brand-vbadge">v23.1</span>
+        <span class="brand-vbadge">v23.2</span>
       </div>
     </div>
     <div id="topbar-right-wrap">
@@ -3058,12 +3072,12 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
           <div class="loading"><div class="spinner"></div> Loading…</div>
         </div>
         <hr style="border:none;border-top:1px solid var(--border);margin:16px 0;">
-        <!-- v22.8 Underlying Colors -->
+        <!-- v23.2 Underlying Settings (color + short form) -->
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
           <span style="font-size:1.1rem;">🎨</span>
           <div>
-            <div style="font-size:0.85rem;font-weight:700;color:var(--text0);">Underlying Colors</div>
-            <div style="font-size:0.72rem;color:var(--text2);margin-top:2px;">Customize the color for each underlying index — used in the system selector panel</div>
+            <div style="font-size:0.85rem;font-weight:700;color:var(--text0);">Underlying Settings</div>
+            <div style="font-size:0.72rem;color:var(--text2);margin-top:2px;">Customize the color and short-form label for each underlying index</div>
           </div>
         </div>
         <div id="settings-underlying-colors"></div>
@@ -4933,6 +4947,12 @@ function startListeners() {
     renderSystemSelectorPanel();
     renderUnderlyingColorsSettings();
   });
+  // v23.2 — underlying short-form labels
+  db.ref('journal/settings/underlying_short').on('value', snap => {
+    underlyingShorts = snap.val() || {};
+    renderSystemSelectorPanel();
+    renderUnderlyingColorsSettings();
+  });
 }
 
 function refreshAll() {
@@ -5592,13 +5612,23 @@ function getUnderlyingColor(underlying) {
   return underlyingColors[underlying] || DEFAULT_UNDERLYING_COLORS[underlying] || '#6b7280';
 }
 
+// v23.2 — short-form labels (customizable from App Settings)
+const DEFAULT_UNDERLYING_SHORTS = {
+  'NIFTY':'NF','BANKNIFTY':'BNF','FINNIFTY':'FNF','MIDCPNIFTY':'MC',
+  'SENSEX':'SX','BANKEX':'BKX','GOLD':'GLD','SILVER':'SLV',
+  'CRUDEOIL':'CRD','MULTI':'MUL'
+};
+let underlyingShorts = {};
+function getUnderlyingShort(underlying) {
+  return underlyingShorts[underlying] || DEFAULT_UNDERLYING_SHORTS[underlying] || underlying;
+}
+
 // Account background color palette (rotating, structural — distinct from underlying semantic colors)
 const ACCT_BG_COLORS = ['#e8f0fe','#e6f7f1','#f3e8ff','#fef3c7','#fee2e2','#e0f2fe','#f0fdf4','#fdf2f8','#ecfeff','#fff7ed'];
 
 function renderSystemSelectorPanel() {
   const container = document.getElementById('dash-system-selector');
   if (!container) return;
-  // v23.0 — group by RAW NICKNAME via getNick()
   const nickSystems = {};
   const nickCids = {};
   const junk = new Set(['tradetron','quantleap','quantiply','zebu','upstox','']);
@@ -5611,7 +5641,6 @@ function renderSystemSelectorPanel() {
     nickSystems[nick].add(t.algo_name);
     nickCids[nick].add(cid);
   });
-  // Broker-ordered: Zebu \u2192 IIFL \u2192 Shoonya \u2192 others
   const brokerOrder = (nick) => {
     const n = nick.toUpperCase();
     if (n.startsWith('ZEBU')) return '0_' + n;
@@ -5623,7 +5652,7 @@ function renderSystemSelectorPanel() {
   };
   const nicks = Object.keys(nickSystems).sort((a, b) => brokerOrder(a).localeCompare(brokerOrder(b)));
   if (!nicks.length) {
-    container.innerHTML = '<div style="padding:14px;color:var(--text3);font-size:0.82rem;">No account-system data yet \u2014 upload trade reports to populate this panel.</div>';
+    container.innerHTML = '<div style="padding:14px;color:var(--text3);font-size:0.82rem;">No account-system data yet.</div>';
     return;
   }
   window._dashNickCids = nickCids;
@@ -5631,37 +5660,46 @@ function renderSystemSelectorPanel() {
   nicks.forEach((nick, idx) => {
     const systems = [...nickSystems[nick]].sort();
     const bg = ACCT_BG_COLORS[idx % ACCT_BG_COLORS.length];
-    const allChecked = systems.every(s => !dashExcludedSystems.has(s));
+    // v23.2 — checked state uses nick:algo key
+    const allChecked = systems.every(s => !dashExcludedSystems.has(nick + ':' + s));
     const safeNick = nick.replace(/'/g, "\\'");
     html += `<div style="min-width:210px;max-width:280px;flex-shrink:0;background:${bg};border-radius:10px;padding:10px 12px;border:1.5px solid var(--border);">`;
-    // Account header + master checkbox — v23.1: space before onchange
     html += `<label style="display:flex;align-items:center;gap:7px;cursor:pointer;margin-bottom:7px;padding-bottom:6px;border-bottom:1.5px solid var(--border);">`;
     html += `<input type="checkbox" ${allChecked ? 'checked ' : ''}onchange="toggleDashAccount('${safeNick}',this.checked)" style="width:15px;height:15px;cursor:pointer;accent-color:var(--blue);">`;
     html += `<span style="font-size:0.75rem;font-weight:800;color:var(--text0);line-height:1.2;">${nick}</span>`;
     html += `</label>`;
-    // Systems — v23.1: full name "S1 - systemname", truncated with ellipsis, hover for full
     systems.forEach((sysName, sysIdx) => {
-      const checked = !dashExcludedSystems.has(sysName);
+      const exKey = nick + ':' + sysName;
+      const checked = !dashExcludedSystems.has(exKey);
       const meta = algoMeta[sysName] || algoMeta[safeKey(sysName)] || {};
       const underlying = meta.underlying || guessUnderlying(sysName);
       const color = getUnderlyingColor(underlying);
+      const short = getUnderlyingShort(underlying);
       const safeName = sysName.replace(/'/g, "\\'");
-      html += `<label title="${sysName}" style="display:flex;align-items:center;gap:6px;cursor:pointer;margin-bottom:4px;${checked ? '' : 'opacity:0.4;'}">`;
-      html += `<input type="checkbox" ${checked ? 'checked ' : ''}onchange="toggleDashSystem('${safeName}',this.checked)" style="width:14px;height:14px;cursor:pointer;accent-color:${color};flex-shrink:0;">`;
+      html += `<label title="${sysName}" style="display:flex;align-items:center;gap:5px;cursor:pointer;margin-bottom:4px;${checked ? '' : 'opacity:0.4;'}">`;
+      html += `<input type="checkbox" ${checked ? 'checked ' : ''}onchange="toggleDashSystem('${safeNick}','${safeName}',this.checked)" style="width:14px;height:14px;cursor:pointer;accent-color:${color};flex-shrink:0;">`;
       html += `<span style="font-size:0.72rem;font-weight:700;color:${color};white-space:nowrap;">S${sysIdx + 1}</span>`;
-      html += `<span style="font-size:0.56rem;color:${color};font-weight:600;white-space:nowrap;">${underlying}</span>`;
+      html += `<span style="font-size:0.56rem;color:${color};font-weight:700;white-space:nowrap;">${short}</span>`;
       html += `<span style="font-size:0.58rem;color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:140px;">${sysName}</span>`;
       html += `</label>`;
     });
     html += `</div>`;
   });
   html += '</div>';
+  // v23.2 — month-stepper buttons below the panel
+  html += `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;">`;
+  html += `<button onclick="stepDailyMonth('dash-daily-month-mode','dash-daily-month-select',-1,renderDashboard)" title="Previous month" style="padding:5px 14px;border-radius:6px;border:1.5px solid var(--blue);background:var(--bg);color:var(--blue);font-size:0.95rem;font-weight:800;cursor:pointer;line-height:1;">\u2039</button>`;
+  html += `<span style="font-size:0.72rem;color:var(--text2);font-weight:600;">Month</span>`;
+  html += `<button onclick="stepDailyMonth('dash-daily-month-mode','dash-daily-month-select',+1,renderDashboard)" title="Next month" style="padding:5px 14px;border-radius:6px;border:1.5px solid var(--blue);background:var(--bg);color:var(--blue);font-size:0.95rem;font-weight:800;cursor:pointer;line-height:1;">\u203a</button>`;
+  html += `</div>`;
   container.innerHTML = html;
 }
 
-function toggleDashSystem(name, checked) {
-  if (checked) dashExcludedSystems.delete(name);
-  else dashExcludedSystems.add(name);
+// v23.2 — toggle uses nick:algo key for per-account independence
+function toggleDashSystem(nick, name, checked) {
+  const key = nick + ':' + name;
+  if (checked) dashExcludedSystems.delete(key);
+  else dashExcludedSystems.add(key);
   renderSystemSelectorPanel();
   renderDashFiltered();
 }
@@ -5673,7 +5711,11 @@ function toggleDashAccount(nick, checked) {
     if (t.archived || isSystemArchived(t.algo_name)) return;
     if (cids.has(t.client_id)) systems.add(t.algo_name);
   });
-  systems.forEach(s => { if (checked) dashExcludedSystems.delete(s); else dashExcludedSystems.add(s); });
+  systems.forEach(s => {
+    const key = nick + ':' + s;
+    if (checked) dashExcludedSystems.delete(key);
+    else dashExcludedSystems.add(key);
+  });
   renderSystemSelectorPanel();
   renderDashFiltered();
 }
@@ -5683,7 +5725,13 @@ let dashDailyRows = [], dashDailyPageNum = 0;
 let capitalBasket = {}; // basket-wise capital: {basketName: {YYYY-MM: amount}}
 
 function renderDashboard() {
-  const tr = allTrades.filter(t=>!t.archived && !isSystemArchived(t.algo_name) && (pnlDate(t)||t.entry_date||'').startsWith(currentYear));
+  const tr = allTrades.filter(t=>{
+    if (t.archived || isSystemArchived(t.algo_name)) return false;
+    if (!(pnlDate(t)||t.entry_date||'').startsWith(currentYear)) return false;
+    if (dashExcludedSystems.size === 0) return true;
+    const nick = getNick(t.client_id) || t.client_id;
+    return !dashExcludedSystems.has(nick + ':' + t.algo_name);
+  });
   const total = tr.reduce((s,t)=>s+(t.pnl||0),0);
   const yearStart = `${currentYear}-01-01`;
   const today = new Date().toISOString().slice(0,10);
@@ -5728,7 +5776,12 @@ function renderDashFiltered() {
   const mMap = {};
   fyMonthsDash.forEach(k=>mMap[k]=0);
   // v22.8 — trFY uses the same excluded-systems filter as getDashFilteredTrades, but without the year clip
-  let trFY = allTrades.filter(t=>!t.archived && !isSystemArchived(t.algo_name) && !dashExcludedSystems.has(t.algo_name));
+  let trFY = allTrades.filter(t=>{
+    if (t.archived || isSystemArchived(t.algo_name)) return false;
+    if (dashExcludedSystems.size === 0) return true;
+    const nick = getNick(t.client_id) || t.client_id;
+    return !dashExcludedSystems.has(nick + ':' + t.algo_name);
+  });
   trFY.forEach(t=>{const ym=(pnlDate(t)||'').slice(0,7);if(fyMonthsDash.includes(ym))mMap[ym]=(mMap[ym]||0)+(t.pnl||0);});
 
   // Period toggle (All Time / FY 2026-27) for Live Performance, Daily P&L table, Equity/Drawdown
@@ -5848,10 +5901,14 @@ function populateDashSelectors() {
 }
 
 function getDashFilteredTrades() {
-  // v22.8 — filter by excluded systems from the account-grouped selector panel
-  return allTrades.filter(t=>!t.archived && !isSystemArchived(t.algo_name)
-    && !dashExcludedSystems.has(t.algo_name)
-    && (pnlDate(t)||t.entry_date||'').startsWith(currentYear));
+  // v23.2 — exclusion keyed by 'nick:algo_name' for per-account independence
+  return allTrades.filter(t=>{
+    if (t.archived || isSystemArchived(t.algo_name)) return false;
+    if (!(pnlDate(t)||t.entry_date||'').startsWith(currentYear)) return false;
+    if (dashExcludedSystems.size === 0) return true;
+    const nick = getNick(t.client_id) || t.client_id;
+    return !dashExcludedSystems.has(nick + ':' + t.algo_name);
+  });
 }
 
 function renderDashHeatmap() {
@@ -8840,15 +8897,18 @@ function renderUnderlyingColorsSettings() {
   container.innerHTML = `<div style="display:flex;gap:10px;flex-wrap:wrap;">` +
     sorted.map(u => {
       const color = getUnderlyingColor(u);
-      return `<div style="display:flex;align-items:center;gap:8px;padding:6px 12px;background:var(--bg2);border-radius:8px;border:1px solid var(--border);cursor:pointer;transition:border-color 0.15s,box-shadow 0.15s;"
-        onmouseenter="this.style.borderColor='var(--blue)';this.style.boxShadow='0 0 0 2px rgba(37,99,235,0.18)'"
-        onmouseleave="this.style.borderColor='var(--border)';this.style.boxShadow='none'"
-        onclick="this.querySelector('input[type=color]').click()">
-        <div style="position:relative;width:28px;height:24px;">
-          <input type="color" value="${color}" onchange="saveUnderlyingColor('${u}',this.value);event.stopPropagation()" onclick="event.stopPropagation()" style="width:28px;height:24px;border:1.5px solid var(--border);border-radius:4px;cursor:pointer;padding:0;">
+      const short = getUnderlyingShort(u);
+      return `<div style="display:flex;align-items:center;gap:8px;padding:6px 12px;background:var(--bg2);border-radius:8px;border:1px solid var(--border);transition:border-color 0.15s;"
+        onmouseenter="this.style.borderColor='var(--blue)'"
+        onmouseleave="this.style.borderColor='var(--border)'">
+        <div style="position:relative;width:28px;height:24px;cursor:pointer;" onclick="this.querySelector('input').click()">
+          <input type="color" value="${color}" onchange="saveUnderlyingColor('${u}',this.value)" onclick="event.stopPropagation()" style="width:28px;height:24px;border:1.5px solid var(--border);border-radius:4px;cursor:pointer;padding:0;">
           <span style="position:absolute;bottom:-1px;right:-3px;font-size:0.55rem;pointer-events:none;">✏️</span>
         </div>
-        <span style="font-size:0.78rem;font-weight:700;color:var(--text0);">${u}</span>
+        <span style="font-size:0.78rem;font-weight:700;color:var(--text0);min-width:70px;">${u}</span>
+        <input type="text" value="${short}" maxlength="5" onchange="saveUnderlyingShort('${u}',this.value)"
+          style="width:42px;padding:3px 6px;border:1.5px solid var(--border);border-radius:5px;font-size:0.75rem;font-weight:700;text-align:center;font-family:var(--font);color:${color};background:var(--bg);outline:none;"
+          title="Short-form label for ${u}">
       </div>`;
     }).join('') + `</div>`;
 }
@@ -8858,6 +8918,14 @@ async function saveUnderlyingColor(underlying, color) {
   renderSystemSelectorPanel();
   renderUnderlyingColorsSettings();
   toast(underlying + ' color updated', 'success');
+}
+async function saveUnderlyingShort(underlying, short) {
+  short = (short || '').trim().toUpperCase() || underlying;
+  underlyingShorts[underlying] = short;
+  if (db) await db.ref('journal/settings/underlying_short/' + safeKey(underlying)).set(short);
+  renderSystemSelectorPanel();
+  renderUnderlyingColorsSettings();
+  toast(underlying + ' short form → ' + short, 'success');
 }
 
 function populateAlgoDropdowns() {
