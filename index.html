@@ -2,7 +2,11 @@
 ==========================================================
   SKVK TRADING JOURNAL — VERSION HISTORY
 ==========================================================
-  v22.9 | 2026-09-03 | SYSTEM SELECTOR PANEL improvements:
+  v23.0 | 2026-09-03 | SYSTEM SELECTOR PANEL improvements:
+         |            | (1) Columns grouped by RAW NICKNAME via getNick() — not
+         |            | getClientLabel() which appends (client_id) and breaks merging.
+         |            | IIFL 43143279 + IIFL Capital both return 'IIFL_SIVA' from getNick()
+         |            | and now correctly merge into one column.
          |            | (1) Columns now grouped by NICKNAME instead of raw client_id,
          |            | so accounts sharing a nickname (e.g. IIFL 43143279 + IIFL Capital
          |            | both nicknamed IIFL_SIVA) merge into one column. toggleDashAccount
@@ -990,7 +994,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>SKVK Trading Journal v22.9</title>
+<title>SKVK Trading Journal v23.0</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -1949,7 +1953,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div class="login-logo">📋</div>
     <div class="login-title">
       SKVK Trading Journal
-      <span class="login-vbadge">v22.9</span>
+      <span class="login-vbadge">v23.0</span>
     </div>
     <div class="login-sub">Sign in with your authorised Google account to access the journal.</div>
     <button class="google-signin-btn" id="googleSignInBtn" onclick="signInWithGoogle()">
@@ -1989,7 +1993,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
         <i class="ti ti-chart-candle brand-icon"></i>
         <span class="brand-skvk">SKVK</span>
         <span class="brand-appname">Trading Journal</span>
-        <span class="brand-vbadge">v22.9</span>
+        <span class="brand-vbadge">v23.0</span>
       </div>
     </div>
     <div id="topbar-right-wrap">
@@ -5578,20 +5582,21 @@ const ACCT_BG_COLORS = ['#e8f0fe','#e6f7f1','#f3e8ff','#fef3c7','#fee2e2','#e0f2
 function renderSystemSelectorPanel() {
   const container = document.getElementById('dash-system-selector');
   if (!container) return;
-  // v22.9 — group by NICKNAME (merges client_ids sharing a nickname)
-  const nickSystems = {};
-  const nickCids = {};
+  // v22.9 — group by RAW NICKNAME via getNick() (not getClientLabel which appends client_id).
+  // This correctly merges e.g. IIFL 43143279 + IIFL Capital → both getNick()='IIFL_SIVA' → one column.
+  const nickSystems = {};   // { rawNick: Set of algo_names }
+  const nickCids = {};      // { rawNick: Set of client_ids }
   const junk = new Set(['tradetron','quantleap','quantiply','zebu','upstox','']);
   allTrades.forEach(t => {
     if (t.archived || isSystemArchived(t.algo_name)) return;
     const cid = t.client_id;
     if (!cid || junk.has(cid.toLowerCase())) return;
-    const nick = getClientLabel(cid);
+    const nick = getNick(cid) || cid;  // fall back to raw cid if no nickname set
     if (!nickSystems[nick]) { nickSystems[nick] = new Set(); nickCids[nick] = new Set(); }
     nickSystems[nick].add(t.algo_name);
     nickCids[nick].add(cid);
   });
-  // v22.9 — broker-ordered: Zebu → IIFL → Shoonya → others
+  // Broker-ordered: Zebu → IIFL → Shoonya → others
   const brokerOrder = (nick) => {
     const n = nick.toUpperCase();
     if (n.startsWith('ZEBU')) return '0_' + n;
@@ -5607,27 +5612,29 @@ function renderSystemSelectorPanel() {
     return;
   }
   window._dashNickCids = nickCids;
-  let html = '<div style="display:flex;gap:8px;overflow-x:auto;padding:8px 0;">';
+  let html = '<div style="display:flex;gap:10px;overflow-x:auto;padding:10px 0;">';
   nicks.forEach((nick, idx) => {
     const systems = [...nickSystems[nick]].sort();
     const bg = ACCT_BG_COLORS[idx % ACCT_BG_COLORS.length];
     const allChecked = systems.every(s => !dashExcludedSystems.has(s));
-    const safeNick = nick.replace(/'/g, "\'");
-    html += `<div style="min-width:130px;max-width:170px;flex-shrink:0;background:${bg};border-radius:10px;padding:8px 10px;border:1.5px solid var(--border);">`;
-    html += `<label style="display:flex;align-items:center;gap:6px;cursor:pointer;margin-bottom:6px;padding-bottom:5px;border-bottom:1.5px solid var(--border);">`;
-    html += `<input type="checkbox" ${allChecked?'checked':''}onchange="toggleDashAccount('${safeNick}',this.checked)" style="width:14px;height:14px;cursor:pointer;accent-color:var(--blue);">`;
-    html += `<span style="font-size:0.68rem;font-weight:800;color:var(--text0);line-height:1.15;">${nick}</span>`;
+    const safeNick = nick.replace(/'/g, "\\'");
+    html += `<div style="min-width:155px;max-width:200px;flex-shrink:0;background:${bg};border-radius:10px;padding:10px 12px;border:1.5px solid var(--border);">`;
+    // Account header + master checkbox
+    html += `<label style="display:flex;align-items:center;gap:7px;cursor:pointer;margin-bottom:7px;padding-bottom:6px;border-bottom:1.5px solid var(--border);">`;
+    html += `<input type="checkbox" ${allChecked?'checked':''}onchange="toggleDashAccount('${safeNick}',this.checked)" style="width:15px;height:15px;cursor:pointer;accent-color:var(--blue);">`;
+    html += `<span style="font-size:0.75rem;font-weight:800;color:var(--text0);line-height:1.2;">${nick}</span>`;
     html += `</label>`;
+    // Systems — compact with hover tooltip for full name
     systems.forEach((sysName, sysIdx) => {
       const checked = !dashExcludedSystems.has(sysName);
       const meta = algoMeta[sysName] || algoMeta[safeKey(sysName)] || {};
       const underlying = meta.underlying || guessUnderlying(sysName);
       const color = getUnderlyingColor(underlying);
-      const safeName = sysName.replace(/'/g, "\'");
-      html += `<label title="${sysName}" style="display:flex;align-items:center;gap:5px;cursor:pointer;margin-bottom:3px;${checked?'':'opacity:0.4;'}">`;
-      html += `<input type="checkbox" ${checked?'checked':''}onchange="toggleDashSystem('${safeName}',this.checked)" style="width:13px;height:13px;cursor:pointer;accent-color:${color};flex-shrink:0;">`;
-      html += `<span style="font-size:0.74rem;font-weight:700;color:${color};">S${sysIdx+1}</span>`;
-      html += `<span style="font-size:0.54rem;color:${color};font-weight:600;">${underlying}</span>`;
+      const safeName = sysName.replace(/'/g, "\\'");
+      html += `<label title="${sysName}" style="display:flex;align-items:center;gap:6px;cursor:pointer;margin-bottom:4px;${checked?'':'opacity:0.4;'}">`;
+      html += `<input type="checkbox" ${checked?'checked':''}onchange="toggleDashSystem('${safeName}',this.checked)" style="width:14px;height:14px;cursor:pointer;accent-color:${color};flex-shrink:0;">`;
+      html += `<span style="font-size:0.82rem;font-weight:700;color:${color};">S${sysIdx+1}</span>`;
+      html += `<span style="font-size:0.62rem;color:${color};font-weight:600;">${underlying}</span>`;
       html += `</label>`;
     });
     html += `</div>`;
@@ -5643,7 +5650,7 @@ function toggleDashSystem(name, checked) {
   renderDashFiltered();
 }
 function toggleDashAccount(nick, checked) {
-  // v22.9 — toggle by nickname (may span multiple client_ids)
+  // v22.9 — toggle by raw nickname (may span multiple client_ids)
   const cids = window._dashNickCids && window._dashNickCids[nick];
   if (!cids) return;
   const systems = new Set();
