@@ -2,6 +2,28 @@
 ==========================================================
   SKVK TRADING JOURNAL — VERSION HISTORY
 ==========================================================
+  v22.6 | 2026-09-02 | NEW ASP: Quantiply added as its own upload platform. Upload page
+         |            | now has three ASP buttons — 📊 Quantleap · 📈 Quantiply · ⚡
+         |            | Tradetron — and routing is DETERMINISTIC per button (no more
+         |            | header-guessing): Quantiply button force-routes to parseQuantiply
+         |            | (algo_name/profit_loss format, e.g. Finvasia & IIFL reports) and
+         |            | stamps source:'quantiply'; Quantleap button now handles Zebu
+         |            | positions CSV only (strategy_name/position_id → parseZebu). If a
+         |            | file is dropped under the wrong button, a toast nudges the user
+         |            | to the correct one. page-subtitle + drop-hints updated.
+         |            | parseQuantiply OPEN-LEG handling now matches Zebu: a leg is kept
+         |            | only when fully CLOSED (has entry_date AND an exit_date/exit_price).
+         |            | Entered-but-still-open legs that carry a running/unrealized P&L
+         |            | are SKIPPED, then ingested normally (booked to entry date) once a
+         |            | later report closes them — so the current day's row stays partial,
+         |            | exactly like Zebu. Two parser fixes: is_re_entry now recognises
+         |            | 'RE-ENTRY' (not just literal 'true'); trade-level underlying is
+         |            | canonicalised via normUnderlying() ('NIFTY 50'→NIFTY, plus
+         |            | BANKNIFTY/FINNIFTY/MIDCPNIFTY/SENSEX/BANKEX/GOLD/SILVER/CRUDEOIL).
+         |            | NOTE: new Quantiply accounts (Finvasia FA50324, IIFL 43143279)
+         |            | still need nickname + holder mapping set in App Settings, and
+         |            | their basket/lots in Allocations, to feed capital/tax analytics.
+==========================================================
   v22.5 | 2026-07-14 | P&L DATE ATTRIBUTION switched to Zebu's entry-date convention:
          |            | pnlDate() now books every trade's P&L to its ENTRY date instead
          |            | of its exit date. This propagates everywhere (Daily Performance
@@ -907,7 +929,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>SKVK Trading Journal v22.5</title>
+<title>SKVK Trading Journal v22.6</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -1866,7 +1888,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div class="login-logo">📋</div>
     <div class="login-title">
       SKVK Trading Journal
-      <span class="login-vbadge">v22.5</span>
+      <span class="login-vbadge">v22.6</span>
     </div>
     <div class="login-sub">Sign in with your authorised Google account to access the journal.</div>
     <button class="google-signin-btn" id="googleSignInBtn" onclick="signInWithGoogle()">
@@ -1906,7 +1928,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
         <i class="ti ti-chart-candle brand-icon"></i>
         <span class="brand-skvk">SKVK</span>
         <span class="brand-appname">Trading Journal</span>
-        <span class="brand-vbadge">v22.5</span>
+        <span class="brand-vbadge">v22.6</span>
       </div>
     </div>
     <div id="topbar-right-wrap">
@@ -2437,7 +2459,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
   <div class="page-header">
     <div>
       <div class="page-title">Upload Reports</div>
-      <div class="page-subtitle">Quantleap CSV · Zebu Positions CSV · Tradetron CSV</div>
+      <div class="page-subtitle">Quantleap CSV · Quantiply CSV · Zebu Positions CSV · Tradetron CSV</div>
     </div>
   </div>
 
@@ -2450,6 +2472,10 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
       <button id="asp-btn-quantleap" onclick="selectASP('quantleap')"
         style="padding:10px 28px;border-radius:8px;font-size:0.88rem;font-weight:700;cursor:pointer;border:2px solid var(--blue);background:var(--blue);color:#fff;transition:all 0.15s;">
         📊 Quantleap
+      </button>
+      <button id="asp-btn-quantiply" onclick="selectASP('quantiply')"
+        style="padding:10px 28px;border-radius:8px;font-size:0.88rem;font-weight:700;cursor:pointer;border:2px solid var(--border);background:var(--bg);color:var(--text1);transition:all 0.15s;">
+        📈 Quantiply
       </button>
       <button id="asp-btn-tradetron" onclick="selectASP('tradetron')"
         style="padding:10px 28px;border-radius:8px;font-size:0.88rem;font-weight:700;cursor:pointer;border:2px solid var(--border);background:var(--bg);color:var(--text1);transition:all 0.15s;">
@@ -4916,14 +4942,27 @@ async function processFile(file) {
       trades = parseTradetron(csvText, ttAlgo);
       // Override client_id with selected account
       trades.forEach(t => { t.client_id = ttAcct; });
+    } else if (currentASP === 'quantiply') {
+      // Quantiply — algo_name / profit_loss format (Finvasia, IIFL, …)
+      const looksQuantiply = header.includes('algo_name') && header.includes('profit_loss');
+      const looksZebu      = header.includes('strategy_name') && header.includes('position_id');
+      if (!looksQuantiply) {
+        if (looksZebu) toast('This looks like a Zebu positions file — use the 📊 Quantleap button for it.', 'error');
+        else           toast('File does not look like a Quantiply report — expected columns: algo_name, profit_loss', 'error');
+        setProgress(false); return;
+      }
+      trades = parseQuantiply(csvText);
     } else {
-      // Quantleap / Zebu auto-detect
-      if (header.includes('algo_name') && header.includes('profit_loss')) {
-        trades = parseQuantiply(csvText);
-      } else if (header.includes('strategy_name') && header.includes('position_id')) {
+      // Quantleap button → Zebu positions CSV (strategy_name / position_id)
+      const looksZebu      = header.includes('strategy_name') && header.includes('position_id');
+      const looksQuantiply = header.includes('algo_name') && header.includes('profit_loss');
+      if (looksZebu) {
         trades = parseZebu(csvText);
+      } else if (looksQuantiply) {
+        toast('This looks like a Quantiply report — use the 📈 Quantiply button for it.', 'error');
+        setProgress(false); return;
       } else {
-        toast('Unknown format in "' + file.name + '" — expected Quantleap, Zebu or Zebu Tradebook', 'error');
+        toast('Unknown format in "' + file.name + '" — expected a Zebu positions CSV', 'error');
         setProgress(false); return;
       }
     }
@@ -5077,12 +5116,16 @@ function parseQuantiply(csv) {
       ? (r.action||'').toUpperCase()
       : (r.entry_order||r.action||'').toUpperCase();
 
+    // is_re_entry: accept 'RE-ENTRY' / 'reentry' / true / yes / 1  (v22.6)
+    const reRaw = (r.is_re_entry||'').toString().trim().toLowerCase();
+    const isReEntry = ['true','yes','1'].includes(reRaw) || reRaw.replace(/[^a-z]/g,'').includes('reentry');
+
     return {
       source:      'quantiply',
       broker:      (r.broker||'').toLowerCase(),
       client_id:   r.client_id||'',
       algo_name:   algoName,
-      underlying:  r.underlying||'',
+      underlying:  normUnderlying(r.underlying, algoName),   // v22.6: 'NIFTY 50'→NIFTY etc.
       symbol:      r.symbol||'',
       option_type: optType(r.symbol||''),
       action:      action,
@@ -5096,10 +5139,15 @@ function parseQuantiply(csv) {
       exit_reason: exitReason,
       pnl:         pnl,
       expiry_date: normDate(r.expiry_date||''),
-      is_re_entry: (r.is_re_entry||'').toLowerCase()==='true',
+      is_re_entry: isReEntry,
       created_at:  new Date().toISOString()
     };
-  }).filter(t => t.entry_date);
+  })
+  // v22.6 — Zebu-match: keep only FULLY CLOSED legs. A leg is closed when it has an
+  // entry_date AND an exit (exit_date or a non-zero exit_price). Entered-but-open legs
+  // carry a running/unrealized P&L and are SKIPPED here — they'll be ingested normally
+  // (booked to their entry date) once a later report closes them, so the day stays partial.
+  .filter(t => t.entry_date && (t.exit_date || t.exit_price));
 }
 
 function parseZebu(csv) {
@@ -5355,6 +5403,23 @@ function normExit(r) {
   return r||'OTHER';
 }
 function guessUnderlying(a='') { a=a.toUpperCase(); return a.startsWith('NF_')?'NIFTY':a.startsWith('BNF_')?'BANKNIFTY':a.startsWith('SX_')?'SENSEX':a.includes('GOLD')?'GOLD':a.includes('SILVER')?'SILVER':'MULTI'; }
+// v22.6 — canonicalise a raw underlying label (e.g. 'NIFTY 50' → 'NIFTY').
+// BANKNIFTY/FINNIFTY/MIDCPNIFTY are checked before the plain NIFTY match (they contain 'NIFTY').
+// Falls back to guessUnderlying(algo) when the raw field is blank.
+function normUnderlying(u, algo) {
+  u = (u||'').toString().toUpperCase().replace(/\s+/g,'');
+  if (!u) return guessUnderlying(algo||'');
+  if (u.includes('BANKNIFTY') || u==='NIFTYBANK') return 'BANKNIFTY';
+  if (u.includes('FINNIFTY'))                     return 'FINNIFTY';
+  if (u.includes('MIDCPNIFTY')||u.includes('MIDCAPNIFTY')||u.includes('MIDCAP')) return 'MIDCPNIFTY';
+  if (u.includes('BANKEX'))                       return 'BANKEX';
+  if (u.includes('SENSEX'))                       return 'SENSEX';
+  if (u.includes('NIFTY'))                        return 'NIFTY';
+  if (u.includes('GOLD'))                         return 'GOLD';
+  if (u.includes('SILVER'))                       return 'SILVER';
+  if (u.includes('CRUDE'))                        return 'CRUDEOIL';
+  return u;
+}
 function guessType(a='') { a=a.toUpperCase(); return a.includes('0DTE')?'0DTE':a.includes('1DTE')?'1DTE':a.includes('HEDGE')?'HEDGE':'POSITIONAL'; }
 function safeKey(s) { return s.replace(/[^a-z0-9_]/gi,'_'); }
 
@@ -8677,20 +8742,23 @@ let currentASP = 'quantleap';
 
 function selectASP(asp) {
   currentASP = asp;
-  const btnQ = document.getElementById('asp-btn-quantleap');
-  const btnT = document.getElementById('asp-btn-tradetron');
+  const btnQ  = document.getElementById('asp-btn-quantleap');
+  const btnQi = document.getElementById('asp-btn-quantiply');
+  const btnT  = document.getElementById('asp-btn-tradetron');
   const ttWrap = document.getElementById('tradetron-algo-wrap');
   const upWrap = document.getElementById('asp-upload-wrap');
   const hint  = document.getElementById('upload-zone-hint');
 
-  if (asp === 'quantleap') {
-    btnQ.style.background = 'var(--blue)'; btnQ.style.color = '#fff'; btnQ.style.borderColor = 'var(--blue)';
-    btnT.style.background = 'var(--bg)';   btnT.style.color = 'var(--text1)'; btnT.style.borderColor = 'var(--border)';
-    ttWrap.style.display = 'none';
-    if (hint) hint.textContent = 'Supports Quantleap & Zebu CSV · Also accepts XLSX files';
-  } else {
-    btnT.style.background = 'var(--blue)'; btnT.style.color = '#fff'; btnT.style.borderColor = 'var(--blue)';
-    btnQ.style.background = 'var(--bg)';   btnQ.style.color = 'var(--text1)'; btnQ.style.borderColor = 'var(--border)';
+  // Style all three buttons: highlight the active one, dim the rest
+  [['quantleap',btnQ], ['quantiply',btnQi], ['tradetron',btnT]].forEach(([key, btn]) => {
+    if (!btn) return;
+    const active = (asp === key);
+    btn.style.background  = active ? 'var(--blue)' : 'var(--bg)';
+    btn.style.color       = active ? '#fff' : 'var(--text1)';
+    btn.style.borderColor = active ? 'var(--blue)' : 'var(--border)';
+  });
+
+  if (asp === 'tradetron') {
     ttWrap.style.display = 'block';
     // Populate Basket/Group/Strategy dropdown from all 3 tiers
     const sel = document.getElementById('tradetron-algo-select');
@@ -8718,6 +8786,14 @@ function selectASP(asp) {
         accounts.map(a=>`<option value="${a}">${getClientLabel(a)}</option>`).join('');
     }
     if (hint) hint.textContent = 'Tradetron CSV export — each row will be one journal entry';
+  } else {
+    // Quantleap and Quantiply both auto-read the account from the file — no picker needed
+    ttWrap.style.display = 'none';
+    if (asp === 'quantiply') {
+      if (hint) hint.textContent = 'Quantiply report (Finvasia / IIFL …) · CSV or XLSX — open legs are skipped until closed';
+    } else {
+      if (hint) hint.textContent = 'Zebu Positions CSV · Also accepts XLSX files';
+    }
   }
   upWrap.style.display = 'block';
 }
