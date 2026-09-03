@@ -2,6 +2,22 @@
 ==========================================================
   SKVK TRADING JOURNAL — VERSION HISTORY
 ==========================================================
+  v23.1 | 2026-09-03 | SYSTEM SELECTOR PANEL fixes:
+         |            | (1) BUGFIX: missing space between 'checked' and 'onchange' in
+         |            | checkbox templates caused 'checkedonchange' — browser ignored
+         |            | both attributes, so checkboxes rendered unchecked and account
+         |            | header toggles didn't fire. Fixed in 4 spots (account header
+         |            | checked + onchange, system checkbox checked + onchange).
+         |            | (2) Full system name now displayed as "S1 - NF_ALL_CP120_…"
+         |            | instead of just "S1 NIFTY". Long names truncated with ellipsis;
+         |            | full name shown on hover (title tooltip). Underlying label
+         |            | retained next to the S-number.
+         |            | (3) Column width increased to 210–280px to fit most system names.
+         |            | (4) TOPBAR: duplicate "Last Report Update" / "Last Database
+         |            | Update" lines consolidated into a single "Last Update" line
+         |            | driven by journal/last_updated (covers both CSV + manual).
+         |            | The report-specific div is hidden; Firebase path retained.
+==========================================================
   v23.0 | 2026-09-03 | SYSTEM SELECTOR PANEL improvements:
          |            | (1) Columns grouped by RAW NICKNAME via getNick() — not
          |            | getClientLabel() which appends (client_id) and breaks merging.
@@ -994,7 +1010,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>SKVK Trading Journal v23.0</title>
+<title>SKVK Trading Journal v23.1</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -1953,7 +1969,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div class="login-logo">📋</div>
     <div class="login-title">
       SKVK Trading Journal
-      <span class="login-vbadge">v23.0</span>
+      <span class="login-vbadge">v23.1</span>
     </div>
     <div class="login-sub">Sign in with your authorised Google account to access the journal.</div>
     <button class="google-signin-btn" id="googleSignInBtn" onclick="signInWithGoogle()">
@@ -1984,7 +2000,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div id="topbar-left">
       <div id="brand-subline" style="flex-direction:column;align-items:flex-start;gap:2px;">
         <div id="db-status">● connecting…</div>
-        <div id="last-report-update-tag"></div>
+        <div id="last-report-update-tag" style="display:none;"></div>
         <div id="last-db-update-tag"></div>
       </div>
     </div>
@@ -1993,7 +2009,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
         <i class="ti ti-chart-candle brand-icon"></i>
         <span class="brand-skvk">SKVK</span>
         <span class="brand-appname">Trading Journal</span>
-        <span class="brand-vbadge">v23.0</span>
+        <span class="brand-vbadge">v23.1</span>
       </div>
     </div>
     <div id="topbar-right-wrap">
@@ -4897,7 +4913,7 @@ function startListeners() {
     const topbarEl = document.getElementById('last-db-update-tag');
     const dashEl   = document.getElementById('dash-last-updated');
     if (d && d.by) {
-      const html = `Last Database Update: <strong style="color:#fff;">${d.by}</strong> &nbsp;·&nbsp; ${d.at}`;
+      const html = `Last Update: <strong style="color:#fff;">${d.by}</strong> &nbsp;·&nbsp; ${d.at}`;
       if (topbarEl) topbarEl.innerHTML = `<span style="color:var(--text3);font-size:0.68rem;">${html}</span>`;
       if (dashEl)   dashEl.innerHTML   = `📅 ${html}`;
     }
@@ -5582,21 +5598,20 @@ const ACCT_BG_COLORS = ['#e8f0fe','#e6f7f1','#f3e8ff','#fef3c7','#fee2e2','#e0f2
 function renderSystemSelectorPanel() {
   const container = document.getElementById('dash-system-selector');
   if (!container) return;
-  // v22.9 — group by RAW NICKNAME via getNick() (not getClientLabel which appends client_id).
-  // This correctly merges e.g. IIFL 43143279 + IIFL Capital → both getNick()='IIFL_SIVA' → one column.
-  const nickSystems = {};   // { rawNick: Set of algo_names }
-  const nickCids = {};      // { rawNick: Set of client_ids }
+  // v23.0 — group by RAW NICKNAME via getNick()
+  const nickSystems = {};
+  const nickCids = {};
   const junk = new Set(['tradetron','quantleap','quantiply','zebu','upstox','']);
   allTrades.forEach(t => {
     if (t.archived || isSystemArchived(t.algo_name)) return;
     const cid = t.client_id;
     if (!cid || junk.has(cid.toLowerCase())) return;
-    const nick = getNick(cid) || cid;  // fall back to raw cid if no nickname set
+    const nick = getNick(cid) || cid;
     if (!nickSystems[nick]) { nickSystems[nick] = new Set(); nickCids[nick] = new Set(); }
     nickSystems[nick].add(t.algo_name);
     nickCids[nick].add(cid);
   });
-  // Broker-ordered: Zebu → IIFL → Shoonya → others
+  // Broker-ordered: Zebu \u2192 IIFL \u2192 Shoonya \u2192 others
   const brokerOrder = (nick) => {
     const n = nick.toUpperCase();
     if (n.startsWith('ZEBU')) return '0_' + n;
@@ -5608,7 +5623,7 @@ function renderSystemSelectorPanel() {
   };
   const nicks = Object.keys(nickSystems).sort((a, b) => brokerOrder(a).localeCompare(brokerOrder(b)));
   if (!nicks.length) {
-    container.innerHTML = '<div style="padding:14px;color:var(--text3);font-size:0.82rem;">No account-system data yet — upload trade reports to populate this panel.</div>';
+    container.innerHTML = '<div style="padding:14px;color:var(--text3);font-size:0.82rem;">No account-system data yet \u2014 upload trade reports to populate this panel.</div>';
     return;
   }
   window._dashNickCids = nickCids;
@@ -5618,23 +5633,24 @@ function renderSystemSelectorPanel() {
     const bg = ACCT_BG_COLORS[idx % ACCT_BG_COLORS.length];
     const allChecked = systems.every(s => !dashExcludedSystems.has(s));
     const safeNick = nick.replace(/'/g, "\\'");
-    html += `<div style="min-width:155px;max-width:200px;flex-shrink:0;background:${bg};border-radius:10px;padding:10px 12px;border:1.5px solid var(--border);">`;
-    // Account header + master checkbox
+    html += `<div style="min-width:210px;max-width:280px;flex-shrink:0;background:${bg};border-radius:10px;padding:10px 12px;border:1.5px solid var(--border);">`;
+    // Account header + master checkbox — v23.1: space before onchange
     html += `<label style="display:flex;align-items:center;gap:7px;cursor:pointer;margin-bottom:7px;padding-bottom:6px;border-bottom:1.5px solid var(--border);">`;
-    html += `<input type="checkbox" ${allChecked?'checked':''}onchange="toggleDashAccount('${safeNick}',this.checked)" style="width:15px;height:15px;cursor:pointer;accent-color:var(--blue);">`;
+    html += `<input type="checkbox" ${allChecked ? 'checked ' : ''}onchange="toggleDashAccount('${safeNick}',this.checked)" style="width:15px;height:15px;cursor:pointer;accent-color:var(--blue);">`;
     html += `<span style="font-size:0.75rem;font-weight:800;color:var(--text0);line-height:1.2;">${nick}</span>`;
     html += `</label>`;
-    // Systems — compact with hover tooltip for full name
+    // Systems — v23.1: full name "S1 - systemname", truncated with ellipsis, hover for full
     systems.forEach((sysName, sysIdx) => {
       const checked = !dashExcludedSystems.has(sysName);
       const meta = algoMeta[sysName] || algoMeta[safeKey(sysName)] || {};
       const underlying = meta.underlying || guessUnderlying(sysName);
       const color = getUnderlyingColor(underlying);
       const safeName = sysName.replace(/'/g, "\\'");
-      html += `<label title="${sysName}" style="display:flex;align-items:center;gap:6px;cursor:pointer;margin-bottom:4px;${checked?'':'opacity:0.4;'}">`;
-      html += `<input type="checkbox" ${checked?'checked':''}onchange="toggleDashSystem('${safeName}',this.checked)" style="width:14px;height:14px;cursor:pointer;accent-color:${color};flex-shrink:0;">`;
-      html += `<span style="font-size:0.82rem;font-weight:700;color:${color};">S${sysIdx+1}</span>`;
-      html += `<span style="font-size:0.62rem;color:${color};font-weight:600;">${underlying}</span>`;
+      html += `<label title="${sysName}" style="display:flex;align-items:center;gap:6px;cursor:pointer;margin-bottom:4px;${checked ? '' : 'opacity:0.4;'}">`;
+      html += `<input type="checkbox" ${checked ? 'checked ' : ''}onchange="toggleDashSystem('${safeName}',this.checked)" style="width:14px;height:14px;cursor:pointer;accent-color:${color};flex-shrink:0;">`;
+      html += `<span style="font-size:0.72rem;font-weight:700;color:${color};white-space:nowrap;">S${sysIdx + 1}</span>`;
+      html += `<span style="font-size:0.56rem;color:${color};font-weight:600;white-space:nowrap;">${underlying}</span>`;
+      html += `<span style="font-size:0.58rem;color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:140px;">${sysName}</span>`;
       html += `</label>`;
     });
     html += `</div>`;
@@ -5650,7 +5666,6 @@ function toggleDashSystem(name, checked) {
   renderDashFiltered();
 }
 function toggleDashAccount(nick, checked) {
-  // v22.9 — toggle by raw nickname (may span multiple client_ids)
   const cids = window._dashNickCids && window._dashNickCids[nick];
   if (!cids) return;
   const systems = new Set();
