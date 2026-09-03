@@ -2,6 +2,32 @@
 ==========================================================
   SKVK TRADING JOURNAL — VERSION HISTORY
 ==========================================================
+  v22.8 | 2026-09-03 | (A) DAILY PERFORMANCE month-stepper arrows: both the Analytics —
+         |            | Basket page and the Analytics — Account wise page now show
+         |            | ‹ prev / › next buttons alongside the existing Current Month /
+         |            | Select Month radio + dropdown. Clicking ‹ steps back one month,
+         |            | › steps forward (capped at the current month). Stepping auto-
+         |            | switches the radio to "Select Month" and shows the dropdown.
+         |            | populateMonthSelect extended to include ALL months from the
+         |            | earliest trade to the current month (cross-FY).
+         |            | (B) ACCOUNT-GROUPED SYSTEM SELECTOR replaces the Basket / Group /
+         |            | Strategy radio+dropdown on the Analytics — Basket page. New panel
+         |            | shows horizontal columns per account (distinct background shade),
+         |            | each listing its active (non-archived) systems as S1, S2, S3…
+         |            | checkboxes. Full system name shown in small font. Default = all ON;
+         |            | toggling OFF excludes that system from the ENTIRE Basket page
+         |            | (P&L table, charts, heatmap, daily table, Grand Total). Account
+         |            | header checkbox = select/deselect all systems under that account.
+         |            | System checkbox colors derived from underlying index (NIFTY = gold,
+         |            | SENSEX = blue, etc.). Capital calculations always use 'All Baskets'
+         |            | aggregate (no single-basket filter). getDashFilteredTrades() and
+         |            | renderDashFiltered() rewired to read dashExcludedSystems set.
+         |            | (C) UNDERLYING COLORS: new "Underlying Colors" settings card in
+         |            | App Settings with a color picker per underlying index. Defaults:
+         |            | NIFTY=#b8860b, SENSEX=#2563eb, BANKNIFTY=#dc2626, FINNIFTY=#059669,
+         |            | etc. Persisted to journal/settings/underlying_colors. Changes
+         |            | update the system selector panel live.
+==========================================================
   v22.7 | 2026-09-03 | (A) BUGFIX: upload / manual-save no longer throws
          |            | "currentUser is not defined". Both sites now read the signed-in
          |            | user via firebase.auth().currentUser (falling back to
@@ -950,7 +976,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>SKVK Trading Journal v22.7</title>
+<title>SKVK Trading Journal v22.8</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -1909,7 +1935,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div class="login-logo">📋</div>
     <div class="login-title">
       SKVK Trading Journal
-      <span class="login-vbadge">v22.7</span>
+      <span class="login-vbadge">v22.8</span>
     </div>
     <div class="login-sub">Sign in with your authorised Google account to access the journal.</div>
     <button class="google-signin-btn" id="googleSignInBtn" onclick="signInWithGoogle()">
@@ -1949,7 +1975,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
         <i class="ti ti-chart-candle brand-icon"></i>
         <span class="brand-skvk">SKVK</span>
         <span class="brand-appname">Trading Journal</span>
-        <span class="brand-vbadge">v22.7</span>
+        <span class="brand-vbadge">v22.8</span>
       </div>
     </div>
     <div id="topbar-right-wrap">
@@ -1995,46 +2021,12 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     </div>
     <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
       <div class="period-tabs" id="year-tabs" style="display:none;"></div>
-      <!-- Basket / Group / Strategy selector — top right -->
-      <div style="display:flex;gap:10px;align-items:stretch;">
-        <!-- Basket -->
-        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
-          <input type="radio" autocomplete="off" name="dash-sel-mode" value="basket" checked onchange="onDashSelMode()"
-            style="accent-color:var(--blue);width:14px;height:14px;flex-shrink:0;">
-          <div id="dash-basket-box" style="background:var(--blue);padding:10px 18px;border-radius:10px;box-shadow:0 2px 6px rgba(26,115,232,0.25);">
-            <div style="font-size:0.65rem;font-weight:700;color:rgba(255,255,255,0.85);letter-spacing:0.05em;margin-bottom:4px;">🧺 BASKET</div>
-            <select id="dash-basket-select" onchange="renderDashFiltered()"
-              style="padding:6px 10px;border:none;border-radius:6px;font-size:0.85rem;font-weight:600;outline:none;background:#fff;color:var(--blue);font-family:var(--font);cursor:pointer;min-width:260px;">
-              <option value="__ALL__">All Baskets</option>
-            </select>
-          </div>
-        </label>
-        <!-- Group -->
-        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
-          <input type="radio" autocomplete="off" name="dash-sel-mode" value="group" onchange="onDashSelMode()"
-            style="accent-color:#0d9488;width:14px;height:14px;flex-shrink:0;">
-          <div id="dash-group-box" style="background:#0d9488;padding:8px 14px;border-radius:10px;box-shadow:0 2px 6px rgba(13,148,136,0.25);opacity:0.5;">
-            <div style="font-size:0.65rem;font-weight:700;color:rgba(255,255,255,0.85);letter-spacing:0.05em;margin-bottom:4px;">📁 GROUP</div>
-            <select id="dash-group-select" onchange="renderDashFiltered()" disabled
-              style="padding:4px 8px;border:none;border-radius:6px;font-size:0.82rem;font-weight:600;outline:none;background:#fff;color:#0d9488;font-family:var(--font);cursor:pointer;min-width:150px;">
-              <option value="__ALL__">All Groups</option>
-            </select>
-          </div>
-        </label>
-        <!-- Strategy -->
-        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
-          <input type="radio" autocomplete="off" name="dash-sel-mode" value="algo" onchange="onDashSelMode()"
-            style="accent-color:#6366f1;width:14px;height:14px;flex-shrink:0;">
-          <div id="dash-algo-box" style="background:#6366f1;padding:8px 14px;border-radius:10px;box-shadow:0 2px 6px rgba(99,102,241,0.25);opacity:0.5;">
-            <div style="font-size:0.65rem;font-weight:700;color:rgba(255,255,255,0.85);letter-spacing:0.05em;margin-bottom:4px;">📋 STRATEGY</div>
-            <select id="dash-algo-select" onchange="renderDashFiltered()" disabled
-              style="padding:4px 8px;border:none;border-radius:6px;font-size:0.82rem;font-weight:600;outline:none;background:#fff;color:#6366f1;font-family:var(--font);cursor:pointer;min-width:150px;">
-              <option value="__ALL__">All Strategies</option>
-            </select>
-          </div>
-        </label>
-      </div>
-      <!-- Accounts Allocated (v22.5) — mirror of the Account page's Baskets Allocated panel -->
+      <!-- v22.8: Account-grouped System Selector Panel -->
+      <div id="dash-system-selector" style="width:100%;"></div>
+      <!-- Hidden fallback elements so capital functions still read '__ALL__' / 'basket' -->
+      <select id="dash-basket-select" style="display:none;"><option value="__ALL__" selected>All</option></select>
+      <input type="radio" name="dash-sel-mode" value="basket" checked style="display:none;">
+      <!-- Accounts Allocated (v22.5) -->
       <div id="dash-accounts-allocated" style="text-align:left;"></div>
     </div>
   </div>
@@ -2051,6 +2043,8 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
       <input type="radio" autocomplete="off" name="dash-daily-month-mode" value="select" onchange="onDashDailyMonthModeChange()" style="accent-color:var(--blue);width:14px;height:14px;"> Select Month
     </label>
     <select id="dash-daily-month-select" onchange="onDashDailyMonthSelectChange()" style="display:none;padding:6px 10px;border:1.5px solid var(--blue);border-radius:6px;font-size:0.82rem;outline:none;"></select>
+    <button onclick="stepDailyMonth('dash-daily-month-mode','dash-daily-month-select',-1,renderDashboard)" title="Previous month" style="padding:5px 12px;border-radius:6px;border:1.5px solid var(--blue);background:var(--bg);color:var(--blue);font-size:0.92rem;font-weight:800;cursor:pointer;line-height:1;">‹</button>
+    <button onclick="stepDailyMonth('dash-daily-month-mode','dash-daily-month-select',+1,renderDashboard)" title="Next month" style="padding:5px 12px;border-radius:6px;border:1.5px solid var(--blue);background:var(--bg);color:var(--blue);font-size:0.92rem;font-weight:800;cursor:pointer;line-height:1;">›</button>
   </div>
 
   <!-- Current Month P&L calendar -->
@@ -2268,6 +2262,8 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
         <input type="radio" autocomplete="off" name="acct-daily-month-mode" value="select" onchange="onAcctDailyMonthModeChange()" style="accent-color:var(--blue);width:14px;height:14px;"> Select Month
       </label>
       <select id="acct-daily-month-select" onchange="onAcctDailyMonthSelectChange()" style="display:none;padding:6px 10px;border:1.5px solid var(--blue);border-radius:6px;font-size:0.82rem;outline:none;"></select>
+      <button onclick="stepDailyMonth('acct-daily-month-mode','acct-daily-month-select',-1,renderAcctReport)" title="Previous month" style="padding:5px 12px;border-radius:6px;border:1.5px solid var(--blue);background:var(--bg);color:var(--blue);font-size:0.92rem;font-weight:800;cursor:pointer;line-height:1;">‹</button>
+      <button onclick="stepDailyMonth('acct-daily-month-mode','acct-daily-month-select',+1,renderAcctReport)" title="Next month" style="padding:5px 12px;border-radius:6px;border:1.5px solid var(--blue);background:var(--bg);color:var(--blue);font-size:0.92rem;font-weight:800;cursor:pointer;line-height:1;">›</button>
     </div>
 
   <!-- Current month calendar heatmap -->
@@ -3027,6 +3023,16 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
         <div id="settings-algo-list">
           <div class="loading"><div class="spinner"></div> Loading…</div>
         </div>
+        <hr style="border:none;border-top:1px solid var(--border);margin:16px 0;">
+        <!-- v22.8 Underlying Colors -->
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+          <span style="font-size:1.1rem;">🎨</span>
+          <div>
+            <div style="font-size:0.85rem;font-weight:700;color:var(--text0);">Underlying Colors</div>
+            <div style="font-size:0.72rem;color:var(--text2);margin-top:2px;">Customize the color for each underlying index — used in the system selector panel</div>
+          </div>
+        </div>
+        <div id="settings-underlying-colors"></div>
       </div>
     </div>
 
@@ -4507,14 +4513,29 @@ function fyCapitalFullyEntered(checkFn) {
   return applicableMonths.every(m => checkFn(m));
 }
 
-function populateMonthSelect(selId) {
+function populateMonthSelect(selId, preselect) {
   const sel = document.getElementById(selId);
   if (!sel) return;
   const curYM = new Date().toISOString().slice(0,7);
-  const fyKeys = getFYMonthKeys(getCurrentFYStartYear());
-  sel.innerHTML = fyKeys.map(ym => {
-    const [y,m] = ym.split('-');
-    return `<option value="${ym}" ${ym===curYM?'selected':''}>${MONTH_NAMES[parseInt(m)-1]} ${y}</option>`;
+  // v22.8 — include ALL months from the earliest trade to the current month (cross-FY),
+  // merged with this FY's months so the dropdown always covers the step-back range.
+  const fyKeys = new Set(getFYMonthKeys(getCurrentFYStartYear()));
+  // Earliest trade month from allTrades (entry_date based)
+  let minYM = curYM;
+  allTrades.forEach(t => { const ym = (t.entry_date || '').slice(0, 7); if (ym && ym < minYM) minYM = ym; });
+  // Build contiguous list from minYM to curYM
+  const allYMs = new Set(fyKeys);
+  let [y, m] = minYM.split('-').map(Number);
+  const [cy, cm] = curYM.split('-').map(Number);
+  while (y < cy || (y === cy && m <= cm)) {
+    allYMs.add(`${y}-${String(m).padStart(2, '0')}`);
+    m++; if (m > 12) { m = 1; y++; }
+  }
+  const sorted = [...allYMs].sort();
+  const target = preselect || curYM;
+  sel.innerHTML = sorted.map(ym => {
+    const [yy, mm] = ym.split('-');
+    return `<option value="${ym}" ${ym === target ? 'selected' : ''}>${MONTH_NAMES[parseInt(mm) - 1]} ${yy}</option>`;
   }).join('');
 }
 
@@ -4531,6 +4552,30 @@ function getSelectedYM(radioName, selId) {
   // fall back to current month rather than producing "Invalid Date".
   const today = new Date();
   return `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}`;
+}
+
+// v22.8 — step ‹ prev / › next month for Daily Performance (Basket + Account wise).
+// dir = -1 (prev) or +1 (next). › is capped at the current month.
+// Auto-switches the radio to "Select Month", populates the dropdown with the target
+// month pre-selected, shows the dropdown, and re-renders.
+function stepDailyMonth(radioName, selId, dir, renderFn) {
+  const curYM = getSelectedYM(radioName, selId);
+  let [y, m] = curYM.split('-').map(Number);
+  m += dir;
+  if (m < 1) { m = 12; y--; }
+  if (m > 12) { m = 1; y++; }
+  const target = `${y}-${String(m).padStart(2, '0')}`;
+  // Cap › at current month
+  const nowYM = new Date().toISOString().slice(0, 7);
+  if (target > nowYM) return;
+  // Switch radio to "select" mode
+  const radio = document.querySelector(`input[name="${radioName}"][value="select"]`);
+  if (radio) radio.checked = true;
+  // Populate dropdown with target pre-selected, show it
+  populateMonthSelect(selId, target);
+  const sel = document.getElementById(selId);
+  if (sel) { sel.value = target; sel.style.display = 'block'; }
+  renderFn();
 }
 
 // Basket tab month selector handlers
@@ -4848,6 +4893,12 @@ function startListeners() {
       if (topbarEl) topbarEl.innerHTML = `<span style="color:var(--text3);font-size:0.68rem;">${html}</span>`;
     }
   });
+  // v22.8 — underlying colors (customizable from App Settings)
+  db.ref('journal/settings/underlying_colors').on('value', snap => {
+    underlyingColors = snap.val() || {};
+    renderSystemSelectorPanel();
+    renderUnderlyingColorsSettings();
+  });
 }
 
 function refreshAll() {
@@ -4859,6 +4910,7 @@ function refreshAll() {
   populateCompareSelects();
   loadDailyQuote();
   loadDisplayPrefs();
+  renderUnderlyingColorsSettings();  // v22.8
 }
 
 // ════════════════════════════════════════════════════
@@ -5489,6 +5541,95 @@ function isSystemArchived(algoName) {
   return !!(m && m.archived);
 }
 
+// ═══════ v22.8 — ACCOUNT-GROUPED SYSTEM SELECTOR ═══════
+// Replaces the old Basket/Group/Strategy radio+dropdown. Tracks which systems are
+// excluded via a Set; default = empty (all ON). Charts, heatmap, P&L table, etc.
+// all filter through this set. Capital always uses '__ALL__' (hidden fallback select).
+let dashExcludedSystems = new Set();
+
+// Underlying colors (customizable from App Settings, persisted at journal/settings/underlying_colors)
+const DEFAULT_UNDERLYING_COLORS = {
+  'NIFTY':'#b8860b','BANKNIFTY':'#dc2626','FINNIFTY':'#059669','MIDCPNIFTY':'#7c3aed',
+  'SENSEX':'#2563eb','BANKEX':'#0891b2','GOLD':'#d97706','SILVER':'#6b7280',
+  'CRUDEOIL':'#4b5563','MULTI':'#8b5cf6'
+};
+let underlyingColors = {};
+function getUnderlyingColor(underlying) {
+  return underlyingColors[underlying] || DEFAULT_UNDERLYING_COLORS[underlying] || '#6b7280';
+}
+
+// Account background color palette (rotating, structural — distinct from underlying semantic colors)
+const ACCT_BG_COLORS = ['#e8f0fe','#e6f7f1','#f3e8ff','#fef3c7','#fee2e2','#e0f2fe','#f0fdf4','#fdf2f8','#ecfeff','#fff7ed'];
+
+function renderSystemSelectorPanel() {
+  const container = document.getElementById('dash-system-selector');
+  if (!container) return;
+  // Build account → active systems map from allTrades
+  const acctSystems = {};
+  allTrades.forEach(t => {
+    if (t.archived || isSystemArchived(t.algo_name)) return;
+    const cid = t.client_id;
+    if (!cid || ['tradetron','quantleap','quantiply','zebu','upstox',''].includes(cid.toLowerCase())) return;
+    if (!acctSystems[cid]) acctSystems[cid] = new Set();
+    acctSystems[cid].add(t.algo_name);
+  });
+  const accounts = Object.keys(acctSystems).sort();
+  if (!accounts.length) {
+    container.innerHTML = '<div style="padding:14px;color:var(--text3);font-size:0.82rem;">No account-system data yet — upload trade reports to populate this panel.</div>';
+    return;
+  }
+  let html = '<div style="display:flex;gap:10px;overflow-x:auto;padding:10px 0;">';
+  accounts.forEach((cid, acctIdx) => {
+    const systems = [...acctSystems[cid]].sort();
+    const bg = ACCT_BG_COLORS[acctIdx % ACCT_BG_COLORS.length];
+    const label = getClientLabel(cid);
+    const allChecked = systems.every(s => !dashExcludedSystems.has(s));
+    const noneChecked = systems.every(s => dashExcludedSystems.has(s));
+    html += `<div style="min-width:175px;max-width:230px;flex-shrink:0;background:${bg};border-radius:12px;padding:12px 14px;border:1.5px solid var(--border);">`;
+    // Account header + master checkbox
+    html += `<label style="display:flex;align-items:center;gap:7px;cursor:pointer;margin-bottom:8px;padding-bottom:7px;border-bottom:1.5px solid var(--border);">`;
+    html += `<input type="checkbox" ${allChecked?'checked':''} ${!allChecked&&!noneChecked?'':''}onchange="toggleDashAccount('${cid}',this.checked)" style="width:15px;height:15px;cursor:pointer;accent-color:var(--blue);">`;
+    html += `<span style="font-size:0.76rem;font-weight:800;color:var(--text0);line-height:1.2;">${label}</span>`;
+    html += `</label>`;
+    // Systems
+    systems.forEach((sysName, sysIdx) => {
+      const checked = !dashExcludedSystems.has(sysName);
+      const meta = algoMeta[sysName] || algoMeta[safeKey(sysName)] || {};
+      const underlying = meta.underlying || guessUnderlying(sysName);
+      const color = getUnderlyingColor(underlying);
+      const safeName = sysName.replace(/'/g, "\\'");
+      html += `<label style="display:flex;align-items:flex-start;gap:6px;cursor:pointer;margin-bottom:4px;${checked?'':'opacity:0.45;'}">`;
+      html += `<input type="checkbox" ${checked?'checked':''} onchange="toggleDashSystem('${safeName}',this.checked)" style="width:14px;height:14px;cursor:pointer;accent-color:${color};flex-shrink:0;margin-top:2px;">`;
+      html += `<div style="min-width:0;">`;
+      html += `<span style="font-size:0.8rem;font-weight:700;color:${color};">S${sysIdx+1}</span>`;
+      html += `<span style="font-size:0.58rem;color:${color};margin-left:4px;font-weight:600;">${underlying}</span>`;
+      html += `<div style="font-size:0.56rem;color:var(--text3);line-height:1.15;word-break:break-all;margin-top:1px;">${sysName}</div>`;
+      html += `</div></label>`;
+    });
+    html += `</div>`;
+  });
+  html += '</div>';
+  container.innerHTML = html;
+}
+
+function toggleDashSystem(name, checked) {
+  if (checked) dashExcludedSystems.delete(name);
+  else dashExcludedSystems.add(name);
+  renderSystemSelectorPanel();
+  renderDashFiltered();
+}
+function toggleDashAccount(cid, checked) {
+  // Find all active systems for this account from allTrades
+  const systems = new Set();
+  allTrades.forEach(t => {
+    if (t.archived || isSystemArchived(t.algo_name)) return;
+    if (t.client_id === cid) systems.add(t.algo_name);
+  });
+  systems.forEach(s => { if (checked) dashExcludedSystems.delete(s); else dashExcludedSystems.add(s); });
+  renderSystemSelectorPanel();
+  renderDashFiltered();
+}
+
 let dashChartEquity = null, dashChartDD = null, dashChartCap = null;
 let dashDailyRows = [], dashDailyPageNum = 0;
 let capitalBasket = {}; // basket-wise capital: {basketName: {YYYY-MM: amount}}
@@ -5538,26 +5679,8 @@ function renderDashFiltered() {
   const fyMonthsDash = getFYMonthKeys(currentYear);
   const mMap = {};
   fyMonthsDash.forEach(k=>mMap[k]=0);
-  const selMode = document.querySelector('input[name="dash-sel-mode"]:checked')?.value || 'basket';
-  let trFY = allTrades.filter(t=>!t.archived);
-  if (selMode === 'basket') {
-    const val = document.getElementById('dash-basket-select')?.value || '__ALL__';
-    if (val !== '__ALL__') {
-      const g = Object.values(algoGroups).find(x=>x.name===val);
-      const members = new Set(g?.algos||[]);
-      trFY = trFY.filter(t=>members.has(t.algo_name));
-    }
-  } else if (selMode === 'group') {
-    const val = document.getElementById('dash-group-select')?.value || '__ALL__';
-    if (val !== '__ALL__') {
-      const g = Object.values(algoGroupsData).find(x=>x.name===val);
-      const members = new Set(g?.algos||[]);
-      trFY = trFY.filter(t=>members.has(t.algo_name));
-    }
-  } else {
-    const val = document.getElementById('dash-algo-select')?.value || '__ALL__';
-    if (val !== '__ALL__') trFY = trFY.filter(t=>t.algo_name===val);
-  }
+  // v22.8 — trFY uses the same excluded-systems filter as getDashFilteredTrades, but without the year clip
+  let trFY = allTrades.filter(t=>!t.archived && !isSystemArchived(t.algo_name) && !dashExcludedSystems.has(t.algo_name));
   trFY.forEach(t=>{const ym=(pnlDate(t)||'').slice(0,7);if(fyMonthsDash.includes(ym))mMap[ym]=(mMap[ym]||0)+(t.pnl||0);});
 
   // Period toggle (All Time / FY 2026-27) for Live Performance, Daily P&L table, Equity/Drawdown
@@ -5608,11 +5731,11 @@ function renderDashLivePerf(tr, periodMode) {
   const winDays=sortedDays.filter(d=>dayPnl[d]>0).length;
   const wr=sortedDays.length?Math.round(winDays/sortedDays.length*100):0;
 
-  // Capital only meaningful at Basket level
-  const hasCapital = (mode === 'basket');
+  // Capital always meaningful (v22.8 — always aggregate mode)
+  const hasCapital = true;
   let totalCap = 0;
-  if (hasCapital) {
-    const basketVal = document.getElementById('dash-basket-select')?.value || '__ALL__';
+  {
+    const basketVal = '__ALL__';
     const fyMonthsList = getFYMonthKeys(getCurrentFYStartYear());
     const inPeriod = m => isFY ? fyMonthsList.includes(m) : true;
     if (basketVal === '__ALL__') {
@@ -5669,94 +5792,25 @@ function renderDashLivePerf(tr, periodMode) {
   setEl('s-algos', hasCapital?(totalCap>0?fmt(totalCap):'₹0'):'NA', hasCapital?undefined:'var(--text3)');
 }
 
-function onDashSelMode() {
-  const mode = document.querySelector('input[name="dash-sel-mode"]:checked')?.value || 'basket';
-  const basketBox = document.getElementById('dash-basket-box');
-  const groupBox  = document.getElementById('dash-group-box');
-  const algoBox   = document.getElementById('dash-algo-box');
-  const basketSel = document.getElementById('dash-basket-select');
-  const groupSel  = document.getElementById('dash-group-select');
-  const algoSel   = document.getElementById('dash-algo-select');
-
-  // Reset all to dimmed/disabled
-  if (basketBox) basketBox.style.opacity = '0.5';
-  if (groupBox)  groupBox.style.opacity  = '0.5';
-  if (algoBox)   algoBox.style.opacity   = '0.5';
-  if (basketSel) basketSel.disabled = true;
-  if (groupSel)  groupSel.disabled  = true;
-  if (algoSel)   algoSel.disabled   = true;
-
-  // Activate the selected one
-  if (mode === 'basket') {
-    if (basketBox) basketBox.style.opacity = '1';
-    if (basketSel) basketSel.disabled = false;
-  } else if (mode === 'group') {
-    if (groupBox) groupBox.style.opacity = '1';
-    if (groupSel) groupSel.disabled = false;
-  } else {
-    if (algoBox) algoBox.style.opacity = '1';
-    if (algoSel) algoSel.disabled = false;
-  }
-  renderDashFiltered();
-}
+function onDashSelMode() { /* v22.8 — no-op, replaced by system selector panel */ renderDashFiltered(); }
 
 function populateDashSelectors() {
-  const basketSel = document.getElementById('dash-basket-select');
-  if (basketSel) {
-    const groups = Object.values(algoGroups).sort((a,b)=>(a.name||'').localeCompare(b.name||''));
-    basketSel.innerHTML = '<option value="__ALL__">All Baskets</option>' +
-      groups.map(g=>`<option value="${g.name}">${g.name}</option>`).join('');
-  }
-  const groupSel = document.getElementById('dash-group-select');
-  if (groupSel) {
-    const grps = Object.values(algoGroupsData).sort((a,b)=>(a.name||'').localeCompare(b.name||''));
-    groupSel.innerHTML = '<option value="__ALL__">All Groups</option>' +
-      grps.map(g=>`<option value="${g.name}">${g.name}</option>`).join('');
-  }
-  const algoSel = document.getElementById('dash-algo-select');
-  if (algoSel) {
-    const algos = [...new Set(allTrades.filter(t=>!t.archived&&(pnlDate(t)||'').startsWith(currentYear)).map(t=>t.algo_name))].sort();
-    algoSel.innerHTML = '<option value="__ALL__">All Strategies</option>' +
-      algos.map(a=>`<option value="${a}">${algoMeta[a]?.display_name||a}</option>`).join('');
-  }
+  // v22.8 — replaced by account-grouped system selector panel
+  renderSystemSelectorPanel();
 }
 
 function getDashFilteredTrades() {
-  const mode = document.querySelector('input[name="dash-sel-mode"]:checked')?.value || 'basket';
-  const tr = allTrades.filter(t=>!t.archived && !isSystemArchived(t.algo_name) && (pnlDate(t)||t.entry_date||'').startsWith(currentYear));
-  if (mode === 'basket') {
-    const val = document.getElementById('dash-basket-select')?.value || '__ALL__';
-    if (val === '__ALL__') return tr;
-    const g = Object.values(algoGroups).find(x=>x.name===val);
-    const members = new Set(g?.algos||[]);
-    return tr.filter(t=>members.has(t.algo_name));
-  } else if (mode === 'group') {
-    const val = document.getElementById('dash-group-select')?.value || '__ALL__';
-    if (val === '__ALL__') return tr;
-    const g = Object.values(algoGroupsData).find(x=>x.name===val);
-    const members = new Set(g?.algos||[]);
-    return tr.filter(t=>members.has(t.algo_name));
-  } else {
-    const val = document.getElementById('dash-algo-select')?.value || '__ALL__';
-    if (val === '__ALL__') return tr;
-    return tr.filter(t=>t.algo_name===val);
-  }
+  // v22.8 — filter by excluded systems from the account-grouped selector panel
+  return allTrades.filter(t=>!t.archived && !isSystemArchived(t.algo_name)
+    && !dashExcludedSystems.has(t.algo_name)
+    && (pnlDate(t)||t.entry_date||'').startsWith(currentYear));
 }
 
 function renderDashHeatmap() {
   const tr = getDashFilteredTrades();
-  const mode = document.querySelector('input[name="dash-sel-mode"]:checked')?.value || 'basket';
-  let val, label;
-  if (mode === 'basket') {
-    val = document.getElementById('dash-basket-select')?.value||'__ALL__';
-    label = val==='__ALL__' ? 'All Baskets' : val;
-  } else if (mode === 'group') {
-    val = document.getElementById('dash-group-select')?.value||'__ALL__';
-    label = val==='__ALL__' ? 'All Groups' : val;
-  } else {
-    val = document.getElementById('dash-algo-select')?.value||'__ALL__';
-    label = val==='__ALL__' ? 'All Strategies' : (algoMeta[val]?.display_name||val);
-  }
+  // v22.8 — label reflects excluded count
+  const exN = dashExcludedSystems.size;
+  const label = exN ? `Active Systems (${exN} excluded)` : 'All Systems';
   const container = document.getElementById('dash-heatmap');
   if (container) container.innerHTML = buildOneHeatmap(label, tr, '#1a73e8');
 }
@@ -5824,12 +5878,8 @@ function renderDashMonthlyReturns(tr) {
 function renderDashCapitalGrid() {
   const grid=document.getElementById('dash-capital-grid');
   if(!grid)return;
-  const mode = document.querySelector('input[name="dash-sel-mode"]:checked')?.value || 'basket';
-  if (mode !== 'basket') {
-    grid.innerHTML = `<div style="padding:16px;text-align:center;color:var(--text3);font-size:0.85rem;font-style:italic;">Capital Deployed is only tracked at Basket level — NA for ${mode==='group'?'Group':'Strategy'} view</div>`;
-    return;
-  }
-  const basketVal = document.getElementById('dash-basket-select')?.value || '__ALL__';
+  // v22.8 — always 'basket' / '__ALL__' mode (old group/strategy NA check removed)
+  const basketVal = '__ALL__';
   const fyKeys=getFYMonthKeys(getCurrentFYStartYear());
   let html=`<div style="font-size:0.7rem;color:var(--text3);margin-bottom:8px;font-style:italic;">Computed from 🔗 Allocations — read-only</div><div style="display:flex;gap:10px;flex-wrap:wrap;">`;
   fyKeys.forEach(ym=>{
@@ -8727,9 +8777,33 @@ async function toggleAllSystemsArchived(checked) {
   const updates = {};
   Object.keys(algoMeta).forEach(k => { algoMeta[k].archived = checked; updates[k + '/archived'] = checked; });
   if (db && Object.keys(updates).length) await db.ref('journal/algos').update(updates);
-  renderAlgoPage();
+  renderAlgoPage(); renderSystemSelectorPanel();
   refreshAll();
   toast(checked ? 'All systems archived — Basket view now empty' : 'All systems reactivated', 'info');
+}
+
+// v22.8 — Underlying Colors settings UI
+function renderUnderlyingColorsSettings() {
+  const container = document.getElementById('settings-underlying-colors');
+  if (!container) return;
+  const allUnderlyings = new Set(Object.keys(DEFAULT_UNDERLYING_COLORS));
+  Object.values(algoMeta).forEach(a => { if (a && a.underlying) allUnderlyings.add(a.underlying); });
+  const sorted = [...allUnderlyings].sort();
+  container.innerHTML = `<div style="display:flex;gap:12px;flex-wrap:wrap;">` +
+    sorted.map(u => {
+      const color = getUnderlyingColor(u);
+      return `<div style="display:flex;align-items:center;gap:8px;padding:6px 12px;background:var(--bg2);border-radius:8px;border:1px solid var(--border);">
+        <input type="color" value="${color}" onchange="saveUnderlyingColor('${u}',this.value)" style="width:28px;height:24px;border:none;cursor:pointer;padding:0;">
+        <span style="font-size:0.78rem;font-weight:700;color:var(--text0);">${u}</span>
+      </div>`;
+    }).join('') + `</div>`;
+}
+async function saveUnderlyingColor(underlying, color) {
+  underlyingColors[underlying] = color;
+  if (db) await db.ref('journal/settings/underlying_colors/' + safeKey(underlying)).set(color);
+  renderSystemSelectorPanel();
+  renderUnderlyingColorsSettings();
+  toast(underlying + ' color updated', 'success');
 }
 
 function populateAlgoDropdowns() {
