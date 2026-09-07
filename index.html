@@ -2,6 +2,20 @@
 ==========================================================
   SKVK TRADING JOURNAL — VERSION HISTORY
 ==========================================================
+  v23.5 | 2026-09-07 | (1) SYSTEM SELECTOR PANEL: layout changed from horizontal flex
+         |            | (with scrollbar) to CSS Grid auto-fit. Columns sized at
+         |            | minmax(210px,1fr), auto-wrapping — all accounts visible without
+         |            | scrolling on 24" monitors. Scrollbar CSS removed.
+         |            | (2) SELECT ALL / UNSELECT ALL buttons restyled as matching outline
+         |            | chips (both same appearance, blue text, hover highlight).
+         |            | (3) PRIVACY TOGGLE changed from filled buttons to radio buttons;
+         |            | selection persisted to Firebase (journal/settings/dash_label_mode).
+         |            | (4) MERGED Quantleap + Quantiply into one auto-detect button on
+         |            | the Upload page. File format detected from headers: algo_name +
+         |            | profit_loss → parseQuantiply; strategy_name + position_id →
+         |            | parseZebu. Two ASP buttons remain: [Quantleap/Quantiply] and
+         |            | [Tradetron].
+==========================================================
   v23.4 | 2026-09-04 | (1) MERGED Quantleap + Quantiply into one auto-detect button:
          |            | Upload page now shows two ASP buttons — [📊 Quantleap/Quantiply]
          |            | and [⚡ Tradetron]. File format auto-detected from headers:
@@ -1047,7 +1061,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>SKVK Trading Journal v23.4</title>
+<title>SKVK Trading Journal v23.5</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -1172,12 +1186,6 @@ body {
 .nav-tabs::-webkit-scrollbar { height: 3px; }
 .nav-tabs::-webkit-scrollbar-thumb { background: var(--blue); border-radius: 2px; }
 .nav-tabs::-webkit-scrollbar-track { background: #0f2440; }
-/* v23.3 — visible drag scrollbar for accounts panel */
-#dash-acct-scroll { scrollbar-width: auto; scrollbar-color: var(--blue) var(--bg2); }
-#dash-acct-scroll::-webkit-scrollbar { height: 10px; }
-#dash-acct-scroll::-webkit-scrollbar-track { background: var(--bg2); border-radius: 5px; }
-#dash-acct-scroll::-webkit-scrollbar-thumb { background: var(--blue); border-radius: 5px; min-width: 60px; }
-#dash-acct-scroll::-webkit-scrollbar-thumb:hover { background: #1a5cd8; }
 .nav-tab {
   display: flex; align-items: center; justify-content: center; gap: 6px;
   padding: 0 20px;
@@ -2012,7 +2020,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div class="login-logo">📋</div>
     <div class="login-title">
       SKVK Trading Journal
-      <span class="login-vbadge">v23.4</span>
+      <span class="login-vbadge">v23.5</span>
     </div>
     <div class="login-sub">Sign in with your authorised Google account to access the journal.</div>
     <button class="google-signin-btn" id="googleSignInBtn" onclick="signInWithGoogle()">
@@ -2052,7 +2060,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
         <i class="ti ti-chart-candle brand-icon"></i>
         <span class="brand-skvk">SKVK</span>
         <span class="brand-appname">Trading Journal</span>
-        <span class="brand-vbadge">v23.4</span>
+        <span class="brand-vbadge">v23.5</span>
       </div>
     </div>
     <div id="topbar-right-wrap">
@@ -5712,24 +5720,25 @@ function renderSystemSelectorPanel() {
   window._dashNickCids = nickCids;
   window._dashNickSystems = nickSystems;
 
-  // v23.4 — Select All / Unselect All buttons + privacy toggle (radio)
-  let html = '<div style="display:flex;align-items:center;gap:14px;padding:6px 0 4px 0;flex-wrap:wrap;">';
-  html += '<button onclick="dashSelectAll(true)" style="padding:4px 14px;border-radius:6px;font-size:0.72rem;font-weight:700;cursor:pointer;border:1.5px solid var(--blue);background:var(--blue);color:#fff;">\u2611 Select All</button>';
-  html += '<button onclick="dashSelectAll(false)" style="padding:4px 14px;border-radius:6px;font-size:0.72rem;font-weight:700;cursor:pointer;border:1.5px solid var(--border);background:var(--bg);color:var(--text2);">\u2610 Unselect All</button>';
+  // v23.5 — toolbar: Select All / Unselect All (matching outline) + privacy radio toggle
+  let html = '<div style="display:flex;align-items:center;gap:10px;padding:6px 0 8px 0;flex-wrap:wrap;">';
+  html += '<button onclick="dashSelectAll(true)" style="padding:4px 14px;border-radius:6px;font-size:0.72rem;font-weight:700;cursor:pointer;border:1.5px solid var(--blue);background:var(--bg);color:var(--blue);transition:background 0.15s;" onmouseenter="this.style.background=\'var(--blue)\';this.style.color=\'#fff\'" onmouseleave="this.style.background=\'var(--bg)\';this.style.color=\'var(--blue)\'">\u2611 Select All</button>';
+  html += '<button onclick="dashSelectAll(false)" style="padding:4px 14px;border-radius:6px;font-size:0.72rem;font-weight:700;cursor:pointer;border:1.5px solid var(--blue);background:var(--bg);color:var(--blue);transition:background 0.15s;" onmouseenter="this.style.background=\'var(--blue)\';this.style.color=\'#fff\'" onmouseleave="this.style.background=\'var(--bg)\';this.style.color=\'var(--blue)\'">\u2610 Unselect All</button>';
   html += '<span style="margin-left:auto;display:flex;align-items:center;gap:8px;">';
   html += '<span style="font-size:0.7rem;color:var(--text2);font-weight:600;">Display:</span>';
   html += `<label style="display:flex;align-items:center;gap:4px;cursor:pointer;font-size:0.7rem;font-weight:600;color:var(--text1);"><input type="radio" name="dash-label-mode" value="id" ${dashLabelMode==='id'?'checked ':''}onchange="setDashLabelMode('id')" style="accent-color:var(--blue);cursor:pointer;">Account ID</label>`;
   html += `<label style="display:flex;align-items:center;gap:4px;cursor:pointer;font-size:0.7rem;font-weight:600;color:var(--text1);"><input type="radio" name="dash-label-mode" value="name" ${dashLabelMode==='name'?'checked ':''}onchange="setDashLabelMode('name')" style="accent-color:var(--blue);cursor:pointer;">Account Name</label>`;
   html += '</span></div>';
 
-  html += '<div id="dash-acct-scroll" style="display:flex;gap:10px;overflow-x:auto;padding:10px 0 14px 0;">';
+  // v23.5 — CSS Grid auto-fit: columns wrap naturally, no scrollbar
+  html += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px;padding:10px 0;">';
   nicks.forEach((nick, idx) => {
     const systems = [...nickSystems[nick]].sort();
     const bg = ACCT_BG_COLORS[idx % ACCT_BG_COLORS.length];
     const allChecked = systems.every(s => !dashExcludedSystems.has(nick + ':' + s));
     const safeNick = nick.replace(/'/g, "\\'");
     const displayLabel = getDashAcctLabel(nick, nickCids[nick]);
-    html += `<div style="min-width:210px;max-width:280px;flex-shrink:0;background:${bg};border-radius:10px;padding:10px 12px;border:1.5px solid var(--border);">`;
+    html += `<div style="background:${bg};border-radius:10px;padding:10px 12px;border:1.5px solid var(--border);">`;
     html += `<label style="display:flex;align-items:center;gap:7px;cursor:pointer;margin-bottom:7px;padding-bottom:6px;border-bottom:1.5px solid var(--border);">`;
     html += `<input type="checkbox" ${allChecked ? 'checked ' : ''}onchange="toggleDashAccount('${safeNick}',this.checked)" style="width:15px;height:15px;cursor:pointer;accent-color:var(--blue);">`;
     html += `<span style="font-size:0.75rem;font-weight:800;color:var(--text0);line-height:1.2;" title="${nick}">${displayLabel}</span>`;
@@ -5746,7 +5755,7 @@ function renderSystemSelectorPanel() {
       html += `<input type="checkbox" ${checked ? 'checked ' : ''}onchange="toggleDashSystem('${safeNick}','${safeName}',this.checked)" style="width:14px;height:14px;cursor:pointer;accent-color:${color};flex-shrink:0;">`;
       html += `<span style="font-size:0.72rem;font-weight:700;color:${color};white-space:nowrap;">S${sysIdx + 1}</span>`;
       html += `<span style="font-size:0.56rem;color:${color};font-weight:700;white-space:nowrap;">${short}</span>`;
-      html += `<span style="font-size:0.58rem;color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:140px;">${sysName}</span>`;
+      html += `<span style="font-size:0.58rem;color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${sysName}</span>`;
       html += `</label>`;
     });
     html += `</div>`;
@@ -5755,7 +5764,6 @@ function renderSystemSelectorPanel() {
   container.innerHTML = html;
 }
 
-// v23.4 — Select All / Unselect All
 function dashSelectAll(checked) {
   const ns = window._dashNickSystems;
   if (!ns) return;
@@ -5769,7 +5777,6 @@ function dashSelectAll(checked) {
   renderDashFiltered();
 }
 
-// v23.4 — privacy toggle persisted to Firebase
 function setDashLabelMode(mode) {
   dashLabelMode = mode;
   if (db) db.ref('journal/settings/dash_label_mode').set(mode);
