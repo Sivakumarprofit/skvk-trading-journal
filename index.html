@@ -2,6 +2,18 @@
 ==========================================================
   SKVK TRADING JOURNAL — VERSION HISTORY
 ==========================================================
+  v23.6 | 2026-09-07 | SYSTEM SELECTOR PANEL layout + collapse:
+         |            | (1) Grid changed to fixed 3-column layout, left-aligned:
+         |            | grid-template-columns: repeat(3, 1fr). Accounts flow in 3+3+N
+         |            | pattern without stretching to fill the full width.
+         |            | (2) MINIMIZE ALL / EXPAND ALL buttons added to the toolbar.
+         |            | Minimize collapses all account cards to just the header (account
+         |            | name + checkbox). Expand shows full system lists. Individual
+         |            | accounts can be toggled by clicking the header.
+         |            | (3) Display type (expanded/minimized) PERSISTED to Firebase
+         |            | (journal/settings/dash_panel_mode) — loads in the user's
+         |            | preferred state on startup.
+==========================================================
   v23.5 | 2026-09-07 | (1) SYSTEM SELECTOR PANEL: layout changed from horizontal flex
          |            | (with scrollbar) to CSS Grid auto-fit. Columns sized at
          |            | minmax(210px,1fr), auto-wrapping — all accounts visible without
@@ -1061,7 +1073,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>SKVK Trading Journal v23.5</title>
+<title>SKVK Trading Journal v23.6</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -2020,7 +2032,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div class="login-logo">📋</div>
     <div class="login-title">
       SKVK Trading Journal
-      <span class="login-vbadge">v23.5</span>
+      <span class="login-vbadge">v23.6</span>
     </div>
     <div class="login-sub">Sign in with your authorised Google account to access the journal.</div>
     <button class="google-signin-btn" id="googleSignInBtn" onclick="signInWithGoogle()">
@@ -2060,7 +2072,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
         <i class="ti ti-chart-candle brand-icon"></i>
         <span class="brand-skvk">SKVK</span>
         <span class="brand-appname">Trading Journal</span>
-        <span class="brand-vbadge">v23.5</span>
+        <span class="brand-vbadge">v23.6</span>
       </div>
     </div>
     <div id="topbar-right-wrap">
@@ -5013,6 +5025,11 @@ function startListeners() {
     dashLabelMode = snap.val() || 'id';
     renderSystemSelectorPanel();
   });
+  // v23.6 — panel display mode persistence
+  db.ref('journal/settings/dash_panel_mode').on('value', snap => {
+    dashPanelMode = snap.val() || 'expanded';
+    renderSystemSelectorPanel();
+  });
 }
 
 function refreshAll() {
@@ -5653,6 +5670,8 @@ let dashExcludedSystems = new Set();
 
 // v23.3 — Privacy toggle: 'id' shows broker+clientid, 'name' shows nickname (holder name)
 let dashLabelMode = 'id';  // default = ID on fresh load, session-only
+// v23.6 — Panel display mode: 'expanded' shows full system lists, 'minimized' shows headers only
+let dashPanelMode = 'expanded';  // persisted to Firebase
 function getDashAcctLabel(nick, cids) {
   if (dashLabelMode === 'name') return nick;
   // ID mode: derive broker prefix from nickname, append first client_id
@@ -5719,49 +5738,90 @@ function renderSystemSelectorPanel() {
   }
   window._dashNickCids = nickCids;
   window._dashNickSystems = nickSystems;
+  // Track which individual accounts are collapsed (overrides global mode)
+  if (!window._dashCollapsed) window._dashCollapsed = {};
+  const isMinimized = (nick) => {
+    if (nick in window._dashCollapsed) return window._dashCollapsed[nick];
+    return dashPanelMode === 'minimized';
+  };
 
-  // v23.5 — toolbar: Select All / Unselect All (matching outline) + privacy radio toggle
-  let html = '<div style="display:flex;align-items:center;gap:10px;padding:6px 0 8px 0;flex-wrap:wrap;">';
-  html += '<button onclick="dashSelectAll(true)" style="padding:4px 14px;border-radius:6px;font-size:0.72rem;font-weight:700;cursor:pointer;border:1.5px solid var(--blue);background:var(--bg);color:var(--blue);transition:background 0.15s;" onmouseenter="this.style.background=\'var(--blue)\';this.style.color=\'#fff\'" onmouseleave="this.style.background=\'var(--bg)\';this.style.color=\'var(--blue)\'">\u2611 Select All</button>';
-  html += '<button onclick="dashSelectAll(false)" style="padding:4px 14px;border-radius:6px;font-size:0.72rem;font-weight:700;cursor:pointer;border:1.5px solid var(--blue);background:var(--bg);color:var(--blue);transition:background 0.15s;" onmouseenter="this.style.background=\'var(--blue)\';this.style.color=\'#fff\'" onmouseleave="this.style.background=\'var(--bg)\';this.style.color=\'var(--blue)\'">\u2610 Unselect All</button>';
+  // v23.6 — toolbar: Select All / Unselect All + Minimize / Expand + privacy radio
+  let html = '<div style="display:flex;align-items:center;gap:8px;padding:6px 0 8px 0;flex-wrap:wrap;">';
+  const btnStyle = 'padding:4px 12px;border-radius:6px;font-size:0.71rem;font-weight:700;cursor:pointer;border:1.5px solid var(--blue);background:var(--bg);color:var(--blue);transition:background 0.15s,color 0.15s;';
+  const hoverIn = "this.style.background='var(--blue)';this.style.color='#fff'";
+  const hoverOut = "this.style.background='var(--bg)';this.style.color='var(--blue)'";
+  html += `<button onclick="dashSelectAll(true)" style="${btnStyle}" onmouseenter="${hoverIn}" onmouseleave="${hoverOut}">\u2611 Select All</button>`;
+  html += `<button onclick="dashSelectAll(false)" style="${btnStyle}" onmouseenter="${hoverIn}" onmouseleave="${hoverOut}">\u2610 Unselect All</button>`;
+  html += `<span style="width:1px;height:20px;background:var(--border);margin:0 2px;"></span>`;
+  html += `<button onclick="setDashPanelMode('minimized')" style="${btnStyle}" onmouseenter="${hoverIn}" onmouseleave="${hoverOut}">\u25b4 Minimize All</button>`;
+  html += `<button onclick="setDashPanelMode('expanded')" style="${btnStyle}" onmouseenter="${hoverIn}" onmouseleave="${hoverOut}">\u25be Expand All</button>`;
   html += '<span style="margin-left:auto;display:flex;align-items:center;gap:8px;">';
   html += '<span style="font-size:0.7rem;color:var(--text2);font-weight:600;">Display:</span>';
   html += `<label style="display:flex;align-items:center;gap:4px;cursor:pointer;font-size:0.7rem;font-weight:600;color:var(--text1);"><input type="radio" name="dash-label-mode" value="id" ${dashLabelMode==='id'?'checked ':''}onchange="setDashLabelMode('id')" style="accent-color:var(--blue);cursor:pointer;">Account ID</label>`;
   html += `<label style="display:flex;align-items:center;gap:4px;cursor:pointer;font-size:0.7rem;font-weight:600;color:var(--text1);"><input type="radio" name="dash-label-mode" value="name" ${dashLabelMode==='name'?'checked ':''}onchange="setDashLabelMode('name')" style="accent-color:var(--blue);cursor:pointer;">Account Name</label>`;
   html += '</span></div>';
 
-  // v23.5 — CSS Grid auto-fit: columns wrap naturally, no scrollbar
-  html += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px;padding:10px 0;">';
+  // v23.6 — fixed 3-column grid, left-aligned
+  html += '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding:10px 0;">';
   nicks.forEach((nick, idx) => {
     const systems = [...nickSystems[nick]].sort();
     const bg = ACCT_BG_COLORS[idx % ACCT_BG_COLORS.length];
     const allChecked = systems.every(s => !dashExcludedSystems.has(nick + ':' + s));
     const safeNick = nick.replace(/'/g, "\\'");
     const displayLabel = getDashAcctLabel(nick, nickCids[nick]);
+    const collapsed = isMinimized(nick);
+    const chevron = collapsed ? '\u25b8' : '\u25be';
     html += `<div style="background:${bg};border-radius:10px;padding:10px 12px;border:1.5px solid var(--border);">`;
-    html += `<label style="display:flex;align-items:center;gap:7px;cursor:pointer;margin-bottom:7px;padding-bottom:6px;border-bottom:1.5px solid var(--border);">`;
+    // Header: checkbox + label + collapse chevron + system count
+    html += `<div style="display:flex;align-items:center;gap:7px;margin-bottom:${collapsed?'0':'7'}px;padding-bottom:${collapsed?'0':'6'}px;${collapsed?'':'border-bottom:1.5px solid var(--border);'}">`;
     html += `<input type="checkbox" ${allChecked ? 'checked ' : ''}onchange="toggleDashAccount('${safeNick}',this.checked)" style="width:15px;height:15px;cursor:pointer;accent-color:var(--blue);">`;
-    html += `<span style="font-size:0.75rem;font-weight:800;color:var(--text0);line-height:1.2;" title="${nick}">${displayLabel}</span>`;
-    html += `</label>`;
-    systems.forEach((sysName, sysIdx) => {
-      const exKey = nick + ':' + sysName;
-      const checked = !dashExcludedSystems.has(exKey);
-      const meta = algoMeta[sysName] || algoMeta[safeKey(sysName)] || {};
-      const underlying = meta.underlying || guessUnderlying(sysName);
-      const color = getUnderlyingColor(underlying);
-      const short = getUnderlyingShort(underlying);
-      const safeName = sysName.replace(/'/g, "\\'");
-      html += `<label title="${sysName}" style="display:flex;align-items:center;gap:5px;cursor:pointer;margin-bottom:4px;${checked ? '' : 'opacity:0.4;'}">`;
-      html += `<input type="checkbox" ${checked ? 'checked ' : ''}onchange="toggleDashSystem('${safeNick}','${safeName}',this.checked)" style="width:14px;height:14px;cursor:pointer;accent-color:${color};flex-shrink:0;">`;
-      html += `<span style="font-size:0.72rem;font-weight:700;color:${color};white-space:nowrap;">S${sysIdx + 1}</span>`;
-      html += `<span style="font-size:0.56rem;color:${color};font-weight:700;white-space:nowrap;">${short}</span>`;
-      html += `<span style="font-size:0.58rem;color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${sysName}</span>`;
-      html += `</label>`;
-    });
+    html += `<span style="font-size:0.75rem;font-weight:800;color:var(--text0);line-height:1.2;cursor:pointer;flex:1;" title="${nick}" onclick="toggleDashCollapse('${safeNick}')">${displayLabel}</span>`;
+    html += `<span style="font-size:0.65rem;color:var(--text2);font-weight:600;">${systems.length}</span>`;
+    html += `<span style="cursor:pointer;font-size:0.75rem;color:var(--text2);user-select:none;" onclick="toggleDashCollapse('${safeNick}')">${chevron}</span>`;
+    html += `</div>`;
+    // Systems — hidden when collapsed
+    if (!collapsed) {
+      systems.forEach((sysName, sysIdx) => {
+        const exKey = nick + ':' + sysName;
+        const checked = !dashExcludedSystems.has(exKey);
+        const meta = algoMeta[sysName] || algoMeta[safeKey(sysName)] || {};
+        const underlying = meta.underlying || guessUnderlying(sysName);
+        const color = getUnderlyingColor(underlying);
+        const short = getUnderlyingShort(underlying);
+        const safeName = sysName.replace(/'/g, "\\'");
+        html += `<label title="${sysName}" style="display:flex;align-items:center;gap:5px;cursor:pointer;margin-bottom:4px;${checked ? '' : 'opacity:0.4;'}">`;
+        html += `<input type="checkbox" ${checked ? 'checked ' : ''}onchange="toggleDashSystem('${safeNick}','${safeName}',this.checked)" style="width:14px;height:14px;cursor:pointer;accent-color:${color};flex-shrink:0;">`;
+        html += `<span style="font-size:0.72rem;font-weight:700;color:${color};white-space:nowrap;">S${sysIdx + 1}</span>`;
+        html += `<span style="font-size:0.56rem;color:${color};font-weight:700;white-space:nowrap;">${short}</span>`;
+        html += `<span style="font-size:0.58rem;color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${sysName}</span>`;
+        html += `</label>`;
+      });
+    }
     html += `</div>`;
   });
   html += '</div>';
   container.innerHTML = html;
+}
+
+// v23.6 — collapse/expand individual accounts
+function toggleDashCollapse(nick) {
+  if (!window._dashCollapsed) window._dashCollapsed = {};
+  const currently = window._dashCollapsed[nick];
+  if (currently === undefined) {
+    // First click — toggle opposite of global mode
+    window._dashCollapsed[nick] = (dashPanelMode !== 'minimized');
+  } else {
+    window._dashCollapsed[nick] = !currently;
+  }
+  renderSystemSelectorPanel();
+}
+
+// v23.6 — Minimize All / Expand All (persisted)
+function setDashPanelMode(mode) {
+  dashPanelMode = mode;
+  window._dashCollapsed = {};  // reset individual overrides
+  if (db) db.ref('journal/settings/dash_panel_mode').set(mode);
+  renderSystemSelectorPanel();
 }
 
 function dashSelectAll(checked) {
