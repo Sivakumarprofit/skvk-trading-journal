@@ -2,6 +2,18 @@
 ==========================================================
   SKVK TRADING JOURNAL — VERSION HISTORY
 ==========================================================
+  v23.4 | 2026-09-04 | (1) MERGED Quantleap + Quantiply into one auto-detect button:
+         |            | Upload page now shows two ASP buttons — [📊 Quantleap/Quantiply]
+         |            | and [⚡ Tradetron]. File format auto-detected from headers:
+         |            | algo_name+profit_loss → parseQuantiply; strategy_name+position_id
+         |            | → parseZebu. No wrong-button errors possible.
+         |            | (2) PRIVACY TOGGLE changed from filled buttons to RADIO BUTTONS.
+         |            | Selection now PERSISTED to Firebase (journal/settings/dash_label_mode)
+         |            | so it survives page close/refresh.
+         |            | (3) SELECT ALL / UNSELECT ALL shortcut buttons added above the
+         |            | system selector panel. Not persisted — default on page load is
+         |            | always all selected.
+==========================================================
   v23.3 | 2026-09-03 | (1) PRIVACY TOGGLE: Account ID / Account Name switcher below the
          |            | system selector panel. Account ID mode (default on fresh load)
          |            | shows broker prefix + client_id (e.g. ZEBU_Z62987) instead of
@@ -1035,7 +1047,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>SKVK Trading Journal v23.3</title>
+<title>SKVK Trading Journal v23.4</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -2000,7 +2012,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div class="login-logo">📋</div>
     <div class="login-title">
       SKVK Trading Journal
-      <span class="login-vbadge">v23.3</span>
+      <span class="login-vbadge">v23.4</span>
     </div>
     <div class="login-sub">Sign in with your authorised Google account to access the journal.</div>
     <button class="google-signin-btn" id="googleSignInBtn" onclick="signInWithGoogle()">
@@ -2040,7 +2052,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
         <i class="ti ti-chart-candle brand-icon"></i>
         <span class="brand-skvk">SKVK</span>
         <span class="brand-appname">Trading Journal</span>
-        <span class="brand-vbadge">v23.3</span>
+        <span class="brand-vbadge">v23.4</span>
       </div>
     </div>
     <div id="topbar-right-wrap">
@@ -2544,7 +2556,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
   <div class="page-header">
     <div>
       <div class="page-title">Upload Reports</div>
-      <div class="page-subtitle">Quantleap CSV · Quantiply CSV · Zebu Positions CSV · Tradetron CSV</div>
+      <div class="page-subtitle">Quantleap · Quantiply · Zebu Positions CSV · Tradetron CSV</div>
     </div>
   </div>
 
@@ -2556,11 +2568,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:center;">
       <button id="asp-btn-quantleap" onclick="selectASP('quantleap')"
         style="padding:10px 28px;border-radius:8px;font-size:0.88rem;font-weight:700;cursor:pointer;border:2px solid var(--blue);background:var(--blue);color:#fff;transition:all 0.15s;">
-        📊 Quantleap
-      </button>
-      <button id="asp-btn-quantiply" onclick="selectASP('quantiply')"
-        style="padding:10px 28px;border-radius:8px;font-size:0.88rem;font-weight:700;cursor:pointer;border:2px solid var(--border);background:var(--bg);color:var(--text1);transition:all 0.15s;">
-        📈 Quantiply
+        📊 Quantleap / Quantiply
       </button>
       <button id="asp-btn-tradetron" onclick="selectASP('tradetron')"
         style="padding:10px 28px;border-radius:8px;font-size:0.88rem;font-weight:700;cursor:pointer;border:2px solid var(--border);background:var(--bg);color:var(--text1);transition:all 0.15s;">
@@ -4992,6 +5000,11 @@ function startListeners() {
     renderSystemSelectorPanel();
     renderUnderlyingColorsSettings();
   });
+  // v23.4 — privacy toggle persistence
+  db.ref('journal/settings/dash_label_mode').on('value', snap => {
+    dashLabelMode = snap.val() || 'id';
+    renderSystemSelectorPanel();
+  });
 }
 
 function refreshAll() {
@@ -5110,27 +5123,16 @@ async function processFile(file) {
       trades = parseTradetron(csvText, ttAlgo);
       // Override client_id with selected account
       trades.forEach(t => { t.client_id = ttAcct; });
-    } else if (currentASP === 'quantiply') {
-      // Quantiply — algo_name / profit_loss format (Finvasia, IIFL, …)
-      const looksQuantiply = header.includes('algo_name') && header.includes('profit_loss');
-      const looksZebu      = header.includes('strategy_name') && header.includes('position_id');
-      if (!looksQuantiply) {
-        if (looksZebu) toast('This looks like a Zebu positions file — use the 📊 Quantleap button for it.', 'error');
-        else           toast('File does not look like a Quantiply report — expected columns: algo_name, profit_loss', 'error');
-        setProgress(false); return;
-      }
-      trades = parseQuantiply(csvText);
     } else {
-      // Quantleap button → Zebu positions CSV (strategy_name / position_id)
-      const looksZebu      = header.includes('strategy_name') && header.includes('position_id');
+      // v23.4 — Auto-detect: Quantleap/Quantiply merged button
       const looksQuantiply = header.includes('algo_name') && header.includes('profit_loss');
-      if (looksZebu) {
+      const looksZebu      = header.includes('strategy_name') && header.includes('position_id');
+      if (looksQuantiply) {
+        trades = parseQuantiply(csvText);
+      } else if (looksZebu) {
         trades = parseZebu(csvText);
-      } else if (looksQuantiply) {
-        toast('This looks like a Quantiply report — use the 📈 Quantiply button for it.', 'error');
-        setProgress(false); return;
       } else {
-        toast('Unknown format in "' + file.name + '" — expected a Zebu positions CSV', 'error');
+        toast('Unknown format in "' + file.name + '" — expected Quantleap, Quantiply or Zebu CSV', 'error');
         setProgress(false); return;
       }
     }
@@ -5708,8 +5710,19 @@ function renderSystemSelectorPanel() {
     return;
   }
   window._dashNickCids = nickCids;
-  // v23.3 — visible scrollbar via custom styling
-  let html = '<div id="dash-acct-scroll" style="display:flex;gap:10px;overflow-x:auto;padding:10px 0 14px 0;">';
+  window._dashNickSystems = nickSystems;
+
+  // v23.4 — Select All / Unselect All buttons + privacy toggle (radio)
+  let html = '<div style="display:flex;align-items:center;gap:14px;padding:6px 0 4px 0;flex-wrap:wrap;">';
+  html += '<button onclick="dashSelectAll(true)" style="padding:4px 14px;border-radius:6px;font-size:0.72rem;font-weight:700;cursor:pointer;border:1.5px solid var(--blue);background:var(--blue);color:#fff;">\u2611 Select All</button>';
+  html += '<button onclick="dashSelectAll(false)" style="padding:4px 14px;border-radius:6px;font-size:0.72rem;font-weight:700;cursor:pointer;border:1.5px solid var(--border);background:var(--bg);color:var(--text2);">\u2610 Unselect All</button>';
+  html += '<span style="margin-left:auto;display:flex;align-items:center;gap:8px;">';
+  html += '<span style="font-size:0.7rem;color:var(--text2);font-weight:600;">Display:</span>';
+  html += `<label style="display:flex;align-items:center;gap:4px;cursor:pointer;font-size:0.7rem;font-weight:600;color:var(--text1);"><input type="radio" name="dash-label-mode" value="id" ${dashLabelMode==='id'?'checked ':''}onchange="setDashLabelMode('id')" style="accent-color:var(--blue);cursor:pointer;">Account ID</label>`;
+  html += `<label style="display:flex;align-items:center;gap:4px;cursor:pointer;font-size:0.7rem;font-weight:600;color:var(--text1);"><input type="radio" name="dash-label-mode" value="name" ${dashLabelMode==='name'?'checked ':''}onchange="setDashLabelMode('name')" style="accent-color:var(--blue);cursor:pointer;">Account Name</label>`;
+  html += '</span></div>';
+
+  html += '<div id="dash-acct-scroll" style="display:flex;gap:10px;overflow-x:auto;padding:10px 0 14px 0;">';
   nicks.forEach((nick, idx) => {
     const systems = [...nickSystems[nick]].sort();
     const bg = ACCT_BG_COLORS[idx % ACCT_BG_COLORS.length];
@@ -5739,17 +5752,27 @@ function renderSystemSelectorPanel() {
     html += `</div>`;
   });
   html += '</div>';
-  // v23.3 — privacy toggle below the panel
-  html += `<div style="display:flex;align-items:center;gap:10px;padding:4px 0 6px 0;">`;
-  html += `<span style="font-size:0.7rem;color:var(--text2);font-weight:600;">Display:</span>`;
-  html += `<button onclick="setDashLabelMode('id')" style="padding:4px 12px;border-radius:5px;font-size:0.7rem;font-weight:700;cursor:pointer;border:1.5px solid ${dashLabelMode==='id'?'var(--blue)':'var(--border)'};background:${dashLabelMode==='id'?'var(--blue)':'var(--bg)'};color:${dashLabelMode==='id'?'#fff':'var(--text2)'};">Account ID</button>`;
-  html += `<button onclick="setDashLabelMode('name')" style="padding:4px 12px;border-radius:5px;font-size:0.7rem;font-weight:700;cursor:pointer;border:1.5px solid ${dashLabelMode==='name'?'var(--blue)':'var(--border)'};background:${dashLabelMode==='name'?'var(--blue)':'var(--bg)'};color:${dashLabelMode==='name'?'#fff':'var(--text2)'};">Account Name</button>`;
-  html += `</div>`;
   container.innerHTML = html;
 }
 
+// v23.4 — Select All / Unselect All
+function dashSelectAll(checked) {
+  const ns = window._dashNickSystems;
+  if (!ns) return;
+  dashExcludedSystems.clear();
+  if (!checked) {
+    Object.keys(ns).forEach(nick => {
+      ns[nick].forEach(s => dashExcludedSystems.add(nick + ':' + s));
+    });
+  }
+  renderSystemSelectorPanel();
+  renderDashFiltered();
+}
+
+// v23.4 — privacy toggle persisted to Firebase
 function setDashLabelMode(mode) {
   dashLabelMode = mode;
+  if (db) db.ref('journal/settings/dash_label_mode').set(mode);
   renderSystemSelectorPanel();
 }
 
@@ -9076,14 +9099,12 @@ let currentASP = 'quantleap';
 function selectASP(asp) {
   currentASP = asp;
   const btnQ  = document.getElementById('asp-btn-quantleap');
-  const btnQi = document.getElementById('asp-btn-quantiply');
   const btnT  = document.getElementById('asp-btn-tradetron');
   const ttWrap = document.getElementById('tradetron-algo-wrap');
   const upWrap = document.getElementById('asp-upload-wrap');
   const hint  = document.getElementById('upload-zone-hint');
 
-  // Style all three buttons: highlight the active one, dim the rest
-  [['quantleap',btnQ], ['quantiply',btnQi], ['tradetron',btnT]].forEach(([key, btn]) => {
+  [['quantleap',btnQ], ['tradetron',btnT]].forEach(([key, btn]) => {
     if (!btn) return;
     const active = (asp === key);
     btn.style.background  = active ? 'var(--blue)' : 'var(--bg)';
@@ -9093,40 +9114,31 @@ function selectASP(asp) {
 
   if (asp === 'tradetron') {
     ttWrap.style.display = 'block';
-    // Populate Basket/Group/Strategy dropdown from all 3 tiers
     const sel = document.getElementById('tradetron-algo-select');
     if (sel) {
       const baskets   = Object.keys(algoGroups).sort();
       const groups    = Object.keys(algoGroupsData).sort();
       const strategies= Object.keys(algoMeta).sort();
-      let opts = '<option value="">— choose Basket / Group / Strategy —</option>';
-      if (baskets.length)    opts += `<optgroup label="── Baskets ──">${baskets.map(k=>`<option value="${k}">${algoGroups[k]?.name||k}</option>`).join('')}</optgroup>`;
-      if (groups.length)     opts += `<optgroup label="── Groups ──">${groups.map(k=>`<option value="${k}">${algoGroupsData[k]?.name||k}</option>`).join('')}</optgroup>`;
-      if (strategies.length) opts += `<optgroup label="── Strategies ──">${strategies.map(k=>`<option value="${k}">${algoMeta[k]?.display_name||k}</option>`).join('')}</optgroup>`;
+      let opts = '<option value="">\u2014 choose Basket / Group / Strategy \u2014</option>';
+      if (baskets.length)    opts += `<optgroup label="\u2500\u2500 Baskets \u2500\u2500">${baskets.map(k=>`<option value="${k}">${algoGroups[k]?.name||k}</option>`).join('')}</optgroup>`;
+      if (groups.length)     opts += `<optgroup label="\u2500\u2500 Groups \u2500\u2500">${groups.map(k=>`<option value="${k}">${algoGroupsData[k]?.name||k}</option>`).join('')}</optgroup>`;
+      if (strategies.length) opts += `<optgroup label="\u2500\u2500 Strategies \u2500\u2500">${strategies.map(k=>`<option value="${k}">${algoMeta[k]?.display_name||k}</option>`).join('')}</optgroup>`;
       sel.innerHTML = opts;
     }
-    // Populate account dropdown from nicknames — all configured accounts always visible
     const acctSel = document.getElementById('tradetron-acct-select');
     if (acctSel) {
-      // Use all client IDs from accountNicknames so newly configured accounts show up
-      // even if no trades have been uploaded for them yet
       const fromNicknames = Object.keys(accountNicknames).sort();
-      // Also include any client_ids from existing trades not yet in nicknames
       const junk = new Set(['tradetron','quantleap','quantiply','zebu','upstox','']);
       const fromTrades = [...new Set(allTrades.map(t=>t.client_id||'').filter(id=>id&&!junk.has(id.toLowerCase())))];
       const accounts = [...new Set([...fromNicknames, ...fromTrades])].sort();
-      acctSel.innerHTML = '<option value="">— choose account —</option>' +
+      acctSel.innerHTML = '<option value="">\u2014 choose account \u2014</option>' +
         accounts.map(a=>`<option value="${a}">${getClientLabel(a)}</option>`).join('');
     }
-    if (hint) hint.textContent = 'Tradetron CSV export — each row will be one journal entry';
+    if (hint) hint.textContent = 'Tradetron CSV export \u2014 each row will be one journal entry';
   } else {
-    // Quantleap and Quantiply both auto-read the account from the file — no picker needed
+    // v23.4 \u2014 merged Quantleap / Quantiply: auto-detects format from headers
     ttWrap.style.display = 'none';
-    if (asp === 'quantiply') {
-      if (hint) hint.textContent = 'Quantiply report (Finvasia / IIFL …) · CSV or XLSX — open legs are skipped until closed';
-    } else {
-      if (hint) hint.textContent = 'Zebu Positions CSV · Also accepts XLSX files';
-    }
+    if (hint) hint.textContent = 'Quantleap \u00b7 Quantiply \u00b7 Zebu CSV or XLSX \u2014 format auto-detected';
   }
   upWrap.style.display = 'block';
 }
