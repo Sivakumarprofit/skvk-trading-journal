@@ -2,6 +2,14 @@
 ==========================================================
   SKVK TRADING JOURNAL — VERSION HISTORY
 ==========================================================
+  v23.7 | 2026-09-07 | SYSTEM SELECTOR: horizontal carousel layout replaces the 3-column
+         |            | grid. All accounts in one row with ‹ / › arrow buttons on either
+         |            | side. Shows ~4-5 at a time; clicking arrows smooth-scrolls to
+         |            | reveal the rest. No wrapping, no vertical stacking.
+         |            | All toolbar features retained: Select/Unselect All, Minimize/
+         |            | Expand All (persisted), privacy toggle (persisted), individual
+         |            | account collapse via chevron click.
+==========================================================
   v23.6 | 2026-09-07 | SYSTEM SELECTOR PANEL layout + collapse:
          |            | (1) Grid changed to fixed 3-column layout, left-aligned:
          |            | grid-template-columns: repeat(3, 1fr). Accounts flow in 3+3+N
@@ -1073,7 +1081,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>SKVK Trading Journal v23.6</title>
+<title>SKVK Trading Journal v23.7</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -2032,7 +2040,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div class="login-logo">📋</div>
     <div class="login-title">
       SKVK Trading Journal
-      <span class="login-vbadge">v23.6</span>
+      <span class="login-vbadge">v23.7</span>
     </div>
     <div class="login-sub">Sign in with your authorised Google account to access the journal.</div>
     <button class="google-signin-btn" id="googleSignInBtn" onclick="signInWithGoogle()">
@@ -2072,7 +2080,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
         <i class="ti ti-chart-candle brand-icon"></i>
         <span class="brand-skvk">SKVK</span>
         <span class="brand-appname">Trading Journal</span>
-        <span class="brand-vbadge">v23.6</span>
+        <span class="brand-vbadge">v23.7</span>
       </div>
     </div>
     <div id="topbar-right-wrap">
@@ -5738,14 +5746,13 @@ function renderSystemSelectorPanel() {
   }
   window._dashNickCids = nickCids;
   window._dashNickSystems = nickSystems;
-  // Track which individual accounts are collapsed (overrides global mode)
   if (!window._dashCollapsed) window._dashCollapsed = {};
   const isMinimized = (nick) => {
     if (nick in window._dashCollapsed) return window._dashCollapsed[nick];
     return dashPanelMode === 'minimized';
   };
 
-  // v23.6 — toolbar: Select All / Unselect All + Minimize / Expand + privacy radio
+  // Toolbar
   let html = '<div style="display:flex;align-items:center;gap:8px;padding:6px 0 8px 0;flex-wrap:wrap;">';
   const btnStyle = 'padding:4px 12px;border-radius:6px;font-size:0.71rem;font-weight:700;cursor:pointer;border:1.5px solid var(--blue);background:var(--bg);color:var(--blue);transition:background 0.15s,color 0.15s;';
   const hoverIn = "this.style.background='var(--blue)';this.style.color='#fff'";
@@ -5761,8 +5768,12 @@ function renderSystemSelectorPanel() {
   html += `<label style="display:flex;align-items:center;gap:4px;cursor:pointer;font-size:0.7rem;font-weight:600;color:var(--text1);"><input type="radio" name="dash-label-mode" value="name" ${dashLabelMode==='name'?'checked ':''}onchange="setDashLabelMode('name')" style="accent-color:var(--blue);cursor:pointer;">Account Name</label>`;
   html += '</span></div>';
 
-  // v23.6 — fixed 3-column grid, left-aligned
-  html += '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding:10px 0;">';
+  // v23.7 — horizontal carousel: [‹] [accounts...] [›]
+  const arrowStyle = 'flex-shrink:0;width:36px;height:36px;border-radius:50%;border:1.5px solid var(--blue);background:var(--bg);color:var(--blue);font-size:1.1rem;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background 0.15s,color 0.15s;';
+  html += '<div style="display:flex;align-items:center;gap:8px;padding:8px 0;">';
+  html += `<button onclick="dashCarouselScroll(-1)" style="${arrowStyle}" onmouseenter="this.style.background='var(--blue)';this.style.color='#fff'" onmouseleave="this.style.background='var(--bg)';this.style.color='var(--blue)'" title="Scroll left">\u2039</button>`;
+  html += '<div id="dash-acct-carousel" style="display:flex;gap:10px;overflow-x:hidden;flex:1;scroll-behavior:smooth;">';
+
   nicks.forEach((nick, idx) => {
     const systems = [...nickSystems[nick]].sort();
     const bg = ACCT_BG_COLORS[idx % ACCT_BG_COLORS.length];
@@ -5771,15 +5782,15 @@ function renderSystemSelectorPanel() {
     const displayLabel = getDashAcctLabel(nick, nickCids[nick]);
     const collapsed = isMinimized(nick);
     const chevron = collapsed ? '\u25b8' : '\u25be';
-    html += `<div style="background:${bg};border-radius:10px;padding:10px 12px;border:1.5px solid var(--border);">`;
-    // Header: checkbox + label + collapse chevron + system count
+    html += `<div style="min-width:210px;max-width:260px;flex-shrink:0;background:${bg};border-radius:10px;padding:10px 12px;border:1.5px solid var(--border);">`;
+    // Header
     html += `<div style="display:flex;align-items:center;gap:7px;margin-bottom:${collapsed?'0':'7'}px;padding-bottom:${collapsed?'0':'6'}px;${collapsed?'':'border-bottom:1.5px solid var(--border);'}">`;
     html += `<input type="checkbox" ${allChecked ? 'checked ' : ''}onchange="toggleDashAccount('${safeNick}',this.checked)" style="width:15px;height:15px;cursor:pointer;accent-color:var(--blue);">`;
     html += `<span style="font-size:0.75rem;font-weight:800;color:var(--text0);line-height:1.2;cursor:pointer;flex:1;" title="${nick}" onclick="toggleDashCollapse('${safeNick}')">${displayLabel}</span>`;
     html += `<span style="font-size:0.65rem;color:var(--text2);font-weight:600;">${systems.length}</span>`;
     html += `<span style="cursor:pointer;font-size:0.75rem;color:var(--text2);user-select:none;" onclick="toggleDashCollapse('${safeNick}')">${chevron}</span>`;
     html += `</div>`;
-    // Systems — hidden when collapsed
+    // Systems
     if (!collapsed) {
       systems.forEach((sysName, sysIdx) => {
         const exKey = nick + ':' + sysName;
@@ -5799,16 +5810,23 @@ function renderSystemSelectorPanel() {
     }
     html += `</div>`;
   });
-  html += '</div>';
+
+  html += '</div>';  // close carousel
+  html += `<button onclick="dashCarouselScroll(1)" style="${arrowStyle}" onmouseenter="this.style.background='var(--blue)';this.style.color='#fff'" onmouseleave="this.style.background='var(--bg)';this.style.color='var(--blue)'" title="Scroll right">\u203a</button>`;
+  html += '</div>';  // close flex row
   container.innerHTML = html;
 }
 
-// v23.6 — collapse/expand individual accounts
+// v23.7 — smooth scroll the carousel by ~one card width
+function dashCarouselScroll(dir) {
+  const el = document.getElementById('dash-acct-carousel');
+  if (el) el.scrollBy({ left: dir * 240, behavior: 'smooth' });
+}
+
 function toggleDashCollapse(nick) {
   if (!window._dashCollapsed) window._dashCollapsed = {};
   const currently = window._dashCollapsed[nick];
   if (currently === undefined) {
-    // First click — toggle opposite of global mode
     window._dashCollapsed[nick] = (dashPanelMode !== 'minimized');
   } else {
     window._dashCollapsed[nick] = !currently;
@@ -5816,10 +5834,9 @@ function toggleDashCollapse(nick) {
   renderSystemSelectorPanel();
 }
 
-// v23.6 — Minimize All / Expand All (persisted)
 function setDashPanelMode(mode) {
   dashPanelMode = mode;
-  window._dashCollapsed = {};  // reset individual overrides
+  window._dashCollapsed = {};
   if (db) db.ref('journal/settings/dash_panel_mode').set(mode);
   renderSystemSelectorPanel();
 }
