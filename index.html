@@ -5769,10 +5769,13 @@ function renderSystemSelectorPanel() {
   html += '</span></div>';
 
   // v23.7 — horizontal carousel: [‹] [accounts...] [›]
-  const arrowStyle = 'flex-shrink:0;width:36px;height:36px;border-radius:50%;border:1.5px solid var(--blue);background:var(--bg);color:var(--blue);font-size:1.1rem;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background 0.15s,color 0.15s;';
-  html += '<div style="display:flex;align-items:center;gap:8px;padding:8px 0;">';
-  html += `<button onclick="dashCarouselScroll(-1)" style="${arrowStyle}" onmouseenter="this.style.background='var(--blue)';this.style.color='#fff'" onmouseleave="this.style.background='var(--bg)';this.style.color='var(--blue)'" title="Scroll left">\u2039</button>`;
-  html += '<div id="dash-acct-carousel" style="display:flex;gap:10px;overflow-x:hidden;flex:1;scroll-behavior:smooth;">';
+  // v23.7 — horizontal carousel with absolutely-positioned ‹ / › arrows
+  const arrowStyle = 'position:absolute;top:50%;transform:translateY(-50%);z-index:2;width:36px;height:36px;border-radius:50%;border:1.5px solid var(--blue);background:var(--bg);color:var(--blue);font-size:1.1rem;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background 0.15s,color 0.15s;box-shadow:0 2px 6px rgba(0,0,0,0.1);';
+  const hoverInA = "this.style.background='var(--blue)';this.style.color='#fff'";
+  const hoverOutA = "this.style.background='var(--bg)';this.style.color='var(--blue)'";
+  html += '<div style="position:relative;padding:0 44px;margin:8px 0;">';
+  html += `<button onclick="dashCarouselScroll(-1)" style="${arrowStyle}left:0;" onmouseenter="${hoverInA}" onmouseleave="${hoverOutA}" title="Scroll left">\u2039</button>`;
+  html += '<div id="dash-acct-carousel" style="display:flex;gap:10px;overflow-x:hidden;scroll-behavior:smooth;">';
 
   nicks.forEach((nick, idx) => {
     const systems = [...nickSystems[nick]].sort();
@@ -5783,14 +5786,12 @@ function renderSystemSelectorPanel() {
     const collapsed = isMinimized(nick);
     const chevron = collapsed ? '\u25b8' : '\u25be';
     html += `<div style="min-width:210px;max-width:260px;flex-shrink:0;background:${bg};border-radius:10px;padding:10px 12px;border:1.5px solid var(--border);">`;
-    // Header
     html += `<div style="display:flex;align-items:center;gap:7px;margin-bottom:${collapsed?'0':'7'}px;padding-bottom:${collapsed?'0':'6'}px;${collapsed?'':'border-bottom:1.5px solid var(--border);'}">`;
     html += `<input type="checkbox" ${allChecked ? 'checked ' : ''}onchange="toggleDashAccount('${safeNick}',this.checked)" style="width:15px;height:15px;cursor:pointer;accent-color:var(--blue);">`;
     html += `<span style="font-size:0.75rem;font-weight:800;color:var(--text0);line-height:1.2;cursor:pointer;flex:1;" title="${nick}" onclick="toggleDashCollapse('${safeNick}')">${displayLabel}</span>`;
     html += `<span style="font-size:0.65rem;color:var(--text2);font-weight:600;">${systems.length}</span>`;
     html += `<span style="cursor:pointer;font-size:0.75rem;color:var(--text2);user-select:none;" onclick="toggleDashCollapse('${safeNick}')">${chevron}</span>`;
     html += `</div>`;
-    // Systems
     if (!collapsed) {
       systems.forEach((sysName, sysIdx) => {
         const exKey = nick + ':' + sysName;
@@ -5812,8 +5813,8 @@ function renderSystemSelectorPanel() {
   });
 
   html += '</div>';  // close carousel
-  html += `<button onclick="dashCarouselScroll(1)" style="${arrowStyle}" onmouseenter="this.style.background='var(--blue)';this.style.color='#fff'" onmouseleave="this.style.background='var(--bg)';this.style.color='var(--blue)'" title="Scroll right">\u203a</button>`;
-  html += '</div>';  // close flex row
+  html += `<button onclick="dashCarouselScroll(1)" style="${arrowStyle}right:0;" onmouseenter="${hoverInA}" onmouseleave="${hoverOutA}" title="Scroll right">\u203a</button>`;
+  html += '</div>';  // close relative wrapper
   container.innerHTML = html;
 }
 
