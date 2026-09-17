@@ -2,6 +2,24 @@
 ==========================================================
   SKVK TRADING JOURNAL — VERSION HISTORY
 ==========================================================
+  v24.1 | 2026-09-17 | BUGFIX — P&L DATE ATTRIBUTION reverted to Zebu's real convention.
+         |            | v22.5 (2026-07-14) had switched pnlDate() to book every trade's
+         |            | P&L to its ENTRY date, on the assumption that this matched Zebu
+         |            | Analytics' own Daily P&L grouping. Direct reconciliation against
+         |            | Zebu's live "Others > Analytics > Overview" dashboard using a raw
+         |            | Zebu positions export (Sep 1-16, 2026) proved that assumption was
+         |            | wrong: Zebu actually books each trade's P&L to its CLOSED/EXIT
+         |            | date, not its entry date. pnlDate() now returns exit_date first,
+         |            | falling back to entry_date only for still-open/unclosed legs (so
+         |            | the current day's row still stays partial until the position
+         |            | closes, same as before). This affects every day-bucketed view:
+         |            | Daily Journal, Daily Performance (Basket + Account-wise) calendars
+         |            | and tables, Monthly Performance stats, equity/drawdown curves, and
+         |            | yearly stats. All of them now tie exactly to Zebu's own Daily P&L
+         |            | numbers, day for day. No change to how trades are parsed, matched,
+         |            | or deduplicated — only which date each trade's P&L is bucketed
+         |            | under for reporting.
+==========================================================
   v23.7 | 2026-09-07 | SYSTEM SELECTOR: horizontal carousel layout replaces the 3-column
          |            | grid. All accounts in one row with ‹ / › arrow buttons on either
          |            | side. Shows ~4-5 at a time; clicking arrows smooth-scrolls to
@@ -1081,7 +1099,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>SKVK Trading Journal v23.7</title>
+<title>SKVK Trading Journal v24.1</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -2040,7 +2058,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div class="login-logo">📋</div>
     <div class="login-title">
       SKVK Trading Journal
-      <span class="login-vbadge">v23.7</span>
+      <span class="login-vbadge">v24.1</span>
     </div>
     <div class="login-sub">Sign in with your authorised Google account to access the journal.</div>
     <button class="google-signin-btn" id="googleSignInBtn" onclick="signInWithGoogle()">
@@ -2080,7 +2098,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
         <i class="ti ti-chart-candle brand-icon"></i>
         <span class="brand-skvk">SKVK</span>
         <span class="brand-appname">Trading Journal</span>
-        <span class="brand-vbadge">v23.7</span>
+        <span class="brand-vbadge">v24.1</span>
       </div>
     </div>
     <div id="topbar-right-wrap">
@@ -5591,10 +5609,14 @@ function normDate(d) {
   return d.slice(0,10);
 }
 // P&L attribution date: use exit_date if available (handles STBT/BTST), else entry_date
-// v22.5: Zebu entry-date convention — P&L books to the day the trade was ENTERED,
-// not the day it exited. STBT trades entered today therefore book to today once
-// they close tomorrow, exactly matching Zebu Analytics' Daily P&L grouping.
-function pnlDate(t) { return t.entry_date || t.exit_date; }
+// v24.1: REVERTED to Zebu's actual exit-date convention. v22.5 had assumed Zebu's
+// Analytics dashboard books P&L to the ENTRY date; a direct reconciliation against
+// Zebu's live "Others -> Analytics -> Overview" Daily P&L table (Sep 2026 data) proved
+// Zebu actually books every trade to its CLOSED/EXIT date instead. Every day total in
+// this app now ties exactly to Zebu's own dashboard again. Open/still-running legs
+// (no exit_date yet) keep booking to entry_date so the current day stays partial,
+// same as before.
+function pnlDate(t) { return t.exit_date || t.entry_date; }
 function isoTime(s) { const m=(s||'').match(/T(\d{2}:\d{2})/); return m?m[1]:''; }
 function optType(s) { s=s.toUpperCase(); return s.endsWith('CE')?'CE':s.endsWith('PE')?'PE':s.includes('FUT')?'FUT':'OPT'; }
 function normExit(r) {
