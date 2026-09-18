@@ -2,6 +2,22 @@
 ==========================================================
   SKVK TRADING JOURNAL — VERSION HISTORY
 ==========================================================
+  v24.5 | 2026-09-18 | ANALYTICS — BASKET, two changes:
+         |            | (1) Removed the per-account collapse chevron (▾) and strategy-count
+         |            | badge from each account card's header — every card now always shows
+         |            | its full strategy list (governed by "Show Archived", per v24.2), no
+         |            | per-card collapsing. The global "Minimize All"/"Expand All" toolbar
+         |            | buttons are UNCHANGED and still collapse/expand every card at once
+         |            | (they drive dashPanelMode directly, independent of the removed
+         |            | per-card control) — toggleDashCollapse() removed as dead code.
+         |            | (2) Fixed ‹ / › carousel arrows: they were inline flex siblings of
+         |            | the scrollable card row, so once enough accounts loaded to fill the
+         |            | row, "›" got pushed out past the last card with an odd gap instead
+         |            | of staying in a fixed, useful spot. Both arrows are now absolutely
+         |            | positioned over the fixed left/right edges of the carousel's visible
+         |            | area (inside a position:relative wrapper) so they never move,
+         |            | regardless of scroll position or how many accounts are loaded.
+==========================================================
   v24.4 | 2026-09-18 | Version bump only — no functional change from v24.3. Confirmed the
          |            | visible drag-scrollbar under the account carousel (v24.3) is correct
          |            | as-is; nothing further requested at this point.
@@ -1129,7 +1145,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>SKVK Trading Journal v24.4</title>
+<title>SKVK Trading Journal v24.5</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -2109,7 +2125,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div class="login-logo">📋</div>
     <div class="login-title">
       SKVK Trading Journal
-      <span class="login-vbadge">v24.4</span>
+      <span class="login-vbadge">v24.5</span>
     </div>
     <div class="login-sub">Sign in with your authorised Google account to access the journal.</div>
     <button class="google-signin-btn" id="googleSignInBtn" onclick="signInWithGoogle()">
@@ -2149,7 +2165,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
         <i class="ti ti-chart-candle brand-icon"></i>
         <span class="brand-skvk">SKVK</span>
         <span class="brand-appname">Trading Journal</span>
-        <span class="brand-vbadge">v24.4</span>
+        <span class="brand-vbadge">v24.5</span>
       </div>
     </div>
     <div id="topbar-right-wrap">
@@ -5858,16 +5874,24 @@ function renderSystemSelectorPanel() {
   // v23.7 — horizontal carousel: [‹] [accounts...] [›]
   // v23.7 — horizontal carousel with absolutely-positioned ‹ / › arrows
   // v23.7 — horizontal carousel: flex layout with always-visible arrows
-  const arrowBtnStyle = 'flex-shrink:0;width:38px;height:38px;border-radius:50%;border:2px solid var(--blue);background:var(--bg);color:var(--blue);font-size:1.2rem;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background 0.15s,color 0.15s;box-shadow:0 2px 8px rgba(0,0,0,0.12);';
+  // v24.5 — arrows were inline flex siblings of the scroll container, so once enough
+  // cards loaded to fill the row, the "›" button got pushed out past the last card
+  // instead of staying at a fixed, useful position. Both arrows are now absolutely
+  // positioned over the FIXED left/right edges of the carousel's visible viewport
+  // (inside a position:relative wrapper), so they never move regardless of scroll
+  // position or card count. The scroll container gets side padding so cards don't
+  // start out hidden underneath the buttons.
+  const arrowBtnStyle = 'position:absolute;top:50%;transform:translateY(-50%);z-index:5;width:38px;height:38px;border-radius:50%;border:2px solid var(--blue);background:var(--bg);color:var(--blue);font-size:1.2rem;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background 0.15s,color 0.15s;box-shadow:0 2px 8px rgba(0,0,0,0.12);';
   const hoverInA = "this.style.background='var(--blue)';this.style.color='#fff'";
   const hoverOutA = "this.style.background='var(--bg)';this.style.color='var(--blue)'";
-  html += '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;">';
-  html += `<button onclick="dashCarouselScroll(-1)" style="${arrowBtnStyle}" onmouseenter="${hoverInA}" onmouseleave="${hoverOutA}" title="Scroll left">\u2039</button>`;
+  html += '<div style="position:relative;padding:8px 0;">';
+  html += `<button onclick="dashCarouselScroll(-1)" style="${arrowBtnStyle}left:0;" onmouseenter="${hoverInA}" onmouseleave="${hoverOutA}" title="Scroll left">\u2039</button>`;
   // v24.3 — visible, draggable scrollbar below the account cards (was overflow-x:hidden,
   // so the only way to move between accounts was the ‹ / › buttons or scrolling the page
   // down to a different selector). Extra bottom padding keeps the scrollbar clear of the
   // card borders; #dash-acct-carousel-scrollbar-css below styles it to be easy to grab.
-  html += '<div id="dash-acct-carousel" class="dash-acct-scrollbar" style="display:flex;gap:10px;overflow-x:auto;flex:1;min-width:0;scroll-behavior:smooth;padding-bottom:12px;">';
+  // v24.5 — side padding (46px) keeps cards clear of the now-fixed-position arrows.
+  html += '<div id="dash-acct-carousel" class="dash-acct-scrollbar" style="display:flex;gap:10px;overflow-x:auto;scroll-behavior:smooth;padding:0 46px 12px 46px;">';
 
   nicks.forEach((nick, idx) => {
     const systems = [...nickSystems[nick]].sort();
@@ -5875,14 +5899,15 @@ function renderSystemSelectorPanel() {
     const allChecked = systems.every(s => !dashExcludedSystems.has(nick + ':' + s));
     const safeNick = nick.replace(/'/g, "\\'");
     const displayLabel = getDashAcctLabel(nick, nickCids[nick]);
+    // v24.5 \u2014 per-card collapse chevron + strategy-count badge removed; every account
+    // card now always shows its full strategy list. "Minimize All"/"Expand All" in the
+    // toolbar still work (they drive dashPanelMode/isMinimized for all cards at once) \u2014
+    // only the individual per-card click-to-collapse control is gone.
     const collapsed = isMinimized(nick);
-    const chevron = collapsed ? '\u25b8' : '\u25be';
     html += `<div style="min-width:210px;max-width:260px;flex-shrink:0;background:${bg};border-radius:10px;padding:10px 12px;border:1.5px solid var(--border);">`;
     html += `<div style="display:flex;align-items:center;gap:7px;margin-bottom:${collapsed?'0':'7'}px;padding-bottom:${collapsed?'0':'6'}px;${collapsed?'':'border-bottom:1.5px solid var(--border);'}">`;
     html += `<input type="checkbox" ${allChecked ? 'checked ' : ''}onchange="toggleDashAccount('${safeNick}',this.checked)" style="width:15px;height:15px;cursor:pointer;accent-color:var(--blue);">`;
-    html += `<span style="font-size:0.75rem;font-weight:800;color:var(--text0);line-height:1.2;cursor:pointer;flex:1;" title="${nick}" onclick="toggleDashCollapse('${safeNick}')">${displayLabel}</span>`;
-    html += `<span style="font-size:0.65rem;color:var(--text2);font-weight:600;">${systems.length}</span>`;
-    html += `<span style="cursor:pointer;font-size:0.75rem;color:var(--text2);user-select:none;" onclick="toggleDashCollapse('${safeNick}')">${chevron}</span>`;
+    html += `<span style="font-size:0.75rem;font-weight:800;color:var(--text0);line-height:1.2;flex:1;" title="${nick}">${displayLabel}</span>`;
     html += `</div>`;
     if (!collapsed) {
       systems.forEach((sysName, sysIdx) => {
@@ -5908,8 +5933,8 @@ function renderSystemSelectorPanel() {
   });
 
   html += '</div>';  // close carousel
-  html += `<button onclick="dashCarouselScroll(1)" style="${arrowBtnStyle}" onmouseenter="${hoverInA}" onmouseleave="${hoverOutA}" title="Scroll right">\u203a</button>`;
-  html += '</div>';  // close flex row
+  html += `<button onclick="dashCarouselScroll(1)" style="${arrowBtnStyle}right:0;" onmouseenter="${hoverInA}" onmouseleave="${hoverOutA}" title="Scroll right">\u203a</button>`;
+  html += '</div>';  // close position:relative wrapper (v24.5)
   container.innerHTML = html;
 }
 
@@ -5919,16 +5944,6 @@ function dashCarouselScroll(dir) {
   if (el) el.scrollBy({ left: dir * 240, behavior: 'smooth' });
 }
 
-function toggleDashCollapse(nick) {
-  if (!window._dashCollapsed) window._dashCollapsed = {};
-  const currently = window._dashCollapsed[nick];
-  if (currently === undefined) {
-    window._dashCollapsed[nick] = (dashPanelMode !== 'minimized');
-  } else {
-    window._dashCollapsed[nick] = !currently;
-  }
-  renderSystemSelectorPanel();
-}
 
 function setDashPanelMode(mode) {
   dashPanelMode = mode;
