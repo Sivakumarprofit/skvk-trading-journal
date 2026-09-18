@@ -2,6 +2,13 @@
 ==========================================================
   SKVK TRADING JOURNAL — VERSION HISTORY
 ==========================================================
+  v24.6 | 2026-09-18 | ANALYTICS — BASKET: moved the ‹ / › carousel arrows out from
+         |            | beside/over the account cards entirely (the v24.5 absolute-
+         |            | positioning fix still left the right arrow unusable at wide
+         |            | viewports). Both arrows now sit in their own row directly
+         |            | BENEATH the account-card carousel (above Daily Performance):
+         |            | ‹ at the far left, › at the far right, spanning the full width.
+         |            | No functional change to dashCarouselScroll() itself.
   v24.5 | 2026-09-18 | ANALYTICS — BASKET, two changes:
          |            | (1) Removed the per-account collapse chevron (▾) and strategy-count
          |            | badge from each account card's header — every card now always shows
@@ -1145,7 +1152,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>SKVK Trading Journal v24.5</title>
+<title>SKVK Trading Journal v24.6</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -2125,7 +2132,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div class="login-logo">📋</div>
     <div class="login-title">
       SKVK Trading Journal
-      <span class="login-vbadge">v24.5</span>
+      <span class="login-vbadge">v24.6</span>
     </div>
     <div class="login-sub">Sign in with your authorised Google account to access the journal.</div>
     <button class="google-signin-btn" id="googleSignInBtn" onclick="signInWithGoogle()">
@@ -2165,7 +2172,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
         <i class="ti ti-chart-candle brand-icon"></i>
         <span class="brand-skvk">SKVK</span>
         <span class="brand-appname">Trading Journal</span>
-        <span class="brand-vbadge">v24.5</span>
+        <span class="brand-vbadge">v24.6</span>
       </div>
     </div>
     <div id="topbar-right-wrap">
@@ -5876,22 +5883,21 @@ function renderSystemSelectorPanel() {
   // v23.7 — horizontal carousel: flex layout with always-visible arrows
   // v24.5 — arrows were inline flex siblings of the scroll container, so once enough
   // cards loaded to fill the row, the "›" button got pushed out past the last card
-  // instead of staying at a fixed, useful position. Both arrows are now absolutely
-  // positioned over the FIXED left/right edges of the carousel's visible viewport
-  // (inside a position:relative wrapper), so they never move regardless of scroll
-  // position or card count. The scroll container gets side padding so cards don't
-  // start out hidden underneath the buttons.
-  const arrowBtnStyle = 'position:absolute;top:50%;transform:translateY(-50%);z-index:5;width:38px;height:38px;border-radius:50%;border:2px solid var(--blue);background:var(--bg);color:var(--blue);font-size:1.2rem;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background 0.15s,color 0.15s;box-shadow:0 2px 8px rgba(0,0,0,0.12);';
+  // instead of staying at a fixed, useful position. Tried absolutely positioning both
+  // arrows over the fixed left/right edges of the carousel viewport.
+  // v24.6 — the absolute-positioned right arrow was still not visible/usable in the
+  // browser at wide viewports. Per user's hand-drawn layout, both arrows are moved out
+  // from beside/over the cards entirely into their own row directly BENEATH the account
+  // cards (above Daily Performance): ‹ at the far left, › at the far right.
+  const arrowBtnStyle = 'width:38px;height:38px;border-radius:50%;border:2px solid var(--blue);background:var(--bg);color:var(--blue);font-size:1.2rem;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background 0.15s,color 0.15s;box-shadow:0 2px 8px rgba(0,0,0,0.12);flex-shrink:0;';
   const hoverInA = "this.style.background='var(--blue)';this.style.color='#fff'";
   const hoverOutA = "this.style.background='var(--bg)';this.style.color='var(--blue)'";
-  html += '<div style="position:relative;padding:8px 0;">';
-  html += `<button onclick="dashCarouselScroll(-1)" style="${arrowBtnStyle}left:0;" onmouseenter="${hoverInA}" onmouseleave="${hoverOutA}" title="Scroll left">\u2039</button>`;
+  html += '<div style="padding:8px 0;">';
   // v24.3 — visible, draggable scrollbar below the account cards (was overflow-x:hidden,
   // so the only way to move between accounts was the ‹ / › buttons or scrolling the page
   // down to a different selector). Extra bottom padding keeps the scrollbar clear of the
   // card borders; #dash-acct-carousel-scrollbar-css below styles it to be easy to grab.
-  // v24.5 — side padding (46px) keeps cards clear of the now-fixed-position arrows.
-  html += '<div id="dash-acct-carousel" class="dash-acct-scrollbar" style="display:flex;gap:10px;overflow-x:auto;scroll-behavior:smooth;padding:0 46px 12px 46px;">';
+  html += '<div id="dash-acct-carousel" class="dash-acct-scrollbar" style="display:flex;gap:10px;overflow-x:auto;scroll-behavior:smooth;padding:0 0 12px 0;">';
 
   nicks.forEach((nick, idx) => {
     const systems = [...nickSystems[nick]].sort();
@@ -5933,8 +5939,12 @@ function renderSystemSelectorPanel() {
   });
 
   html += '</div>';  // close carousel
-  html += `<button onclick="dashCarouselScroll(1)" style="${arrowBtnStyle}right:0;" onmouseenter="${hoverInA}" onmouseleave="${hoverOutA}" title="Scroll right">\u203a</button>`;
-  html += '</div>';  // close position:relative wrapper (v24.5)
+  // v24.6 — new row beneath the cards holding both arrows, ‹ far-left / › far-right.
+  html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;">';
+  html += `<button onclick="dashCarouselScroll(-1)" style="${arrowBtnStyle}" onmouseenter="${hoverInA}" onmouseleave="${hoverOutA}" title="Scroll left">\u2039</button>`;
+  html += `<button onclick="dashCarouselScroll(1)" style="${arrowBtnStyle}" onmouseenter="${hoverInA}" onmouseleave="${hoverOutA}" title="Scroll right">\u203a</button>`;
+  html += '</div>';
+  html += '</div>';  // close outer wrapper (v24.6)
   container.innerHTML = html;
 }
 
