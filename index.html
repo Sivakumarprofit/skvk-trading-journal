@@ -2,6 +2,22 @@
 ==========================================================
   SKVK TRADING JOURNAL — VERSION HISTORY
 ==========================================================
+  v24.9 | 2026-09-18 | ANALYTICS — BASKET: fixed archived strategies silently counting
+         |            | toward Monthly P&L Data / Monthly P&L Chart totals. Root cause:
+         |            | getDashFilteredTrades() and renderDashFiltered()'s trFY only
+         |            | excluded an archived strategy's trades while "Show Archived" was
+         |            | off; once revealed (or by default, since dashExcludedSystems never
+         |            | gets an archived key added while it's hidden — Select All/Unselect
+         |            | All and the per-basket checkbox both skip archived rows via
+         |            | _dashNickSystems while hidden), archived strategies from OTHER
+         |            | baskets stayed silently included even for a basket selection (e.g.
+         |            | ZEBU_ALAMELU) with zero archived strategies of its own. Archived
+         |            | strategies are now ALWAYS excluded from both totals, regardless of
+         |            | the Show Archived toggle; that toggle now only controls whether
+         |            | archived rows are listed in the selector panel for review. Updated
+         |            | the archived-count caption to match. No change to the strategy-level
+         |            | breakdown table on this page, which intentionally still shows all
+         |            | trades including archived/excluded ones for audit purposes.
   v24.8 | 2026-09-18 | ANALYTICS — BASKET: the v24.7 sizing fix still wasn't enough — the
          |            | account-card selector panel (#dash-system-selector) sat INSIDE the
          |            | page header's own flex row, as a flex item next to the page title.
@@ -1173,7 +1189,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>SKVK Trading Journal v24.8</title>
+<title>SKVK Trading Journal v24.9</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -2153,7 +2169,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div class="login-logo">📋</div>
     <div class="login-title">
       SKVK Trading Journal
-      <span class="login-vbadge">v24.8</span>
+      <span class="login-vbadge">v24.9</span>
     </div>
     <div class="login-sub">Sign in with your authorised Google account to access the journal.</div>
     <button class="google-signin-btn" id="googleSignInBtn" onclick="signInWithGoogle()">
@@ -2193,7 +2209,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
         <i class="ti ti-chart-candle brand-icon"></i>
         <span class="brand-skvk">SKVK</span>
         <span class="brand-appname">Trading Journal</span>
-        <span class="brand-vbadge">v24.8</span>
+        <span class="brand-vbadge">v24.9</span>
       </div>
     </div>
     <div id="topbar-right-wrap">
@@ -6077,11 +6093,12 @@ function renderDashboard() {
   if (dateRangeEl) dateRangeEl.textContent = `01 Jan ${currentYear} – ${new Date().toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'})}`;
 
   // v22.7 — active-only caption when any system is archived
+  // v24.9 — archived strategies never count toward totals now, so the caption no longer
+  // implies that "Show Archived" changes the numbers — it only affects what's listed below.
   const archCount = Object.values(algoMeta).filter(a => a && a.archived).length;
   const archNoteEl = document.getElementById('dash-archived-note');
   if (archNoteEl) {
-    if (archCount && !dashShowArchived) { archNoteEl.style.display = 'inline-block'; archNoteEl.textContent = `⏸ Active systems only — ${archCount} archived (App Settings) — click "Show Archived" above to include`; }
-    else if (archCount && dashShowArchived) { archNoteEl.style.display = 'inline-block'; archNoteEl.textContent = `📦 Showing ${archCount} archived (Not Live) strategies too`; }
+    if (archCount) { archNoteEl.style.display = 'inline-block'; archNoteEl.textContent = `⏸ ${archCount} archived strategies excluded from all totals${dashShowArchived ? ' — shown below for reference only' : ' (click "Show Archived" above to review them)'}`; }
     else { archNoteEl.style.display = 'none'; archNoteEl.textContent = ''; }
   }
 
@@ -6101,9 +6118,10 @@ function renderDashFiltered() {
   const mMap = {};
   fyMonthsDash.forEach(k=>mMap[k]=0);
   // v22.8 — trFY uses the same excluded-systems filter as getDashFilteredTrades, but without the year clip
+  // v24.9 — archived strategies always excluded from P&L math (see getDashFilteredTrades)
   let trFY = allTrades.filter(t=>{
     if (t.archived) return false;
-    if (isSystemArchived(t.algo_name) && !dashShowArchived) return false;  // v24.2
+    if (isSystemArchived(t.algo_name)) return false;
     if (dashExcludedSystems.size === 0) return true;
     const nick = getNick(t.client_id) || t.client_id;
     return !dashExcludedSystems.has(nick + ':' + t.algo_name);
@@ -6228,11 +6246,16 @@ function populateDashSelectors() {
 
 function getDashFilteredTrades() {
   // v23.2 — exclusion keyed by 'nick:algo_name' for per-account independence
-  // v24.2 — isSystemArchived() only excludes when the global "Show Archived" switch is
-  // off; when on, archived strategies are governed by dashExcludedSystems like any other.
+  // v24.9 — archived strategies are ALWAYS excluded from P&L math, regardless of the
+  // "Show Archived" switch. "Show Archived" only reveals archived rows in the selector
+  // panel for review/management; it never re-includes their P&L. This fixes a bug where
+  // an archived strategy in one basket (e.g. Kayal/Murali) — invisible unless "Show
+  // Archived" was clicked, and never touched by Select All / Unselect All while hidden —
+  // stayed silently included by default and skewed totals for baskets (e.g. Alamelu)
+  // that have no archived strategies of their own.
   return allTrades.filter(t=>{
     if (t.archived) return false;
-    if (isSystemArchived(t.algo_name) && !dashShowArchived) return false;
+    if (isSystemArchived(t.algo_name)) return false;
     if (!(pnlDate(t)||t.entry_date||'').startsWith(currentYear)) return false;
     if (dashExcludedSystems.size === 0) return true;
     const nick = getNick(t.client_id) || t.client_id;
