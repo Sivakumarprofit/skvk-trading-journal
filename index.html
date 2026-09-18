@@ -2,6 +2,16 @@
 ==========================================================
   SKVK TRADING JOURNAL — VERSION HISTORY
 ==========================================================
+  v24.7 | 2026-09-18 | ANALYTICS — BASKET: the v24.6 arrow row was still being pushed
+         |            | off-screen — the account-card row itself was wider than the page
+         |            | (min-width:auto on the flex carousel let its cards' total width
+         |            | stretch the whole page sideways), taking the below-cards arrow
+         |            | row with it. Added width:100%/min-width:0/box-sizing:border-box
+         |            | to the carousel row and its wrapper divs so overflow-x:auto clips
+         |            | the cards inside their own row instead of the page stretching;
+         |            | ‹ and › now stay inside the visible row beneath the cards. Card
+         |            | sizes/content are unchanged (min-width:210px, flex-shrink:0, as
+         |            | before) — only the row's own overflow handling was fixed.
   v24.6 | 2026-09-18 | ANALYTICS — BASKET: moved the ‹ / › carousel arrows out from
          |            | beside/over the account cards entirely (the v24.5 absolute-
          |            | positioning fix still left the right arrow unusable at wide
@@ -1152,7 +1162,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>SKVK Trading Journal v24.6</title>
+<title>SKVK Trading Journal v24.7</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -2132,7 +2142,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div class="login-logo">📋</div>
     <div class="login-title">
       SKVK Trading Journal
-      <span class="login-vbadge">v24.6</span>
+      <span class="login-vbadge">v24.7</span>
     </div>
     <div class="login-sub">Sign in with your authorised Google account to access the journal.</div>
     <button class="google-signin-btn" id="googleSignInBtn" onclick="signInWithGoogle()">
@@ -2172,7 +2182,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
         <i class="ti ti-chart-candle brand-icon"></i>
         <span class="brand-skvk">SKVK</span>
         <span class="brand-appname">Trading Journal</span>
-        <span class="brand-vbadge">v24.6</span>
+        <span class="brand-vbadge">v24.7</span>
       </div>
     </div>
     <div id="topbar-right-wrap">
@@ -2219,7 +2229,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
       <div class="period-tabs" id="year-tabs" style="display:none;"></div>
       <!-- v22.8: Account-grouped System Selector Panel -->
-      <div id="dash-system-selector" style="width:100%;"></div>
+      <div id="dash-system-selector" style="width:100%;min-width:0;max-width:100%;box-sizing:border-box;"></div>
       <!-- Hidden fallback elements so capital functions still read '__ALL__' / 'basket' -->
       <select id="dash-basket-select" style="display:none;"><option value="__ALL__" selected>All</option></select>
       <input type="radio" name="dash-sel-mode" value="basket" checked style="display:none;">
@@ -5892,12 +5902,15 @@ function renderSystemSelectorPanel() {
   const arrowBtnStyle = 'width:38px;height:38px;border-radius:50%;border:2px solid var(--blue);background:var(--bg);color:var(--blue);font-size:1.2rem;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background 0.15s,color 0.15s;box-shadow:0 2px 8px rgba(0,0,0,0.12);flex-shrink:0;';
   const hoverInA = "this.style.background='var(--blue)';this.style.color='#fff'";
   const hoverOutA = "this.style.background='var(--bg)';this.style.color='var(--blue)'";
-  html += '<div style="padding:8px 0;">';
+  html += '<div style="padding:8px 0;width:100%;max-width:100%;box-sizing:border-box;">';
   // v24.3 — visible, draggable scrollbar below the account cards (was overflow-x:hidden,
   // so the only way to move between accounts was the ‹ / › buttons or scrolling the page
   // down to a different selector). Extra bottom padding keeps the scrollbar clear of the
   // card borders; #dash-acct-carousel-scrollbar-css below styles it to be easy to grab.
-  html += '<div id="dash-acct-carousel" class="dash-acct-scrollbar" style="display:flex;gap:10px;overflow-x:auto;scroll-behavior:smooth;padding:0 0 12px 0;">';
+  // v24.6 — width:100%/min-width:0/box-sizing:border-box added so this row's own
+  // overflow-x:auto actually clips the cards instead of the whole row (and the page)
+  // stretching wider than the viewport, which was pushing the "›" row off-screen.
+  html += '<div id="dash-acct-carousel" class="dash-acct-scrollbar" style="display:flex;gap:10px;overflow-x:auto;scroll-behavior:smooth;padding:0 0 12px 0;width:100%;min-width:0;box-sizing:border-box;">';
 
   nicks.forEach((nick, idx) => {
     const systems = [...nickSystems[nick]].sort();
@@ -5940,7 +5953,7 @@ function renderSystemSelectorPanel() {
 
   html += '</div>';  // close carousel
   // v24.6 — new row beneath the cards holding both arrows, ‹ far-left / › far-right.
-  html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;">';
+  html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;width:100%;max-width:100%;box-sizing:border-box;">';
   html += `<button onclick="dashCarouselScroll(-1)" style="${arrowBtnStyle}" onmouseenter="${hoverInA}" onmouseleave="${hoverOutA}" title="Scroll left">\u2039</button>`;
   html += `<button onclick="dashCarouselScroll(1)" style="${arrowBtnStyle}" onmouseenter="${hoverInA}" onmouseleave="${hoverOutA}" title="Scroll right">\u203a</button>`;
   html += '</div>';
