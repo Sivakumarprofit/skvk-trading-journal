@@ -2,6 +2,17 @@
 ==========================================================
   SKVK TRADING JOURNAL — VERSION HISTORY
 ==========================================================
+  v24.8 | 2026-09-18 | ANALYTICS — BASKET: the v24.7 sizing fix still wasn't enough — the
+         |            | account-card selector panel (#dash-system-selector) sat INSIDE the
+         |            | page header's own flex row, as a flex item next to the page title.
+         |            | Its width:100% had nothing real to size against there (a flex item's
+         |            | shrink-to-fit sibling row), so the card carousel and the arrows row
+         |            | beneath it could still stretch past the visible page. Moved the whole
+         |            | selector panel out of the header's flex row into its own plain block
+         |            | div, directly below the header — a normal block element always spans
+         |            | the true page width, so overflow-x:auto on the carousel row (and the
+         |            | ‹ / › arrows row beneath it) now has a real boundary to clip against.
+         |            | No change to card content, Show Archived, or any other behavior.
   v24.7 | 2026-09-18 | ANALYTICS — BASKET: the v24.6 arrow row was still being pushed
          |            | off-screen — the account-card row itself was wider than the page
          |            | (min-width:auto on the flex carousel let its cards' total width
@@ -1162,7 +1173,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>SKVK Trading Journal v24.7</title>
+<title>SKVK Trading Journal v24.8</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -2142,7 +2153,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div class="login-logo">📋</div>
     <div class="login-title">
       SKVK Trading Journal
-      <span class="login-vbadge">v24.7</span>
+      <span class="login-vbadge">v24.8</span>
     </div>
     <div class="login-sub">Sign in with your authorised Google account to access the journal.</div>
     <button class="google-signin-btn" id="googleSignInBtn" onclick="signInWithGoogle()">
@@ -2182,7 +2193,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
         <i class="ti ti-chart-candle brand-icon"></i>
         <span class="brand-skvk">SKVK</span>
         <span class="brand-appname">Trading Journal</span>
-        <span class="brand-vbadge">v24.7</span>
+        <span class="brand-vbadge">v24.8</span>
       </div>
     </div>
     <div id="topbar-right-wrap">
@@ -2228,8 +2239,6 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     </div>
     <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
       <div class="period-tabs" id="year-tabs" style="display:none;"></div>
-      <!-- v22.8: Account-grouped System Selector Panel -->
-      <div id="dash-system-selector" style="width:100%;min-width:0;max-width:100%;box-sizing:border-box;"></div>
       <!-- Hidden fallback elements so capital functions still read '__ALL__' / 'basket' -->
       <select id="dash-basket-select" style="display:none;"><option value="__ALL__" selected>All</option></select>
       <input type="radio" name="dash-sel-mode" value="basket" checked style="display:none;">
@@ -2237,6 +2246,15 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
       <div id="dash-accounts-allocated" style="text-align:left;"></div>
     </div>
   </div>
+
+  <!-- v24.7 — moved out of the header's flex row (2223) entirely: as a flex-item there,
+       its width:100% had nothing real to size against, and the row's own shrink-to-fit
+       behavior was letting the account-card carousel (and the arrows row under it) push
+       past the visible page width with no way to actually constrain it. As a plain block
+       div here it always spans the true page width, so overflow-x:auto on the carousel
+       row (and the arrows row beneath it) has a real boundary to clip against. -->
+  <!-- v22.8: Account-grouped System Selector Panel -->
+  <div id="dash-system-selector" style="width:100%;min-width:0;max-width:100%;box-sizing:border-box;margin-bottom:16px;"></div>
 
   <!-- ══ Daily P&L ══ -->
   <div style="border-top:3px solid var(--blue);padding-top:10px;margin-bottom:16px;">
