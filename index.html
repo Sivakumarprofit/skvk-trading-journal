@@ -2,6 +2,38 @@
 ==========================================================
   SKVK TRADING JOURNAL — VERSION HISTORY
 ==========================================================
+  v25.5 | 2026-09-18 | ANALYTICS — ACCOUNT WISE: replaced the single-account dropdown
+         |            | with a row-wise, horizontally scrollable, multi-select
+         |            | account/strategy selector — the same carousel-of-cards + checkbox
+         |            | mechanism as Analytics — Basket's selector, now with its own "Show
+         |            | Archived" toggle. Any combination of accounts can now be combined
+         |            | into one Live Performance / Monthly P&L / Daily P&L / Equity-DD
+         |            | view (not just a single account or literally every account as
+         |            | before), and archived strategies can be selectively added back in
+         |            | exactly like on the Basket page. Selection and the Show Archived
+         |            | state persist to Firebase independently of the Basket page's own
+         |            | selector (journal/settings/acct_excluded_systems,
+         |            | journal/settings/acct_show_archived). Capital Deployed, the
+         |            | Capital grid and the Baskets-Traded panel were updated to
+         |            | understand a multi-account selection (Baskets Traded shows nothing
+         |            | when more than one account is selected, same as it already did for
+         |            | "All Accounts", since it's a per-account concept). Note: a manually
+         |            | added account with no trades yet won't appear as a card until it
+         |            | has at least one trade — same limitation the Basket page's selector
+         |            | already had.
+  v25.4 | 2026-09-18 | ANALYTICS — BASKET: "Show Archived" can now actually bring an
+         |            | archived strategy's P&L back into the Monthly P&L / basket totals
+         |            | — per strategy, via its own checkbox in the selector panel, exactly
+         |            | like a live strategy. By default (toggle off) archived strategies
+         |            | stay fully hidden and excluded from all totals, same as v24.9. Click
+         |            | "Show Archived" to reveal them as checkboxes (still marked "NOT
+         |            | LIVE"), then check any mix of live + archived strategies you want —
+         |            | the Monthly P&L Data and chart immediately reflect exactly that
+         |            | selection, individual or combined. This is the intended way to
+         |            | reconcile against a broker report that still includes a
+         |            | now-archived strategy, without silently including every other
+         |            | archived strategy across every account (the exact bug v24.9 fixed).
+         |            | Caption above the selector panel updated to describe this.
   v25.3 | 2026-09-18 | APP SETTINGS: added a new "⚠️ Unassigned Trades" card, placed last
          |            | on the App Settings page, that lists every orphan trade (client_id
          |            | can't be resolved to an account — see v25.2) with its strategy,
@@ -1239,7 +1271,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>SKVK Trading Journal v25.3</title>
+<title>SKVK Trading Journal v25.5</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -2219,7 +2251,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div class="login-logo">📋</div>
     <div class="login-title">
       SKVK Trading Journal
-      <span class="login-vbadge">v25.3</span>
+      <span class="login-vbadge">v25.5</span>
     </div>
     <div class="login-sub">Sign in with your authorised Google account to access the journal.</div>
     <button class="google-signin-btn" id="googleSignInBtn" onclick="signInWithGoogle()">
@@ -2259,7 +2291,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
         <i class="ti ti-chart-candle brand-icon"></i>
         <span class="brand-skvk">SKVK</span>
         <span class="brand-appname">Trading Journal</span>
-        <span class="brand-vbadge">v25.3</span>
+        <span class="brand-vbadge">v25.5</span>
       </div>
     </div>
     <div id="topbar-right-wrap">
@@ -2534,17 +2566,12 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div class="page-subtitle">Select one or more accounts to view combined performance analytics</div>
   </div>
 
-  <!-- ── Account Selector (left-aligned, single select) + Baskets Traded (beside it) ── -->
-  <div style="display:flex;align-items:flex-start;margin-bottom:24px;gap:32px;">
-    <div style="background:var(--blue);padding:10px 18px;border-radius:14px;box-shadow:0 2px 10px rgba(26,115,232,0.25);min-width:260px;">
-      <div style="font-size:0.72rem;font-weight:700;color:rgba(255,255,255,0.85);letter-spacing:0.06em;text-align:center;margin-bottom:8px;">SELECT ACCOUNT</div>
-      <select id="acct-select" onchange="renderAcctReport()" style="width:100%;padding:6px 10px;border:none;border-radius:8px;font-size:0.85rem;font-weight:600;outline:none;background:#fff;color:var(--blue);font-family:var(--font);cursor:pointer;">
-        <option value="">— Select account —</option>
-        <option value="__ALL__">All Accounts</option>
-      </select>
-    </div>
-    <div id="acct-baskets-traded" style="text-align:left;"></div>
-  </div>
+  <!-- ── v25.5 — Account Selector: row-wise, scrollable, multi-select account/strategy
+       cards — same mechanism as Analytics — Basket's selector, with its own "Show
+       Archived" toggle. Replaces the old single-account dropdown so any combination of
+       accounts can be combined into one view. ── -->
+  <div id="acct-system-selector" style="width:100%;min-width:0;max-width:100%;box-sizing:border-box;margin-bottom:8px;"></div>
+  <div id="acct-baskets-traded" style="text-align:left;margin-bottom:16px;"></div>
 
   <!-- ══ Daily P&L ══ -->
   <div id="acct-daily-block" style="display:none;margin-bottom:28px;">
@@ -4014,23 +4041,14 @@ let acctDailyRows = [];
 const ACCT_PAGE_SIZE = 20;
 
 function initAcctReport() {
-  const junk = new Set(['tradetron','quantleap','quantiply','zebu','upstox','']);
-  const tradeAccounts = [...new Set(allTrades.map(t=>t.client_id||'').filter(id=>id&&!junk.has(id.toLowerCase())))];
-  const manualIds = Object.keys(manualAccounts);
-  const accounts = [...new Set([...tradeAccounts, ...manualIds])].sort();
-  const sel = document.getElementById('acct-select');
-  if (!sel) return;
-  sel.innerHTML = '<option value="">— Select account —</option><option value="__ALL__">All Accounts</option>' +
-    accounts.map(a=>`<option value="${a}">${getClientLabel(a)}</option>`).join('');
-  if (!currentAcct) currentAcct = '__ALL__';
-  sel.value = currentAcct;
+  renderAcctSystemSelectorPanel();
   renderAcctReport();
 }
 
 function renderAcctReport() {
-  const sel = document.getElementById('acct-select');
-  currentAcct = sel?.value || '';
-  const hasAcct = !!currentAcct;
+  renderAcctSystemSelectorPanel();
+  currentAcct = resolveCurrentAcct();
+  const hasAcct = Array.isArray(currentAcct) ? currentAcct.length > 0 : !!currentAcct;
   document.getElementById('acct-empty').style.display = hasAcct ? 'none' : '';
   document.getElementById('acct-main').style.display  = hasAcct ? '' : 'none';
   document.getElementById('acct-daily-block').style.display = hasAcct ? '' : 'none';
@@ -4038,10 +4056,8 @@ function renderAcctReport() {
   document.getElementById('acct-yearly-block-hdr').style.display = hasAcct ? '' : 'none';
   if (!hasAcct) return;
 
-  const tr = currentAcct === '__ALL__'
-    ? allTrades.filter(t=>!t.archived)
-    : allTrades.filter(t=>!t.archived && (t.client_id||'')===currentAcct);
-  const label = currentAcct === '__ALL__' ? 'All Accounts' : getClientLabel(currentAcct);
+  const tr = getAcctFilteredTrades();
+  const label = getAcctSelectionLabel();
 
   // Period toggle (All Time / FY 2026-27) for Live Performance, Daily P&L table, Equity/Drawdown
   const periodMode = document.querySelector('input[name="acct-period-mode"]:checked')?.value || 'all';
@@ -4077,7 +4093,7 @@ function getBasketsAllocatedForAccount(cid) {
 function renderAcctBasketsTraded() {
   const el = document.getElementById('acct-baskets-traded');
   if (!el) return;
-  if (!currentAcct || currentAcct === '__ALL__') { el.innerHTML = ''; return; }
+  if (!currentAcct || currentAcct === '__ALL__' || Array.isArray(currentAcct)) { el.innerHTML = ''; return; }  // v25.5 — ambiguous for a multi-account subset
   const baskets = getBasketsAllocatedForAccount(currentAcct);
   if (!baskets.length) { el.innerHTML = ''; return; }
   el.innerHTML =
@@ -4106,10 +4122,7 @@ function renderDashAccountsAllocated() {
 
 function acctWeekNav(dir) {
   acctWeekOffset += dir;
-  const tr = currentAcct === '__ALL__'
-    ? allTrades.filter(t=>!t.archived)
-    : allTrades.filter(t=>!t.archived && (t.client_id||'')===currentAcct);
-  renderAcctWeekTiles(tr);
+  renderAcctWeekTiles(getAcctFilteredTrades());
 }
 
 function renderAcctWeekTiles(tr) {
@@ -4187,6 +4200,13 @@ function renderAcctLivePerf(tr, periodMode) {
     const allVals = [];
     Object.values(capitalDataAll).forEach(acctData => {
       Object.entries(acctData||{}).forEach(([m,v]) => { if (inPeriod(m) && v > 0) allVals.push(v); });
+    });
+    totalCap = allVals.length > 0 ? allVals.reduce((s,v)=>s+v,0) / allVals.length : 0;
+  } else if (Array.isArray(currentAcct)) {
+    // v25.5 — a specific subset of accounts selected: average across just those
+    const allVals = [];
+    currentAcct.forEach(cid => {
+      Object.entries(capitalDataAll[cid]||{}).forEach(([m,v]) => { if (inPeriod(m) && v > 0) allVals.push(v); });
     });
     totalCap = allVals.length > 0 ? allVals.reduce((s,v)=>s+v,0) / allVals.length : 0;
   } else {
@@ -4721,7 +4741,11 @@ function renderAcctCapitalGrid() {
     const incomplete = isAllocationIncomplete(ym);
 
     const rows = (allocations[ym] && allocations[ym].rows) || {};
-    const filtered = Object.values(rows).filter(r => currentAcct === '__ALL__' ? true : r.client_id === currentAcct);
+    const filtered = Object.values(rows).filter(r => {
+      if (currentAcct === '__ALL__') return true;
+      if (Array.isArray(currentAcct)) return currentAcct.includes(r.client_id);  // v25.5
+      return r.client_id === currentAcct;
+    });
 
     if (!filtered.length) {
       const status = incomplete
@@ -4809,6 +4833,9 @@ function dashCapitalEnteredFor(ym) {
 function acctCapitalEnteredFor(ym) {
   if (currentAcct === '__ALL__') {
     return Object.values(capitalDataAll).some(d => d && d[ym] !== undefined && d[ym] !== null && d[ym] !== '');
+  }
+  if (Array.isArray(currentAcct)) {  // v25.5
+    return currentAcct.some(cid => { const d = capitalDataAll[cid]; return !!(d && d[ym] !== undefined && d[ym] !== null && d[ym] !== ''); });
   }
   const d = capitalDataAll[currentAcct];
   return !!(d && d[ym] !== undefined && d[ym] !== null && d[ym] !== '');
@@ -5256,6 +5283,17 @@ function startListeners() {
     dashShowArchived = !!snap.val();
     renderSystemSelectorPanel();
     renderDashFiltered();
+  });
+  // v25.5 — Account-wise page's own selection/show-archived persistence (independent of
+  // the Basket page's dashExcludedSystems/dashShowArchived above)
+  db.ref('journal/settings/acct_excluded_systems').on('value', snap => {
+    const arr = snap.val();
+    acctExcludedSystems = new Set(Array.isArray(arr) ? arr : []);
+    renderAcctReport();
+  });
+  db.ref('journal/settings/acct_show_archived').on('value', snap => {
+    acctShowArchived = !!snap.val();
+    renderAcctReport();
   });
 }
 
@@ -6178,6 +6216,234 @@ function toggleDashAccount(nick, checked) {
   renderDashFiltered();
 }
 
+// ════════════════════════════════════════════════════
+//  v25.5 — ANALYTICS — ACCOUNT WISE: row-wise multi-select account/strategy selector,
+//  cloned from renderSystemSelectorPanel() above (same carousel + checkbox mechanism),
+//  with its own persisted state (acctExcludedSystems / acctShowArchived) so it's fully
+//  independent of the Basket page's own selection. Replaces the old single-account
+//  <select id="acct-select"> dropdown, which could only show one account (or literally
+//  everything via "All Accounts") — this lets any combination of accounts be combined,
+//  and "Show Archived" lets specific archived strategies be added back in, exactly like
+//  the Basket page.
+// ════════════════════════════════════════════════════
+let acctExcludedSystems = new Set();  // persisted: journal/settings/acct_excluded_systems
+let acctShowArchived = false;         // persisted: journal/settings/acct_show_archived
+
+function saveAcctExcludedSystems() {
+  if (db) db.ref('journal/settings/acct_excluded_systems').set([...acctExcludedSystems]);
+}
+
+function renderAcctSystemSelectorPanel() {
+  const container = document.getElementById('acct-system-selector');
+  if (!container) return;
+  const nickSystems = {};
+  const nickCids = {};
+  const junk = new Set(['tradetron','quantleap','quantiply','zebu','upstox','']);
+  allTrades.forEach(t => {
+    if (t.archived) return;
+    if (isSystemArchived(t.algo_name) && !acctShowArchived) return;
+    const cid = t.client_id;
+    if (!cid || junk.has(cid.toLowerCase())) return;
+    const nick = getNick(cid) || cid;
+    if (!nickSystems[nick]) { nickSystems[nick] = new Set(); nickCids[nick] = new Set(); }
+    nickSystems[nick].add(t.algo_name);
+    nickCids[nick].add(cid);
+  });
+  const brokerOrder = (nick) => {
+    const n = nick.toUpperCase();
+    if (n.startsWith('ZEBU')) return '0_' + n;
+    if (n.startsWith('IIFL')) return '1_' + n;
+    if (n.startsWith('SHOONYA')) return '2_' + n;
+    if (n.startsWith('ALICEBLUE')) return '3_' + n;
+    if (n.startsWith('UPSTOX')) return '4_' + n;
+    return '9_' + n;
+  };
+  const nicks = Object.keys(nickSystems).sort((a, b) => brokerOrder(a).localeCompare(brokerOrder(b)));
+  if (!nicks.length) {
+    container.innerHTML = '<div style="padding:14px;color:var(--text3);font-size:0.82rem;">No account-system data yet.</div>';
+    window._acctNickCids = {};
+    window._acctNickSystems = {};
+    return;
+  }
+  window._acctNickCids = nickCids;
+  window._acctNickSystems = nickSystems;
+  if (!window._acctCollapsed) window._acctCollapsed = {};
+  const isMinimized = (nick) => {
+    if (nick in window._acctCollapsed) return window._acctCollapsed[nick];
+    return dashPanelMode === 'minimized';  // shares the Basket page's minimize/expand preference
+  };
+
+  let html = '<div style="display:flex;align-items:center;gap:8px;padding:6px 0 8px 0;flex-wrap:wrap;">';
+  const btnStyle = 'padding:4px 12px;border-radius:6px;font-size:0.71rem;font-weight:700;cursor:pointer;border:1.5px solid var(--blue);background:var(--bg);color:var(--blue);transition:background 0.15s,color 0.15s;';
+  const hoverIn = "this.style.background='var(--blue)';this.style.color='#fff'";
+  const hoverOut = "this.style.background='var(--bg)';this.style.color='var(--blue)'";
+  html += `<button onclick="acctSelectAll(true)" style="${btnStyle}" onmouseenter="${hoverIn}" onmouseleave="${hoverOut}">☑ Select All</button>`;
+  html += `<button onclick="acctSelectAll(false)" style="${btnStyle}" onmouseenter="${hoverIn}" onmouseleave="${hoverOut}">☐ Unselect All</button>`;
+  html += `<span style="width:1px;height:20px;background:var(--border);margin:0 2px;"></span>`;
+  html += `<button onclick="setDashPanelMode('minimized')" style="${btnStyle}" onmouseenter="${hoverIn}" onmouseleave="${hoverOut}">▴ Minimize All</button>`;
+  html += `<button onclick="setDashPanelMode('expanded')" style="${btnStyle}" onmouseenter="${hoverIn}" onmouseleave="${hoverOut}">▾ Expand All</button>`;
+  html += `<span style="width:1px;height:20px;background:var(--border);margin:0 2px;"></span>`;
+  const archBtnStyle = acctShowArchived
+    ? 'padding:4px 12px;border-radius:6px;font-size:0.71rem;font-weight:700;cursor:pointer;border:1.5px solid #c2410c;background:#c2410c;color:#fff;transition:background 0.15s,color 0.15s;'
+    : 'padding:4px 12px;border-radius:6px;font-size:0.71rem;font-weight:700;cursor:pointer;border:1.5px solid #c2410c;background:var(--bg);color:#c2410c;transition:background 0.15s,color 0.15s;';
+  html += `<button onclick="toggleAcctShowArchived()" style="${archBtnStyle}">📦 ${acctShowArchived ? 'Hide' : 'Show'} Archived</button>`;
+  html += '<span style="margin-left:auto;display:flex;align-items:center;gap:8px;">';
+  html += '<span style="font-size:0.7rem;color:var(--text2);font-weight:600;">Display:</span>';
+  html += `<label style="display:flex;align-items:center;gap:4px;cursor:pointer;font-size:0.7rem;font-weight:600;color:var(--text1);"><input type="radio" name="acct-label-mode" value="id" ${dashLabelMode==='id'?'checked ':''}onchange="setDashLabelMode('id')" style="accent-color:var(--blue);cursor:pointer;">Account ID</label>`;
+  html += `<label style="display:flex;align-items:center;gap:4px;cursor:pointer;font-size:0.7rem;font-weight:600;color:var(--text1);"><input type="radio" name="acct-label-mode" value="name" ${dashLabelMode==='name'?'checked ':''}onchange="setDashLabelMode('name')" style="accent-color:var(--blue);cursor:pointer;">Account Name</label>`;
+  html += '</span></div>';
+
+  const arrowBtnStyle = 'width:38px;height:38px;border-radius:50%;border:2px solid var(--blue);background:var(--bg);color:var(--blue);font-size:1.2rem;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background 0.15s,color 0.15s;box-shadow:0 2px 8px rgba(0,0,0,0.12);flex-shrink:0;';
+  const hoverInA = "this.style.background='var(--blue)';this.style.color='#fff'";
+  const hoverOutA = "this.style.background='var(--bg)';this.style.color='var(--blue)'";
+  html += '<div style="padding:8px 0;width:100%;max-width:100%;box-sizing:border-box;">';
+  html += '<div id="acct-acct-carousel" class="dash-acct-scrollbar" style="display:flex;gap:10px;overflow-x:auto;scroll-behavior:smooth;padding:0 0 12px 0;width:100%;min-width:0;box-sizing:border-box;">';
+
+  nicks.forEach((nick, idx) => {
+    const systems = [...nickSystems[nick]].sort();
+    const bg = ACCT_BG_COLORS[idx % ACCT_BG_COLORS.length];
+    const allChecked = systems.every(s => !acctExcludedSystems.has(nick + ':' + s));
+    const safeNick = nick.replace(/'/g, "\\'");
+    const displayLabel = getDashAcctLabel(nick, nickCids[nick]);
+    const collapsed = isMinimized(nick);
+    html += `<div style="min-width:210px;max-width:260px;flex-shrink:0;background:${bg};border-radius:10px;padding:10px 12px;border:1.5px solid var(--border);">`;
+    html += `<div style="display:flex;align-items:center;gap:7px;margin-bottom:${collapsed?'0':'7'}px;padding-bottom:${collapsed?'0':'6'}px;${collapsed?'':'border-bottom:1.5px solid var(--border);'}">`;
+    html += `<input type="checkbox" ${allChecked ? 'checked ' : ''}onchange="toggleAcctAccount('${safeNick}',this.checked)" style="width:15px;height:15px;cursor:pointer;accent-color:var(--blue);">`;
+    html += `<span style="font-size:0.75rem;font-weight:800;color:var(--text0);line-height:1.2;flex:1;" title="${nick}">${displayLabel}</span>`;
+    html += `</div>`;
+    if (!collapsed) {
+      systems.forEach((sysName, sysIdx) => {
+        const exKey = nick + ':' + sysName;
+        const checked = !acctExcludedSystems.has(exKey);
+        const isArch = isSystemArchived(sysName);
+        const meta = algoMeta[sysName] || algoMeta[safeKey(sysName)] || {};
+        const underlying = meta.underlying || guessUnderlying(sysName);
+        const color = isArch ? '#9ca3af' : getUnderlyingColor(underlying);
+        const short = getUnderlyingShort(underlying);
+        const safeName = sysName.replace(/'/g, "\\'");
+        const rowOpacity = isArch ? (checked ? 0.55 : 0.32) : (checked ? 1 : 0.4);
+        html += `<label title="${sysName}${isArch ? ' (Not Live / Archived)' : ''}" style="display:flex;align-items:center;gap:5px;cursor:pointer;margin-bottom:4px;opacity:${rowOpacity};${isArch ? 'font-style:italic;' : ''}">`;
+        html += `<input type="checkbox" ${checked ? 'checked ' : ''}onchange="toggleAcctSystem('${safeNick}','${safeName}',this.checked)" style="width:14px;height:14px;cursor:pointer;accent-color:${color};flex-shrink:0;">`;
+        html += `<span style="font-size:0.72rem;font-weight:700;color:${color};white-space:nowrap;">S${sysIdx + 1}</span>`;
+        html += `<span style="font-size:0.56rem;color:${color};font-weight:700;white-space:nowrap;">${short}</span>`;
+        html += `<span style="font-size:0.58rem;color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${sysName}</span>`;
+        if (isArch) html += `<span style="font-size:0.5rem;font-weight:800;color:#9ca3af;border:1px solid #9ca3af;border-radius:4px;padding:0 3px;flex-shrink:0;">NOT LIVE</span>`;
+        html += `</label>`;
+      });
+    }
+    html += `</div>`;
+  });
+
+  html += '</div>';  // close carousel
+  html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;width:100%;max-width:100%;box-sizing:border-box;">';
+  html += `<button onclick="acctCarouselScroll(-1)" style="${arrowBtnStyle}" onmouseenter="${hoverInA}" onmouseleave="${hoverOutA}" title="Scroll left">‹</button>`;
+  html += `<button onclick="acctCarouselScroll(1)" style="${arrowBtnStyle}" onmouseenter="${hoverInA}" onmouseleave="${hoverOutA}" title="Scroll right">›</button>`;
+  html += '</div>';
+  html += '</div>';
+  container.innerHTML = html;
+}
+
+function acctCarouselScroll(dir) {
+  const el = document.getElementById('acct-acct-carousel');
+  if (el) el.scrollBy({ left: dir * 240, behavior: 'smooth' });
+}
+
+function acctSelectAll(checked) {
+  const ns = window._acctNickSystems;
+  if (!ns) return;
+  acctExcludedSystems.clear();
+  if (!checked) {
+    Object.keys(ns).forEach(nick => {
+      ns[nick].forEach(s => acctExcludedSystems.add(nick + ':' + s));
+    });
+  }
+  saveAcctExcludedSystems();
+  renderAcctSystemSelectorPanel();
+  renderAcctReport();
+}
+
+function toggleAcctSystem(nick, name, checked) {
+  const key = nick + ':' + name;
+  if (checked) acctExcludedSystems.delete(key);
+  else acctExcludedSystems.add(key);
+  saveAcctExcludedSystems();
+  renderAcctSystemSelectorPanel();
+  renderAcctReport();
+}
+
+function toggleAcctAccount(nick, checked) {
+  const cids = window._acctNickCids && window._acctNickCids[nick];
+  if (!cids) return;
+  const systems = new Set();
+  allTrades.forEach(t => {
+    if (t.archived) return;
+    if (isSystemArchived(t.algo_name) && !acctShowArchived) return;
+    if (cids.has(t.client_id)) systems.add(t.algo_name);
+  });
+  systems.forEach(s => {
+    const key = nick + ':' + s;
+    if (checked) acctExcludedSystems.delete(key);
+    else acctExcludedSystems.add(key);
+  });
+  saveAcctExcludedSystems();
+  renderAcctSystemSelectorPanel();
+  renderAcctReport();
+}
+
+function toggleAcctShowArchived() {
+  acctShowArchived = !acctShowArchived;
+  if (db) db.ref('journal/settings/acct_show_archived').set(acctShowArchived);
+  renderAcctSystemSelectorPanel();
+  renderAcctReport();
+}
+
+// Trades matching the current Account-wise selection (mirrors getDashFilteredTrades,
+// minus the year clip — Account-wise applies its own FY/All-Time toggle afterward).
+function getAcctFilteredTrades() {
+  return allTrades.filter(t => {
+    if (t.archived) return false;
+    if (isSystemArchived(t.algo_name) && !acctShowArchived) return false;
+    if (isOrphanTrade(t)) return false;
+    if (acctExcludedSystems.size === 0) return true;
+    const nick = getNick(t.client_id) || t.client_id;
+    return !acctExcludedSystems.has(nick + ':' + t.algo_name);
+  });
+}
+
+// Resolves the selector panel's checked state down to what the rest of the Account-wise
+// page (getCapital, capitalDataAll lookups, etc.) already understands: '__ALL__' when
+// every account is fully selected, a single client_id when exactly one is, otherwise an
+// array of client_ids — so those functions need only one extra Array.isArray branch each
+// rather than a full rewrite.
+function getSelectedAcctCids() {
+  const ns = window._acctNickSystems || {};
+  const cidsMap = window._acctNickCids || {};
+  const allNicks = Object.keys(ns);
+  const selectedNicks = allNicks.filter(nick => [...ns[nick]].some(s => !acctExcludedSystems.has(nick + ':' + s)));
+  const cids = new Set();
+  selectedNicks.forEach(nick => (cidsMap[nick] || new Set()).forEach(cid => cids.add(cid)));
+  return { selectedNicks, allNicks, cids: [...cids] };
+}
+
+function resolveCurrentAcct() {
+  const { selectedNicks, allNicks, cids } = getSelectedAcctCids();
+  if (!cids.length) return '';
+  if (allNicks.length && selectedNicks.length === allNicks.length) return '__ALL__';
+  if (cids.length === 1) return cids[0];
+  return cids;
+}
+
+function getAcctSelectionLabel() {
+  if (currentAcct === '__ALL__') return 'All Accounts';
+  if (Array.isArray(currentAcct)) {
+    const { selectedNicks } = getSelectedAcctCids();
+    return selectedNicks.length
+      ? selectedNicks.map(n => getDashAcctLabel(n, window._acctNickCids[n])).join(', ')
+      : `${currentAcct.length} accounts selected`;
+  }
+  return getClientLabel(currentAcct);
+}
+
 let dashChartEquity = null, dashChartDD = null, dashChartCap = null;
 let dashDailyRows = [], dashDailyPageNum = 0;
 let capitalBasket = {}; // basket-wise capital: {basketName: {YYYY-MM: amount}}
@@ -6212,12 +6478,14 @@ function renderDashboard() {
   if (dateRangeEl) dateRangeEl.textContent = `01 Jan ${currentYear} – ${new Date().toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'})}`;
 
   // v22.7 — active-only caption when any system is archived
-  // v24.9 — archived strategies never count toward totals now, so the caption no longer
-  // implies that "Show Archived" changes the numbers — it only affects what's listed below.
+  // v24.9 — archived strategies never counted toward totals, regardless of the toggle.
+  // v25.4 — "Show Archived" now actually re-includes them, per-strategy, via their own
+  // checkbox in the selector panel below — caption updated to say so instead of implying
+  // the toggle is review-only.
   const archCount = Object.values(algoMeta).filter(a => a && a.archived).length;
   const archNoteEl = document.getElementById('dash-archived-note');
   if (archNoteEl) {
-    if (archCount) { archNoteEl.style.display = 'inline-block'; archNoteEl.textContent = `⏸ ${archCount} archived strategies excluded from all totals${dashShowArchived ? ' — shown below for reference only' : ' (click "Show Archived" above to review them)'}`; }
+    if (archCount) { archNoteEl.style.display = 'inline-block'; archNoteEl.textContent = dashShowArchived ? `📦 Archived strategies shown below — check/uncheck each one to include it in totals` : `⏸ ${archCount} archived strategies hidden (click "Show Archived" above, then check the ones you want in totals)`; }
     else { archNoteEl.style.display = 'none'; archNoteEl.textContent = ''; }
   }
 
@@ -6260,9 +6528,13 @@ function renderDashFiltered() {
   // v22.8 — trFY uses the same excluded-systems filter as getDashFilteredTrades, but without the year clip
   // v24.9 — archived strategies always excluded from P&L math (see getDashFilteredTrades)
   // v25.2 — orphan trades (unresolvable client_id) always excluded too (see isOrphanTrade)
+  // v25.4 — archived strategies are hidden+excluded while "Show Archived" is off (same
+  // safety as v24.9), but once switched on they follow their own checkbox exactly like
+  // live strategies — so a specific archived strategy can be selected in (e.g. to match
+  // a broker report) without silently pulling in every other archived strategy too.
   let trFY = allTrades.filter(t=>{
     if (t.archived) return false;
-    if (isSystemArchived(t.algo_name)) return false;
+    if (isSystemArchived(t.algo_name) && !dashShowArchived) return false;
     if (isOrphanTrade(t)) return false;
     if (dashExcludedSystems.size === 0) return true;
     const nick = getNick(t.client_id) || t.client_id;
@@ -6396,9 +6668,14 @@ function getDashFilteredTrades() {
   // stayed silently included by default and skewed totals for baskets (e.g. Alamelu)
   // that have no archived strategies of their own.
   // v25.2 — orphan trades (unresolvable client_id) always excluded too (see isOrphanTrade)
+  // v25.4 — "Show Archived" off still hard-excludes archived strategies (same safety as
+  // v24.9). Once switched on, each archived strategy's own checkbox in the selector
+  // panel decides — exactly like a live strategy — so specific archived strategies can
+  // be selected in (e.g. to reconcile against a broker report) without the "everything
+  // silently included" risk v24.9 fixed.
   return allTrades.filter(t=>{
     if (t.archived) return false;
-    if (isSystemArchived(t.algo_name)) return false;
+    if (isSystemArchived(t.algo_name) && !dashShowArchived) return false;
     if (isOrphanTrade(t)) return false;
     if (!(pnlDate(t)||t.entry_date||'').startsWith(currentYear)) return false;
     if (dashExcludedSystems.size === 0) return true;
@@ -7366,6 +7643,11 @@ function getCapital(clientId, ym) {
   if (!ym) return 0;
   if (!clientId || clientId === '__ALL__') {
     return Object.values(capitalDataAll).reduce((s, d) => s + (d[ym]||0), 0);
+  }
+  // v25.5 — Account-wise page can now select a specific subset of accounts (not just one
+  // or literally all), resolved to an array of client_ids by resolveCurrentAcct().
+  if (Array.isArray(clientId)) {
+    return clientId.reduce((s, cid) => s + ((capitalDataAll[cid]||{})[ym] || 0), 0);
   }
   return (capitalDataAll[clientId]||{})[ym] || 0;
 }
