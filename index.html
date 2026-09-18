@@ -2,6 +2,37 @@
 ==========================================================
   SKVK TRADING JOURNAL — VERSION HISTORY
 ==========================================================
+  v25.3 | 2026-09-18 | APP SETTINGS: added a new "⚠️ Unassigned Trades" card, placed last
+         |            | on the App Settings page, that lists every orphan trade (client_id
+         |            | can't be resolved to an account — see v25.2) with its strategy,
+         |            | broker, dates and P&L, and a "🗑 Delete" button per row using the
+         |            | same type-DELETE confirmation as every other delete in the app. A
+         |            | "🗑 Delete All" button is also provided for clearing them in one go.
+         |            | The card is hidden automatically whenever there are no unassigned
+         |            | trades. The Analytics — Basket page's orphan-trade banner now links
+         |            | here by name ("Go to App Settings → Unassigned Trades to fix or
+         |            | delete them").
+  v25.2 | 2026-09-18 | ANALYTICS — BASKET: fixed "orphan" trades — those whose client_id
+         |            | can't be resolved to any account nickname — silently and
+         |            | permanently counting toward every basket total, from every account
+         |            | selection, with no way to see or exclude them. Root cause: a trade
+         |            | with no usable client_id can never be grouped under a nick, so it
+         |            | never appears as a checkbox in the selector panel, so
+         |            | dashExcludedSystems can never contain a key for it — the "nothing
+         |            | excluded = include everything" default silently swallowed it
+         |            | forever. Found via a real case: 72 Tradetron DUAL_SHORT_STRADDLE
+         |            | trades with client_id:"" on 2026-06-19 were adding +₹18,327.30 to
+         |            | every basket's June total, invisibly, regardless of which account
+         |            | was selected — this is what was still causing a mismatch against
+         |            | Zebu's own report even after v25.1 correctly isolated a single
+         |            | account. New isOrphanTrade() helper now always excludes such trades
+         |            | from getDashFilteredTrades() and renderDashFiltered()'s trFY (same
+         |            | treatment as archived strategies since v24.9). Also added a red
+         |            | "⚠️ N unassigned trades excluded" banner next to the existing
+         |            | archived-strategies note, naming the count, combined P&L and date
+         |            | span, so this is visible instead of silently vanishing a second way
+         |            | — the strategy-level breakdown table (which intentionally still
+         |            | shows everything, archived included) is unaffected.
   v25.1 | 2026-09-18 | ANALYTICS — BASKET: fixed the basket/strategy selection
          |            | (dashExcludedSystems) and the "Show Archived" toggle
          |            | (dashShowArchived) resetting on every page load. Both were plain
@@ -1208,7 +1239,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>SKVK Trading Journal v25.1</title>
+<title>SKVK Trading Journal v25.3</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -2188,7 +2219,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div class="login-logo">📋</div>
     <div class="login-title">
       SKVK Trading Journal
-      <span class="login-vbadge">v25.1</span>
+      <span class="login-vbadge">v25.3</span>
     </div>
     <div class="login-sub">Sign in with your authorised Google account to access the journal.</div>
     <button class="google-signin-btn" id="googleSignInBtn" onclick="signInWithGoogle()">
@@ -2228,7 +2259,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
         <i class="ti ti-chart-candle brand-icon"></i>
         <span class="brand-skvk">SKVK</span>
         <span class="brand-appname">Trading Journal</span>
-        <span class="brand-vbadge">v25.1</span>
+        <span class="brand-vbadge">v25.3</span>
       </div>
     </div>
     <div id="topbar-right-wrap">
@@ -2389,6 +2420,11 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
       </div>
       <span id="dash-date-range" style="font-size:0.75rem;background:#eef2ff;color:#3730a3;padding:4px 12px;border-radius:20px;font-weight:600;"></span>
       <span id="dash-archived-note" style="display:none;font-size:0.72rem;background:#fef3c7;color:#92400e;padding:4px 12px;border-radius:20px;font-weight:600;margin-left:6px;"></span>
+      <!-- v25.2 — flags trades whose client_id can't be mapped to any account nickname; these
+           can never appear as a checkbox in the selector below (nothing to group them under),
+           so without this they'd be silently, permanently included in every total no matter
+           what account is selected. See isOrphanTrade() / getDashFilteredTrades(). -->
+      <span id="dash-orphan-note" style="display:none;font-size:0.72rem;background:#fee2e2;color:#991b1b;padding:4px 12px;border-radius:20px;font-weight:700;margin-left:6px;cursor:default;"></span>
     </div>
     <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:16px 24px;">
       <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Capital Deployed</div><div id="s-algos" style="font-size:1.1rem;font-weight:800;">—</div></div>
@@ -3463,6 +3499,20 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
       <button class="btn btn-primary" onclick="showPage('manual')">
         ✏️ Open Manual Entry
       </button>
+    </div>
+
+    <!-- ── v25.3 — Unassigned Trades (last option): trades with no client_id, invisible to
+         the Analytics — Basket selector, always excluded from its totals since v25.2. Shown
+         only when at least one exists, so this stays out of the way otherwise. ── -->
+    <div class="access-card" id="orphanTradesCard" style="display:none;border-color:#fca5a5;">
+      <h4>⚠️ Unassigned Trades</h4>
+      <p style="font-size:0.8rem;color:var(--text2);margin-bottom:16px;">
+        These trades have no <code>client_id</code>, so they can't be attributed to any account — they never
+        appear as a checkbox on Analytics — Basket and are always excluded from its totals. Usually caused by
+        a broker/algo import that didn't map an account. Fix the import and re-upload with the correct
+        account, or delete them here one at a time.
+      </p>
+      <div id="orphanTradesList"></div>
     </div>
 
   </div>
@@ -5220,6 +5270,7 @@ function refreshAll() {
   loadDisplayPrefs();
   renderUnderlyingColorsSettings();  // v22.8
   updateDailyMonthLabels();  // v23.3
+  renderOrphanTradesSettings();  // v25.3
 }
 
 // ════════════════════════════════════════════════════
@@ -5232,7 +5283,7 @@ function showPage(name) {
   if (pg) pg.classList.add('active');
   const tab = document.querySelector(`[data-page="${name}"]`);
   if (tab) tab.classList.add('active');
-  if (name === 'appsettings') { initAppSettings(); renderGroupList(); renderAlgoPage(); loadDisplayPrefs(); buildNicknameList(); estimateDBSize(); populateBrokerClearDropdown(); acLoadEmails(); }
+  if (name === 'appsettings') { initAppSettings(); renderGroupList(); renderAlgoPage(); loadDisplayPrefs(); buildNicknameList(); estimateDBSize(); populateBrokerClearDropdown(); acLoadEmails(); renderOrphanTradesSettings(); }
   if (name === 'taxation') { renderTaxPnlSection(); renderExpensesSection(); }
   if (name === 'stockmock') { loadSMTolerances(); updateSMStrategyDropdown(); onSMStratChange(); populateCompareSelects(); }
   if (name === 'algos') { renderGroupList(); renderAlgoPage(); }
@@ -5843,6 +5894,26 @@ function isSystemArchived(algoName) {
   return !!(m && m.archived);
 }
 
+// v25.2 — a trade whose client_id can't be resolved to an account nickname (blank
+// client_id, or one getNick() doesn't recognize) can never be grouped under any account
+// in the selector panel below, so it never gets a checkbox and can never be individually
+// excluded — dashExcludedSystems has no way to ever contain its key. Left unhandled, such
+// a trade is silently and permanently included in EVERY basket total regardless of which
+// account is selected (found via a real case: 72 Tradetron DUAL_SHORT_STRADDLE trades with
+// client_id:"" on 2026-06-19 were inflating every basket's June total by +₹18,327.30, with
+// no way to see or exclude them from the UI). Always excluded from Analytics — Basket
+// totals; see the dash-orphan-note banner in renderDashboard() for the visible warning.
+function isOrphanTrade(t) {
+  return !(getNick(t.client_id) || t.client_id);
+}
+
+// v25.3 — shared by the dash-orphan-note banner AND the App Settings "Unassigned Trades"
+// management card, so both agree on exactly which trades count. Archived/deleted trades
+// are left out here since they're already gone from every total either way.
+function getOrphanTrades() {
+  return allTrades.filter(t => !t.archived && !isSystemArchived(t.algo_name) && isOrphanTrade(t));
+}
+
 // ═══════ v22.8 — ACCOUNT-GROUPED SYSTEM SELECTOR ═══════
 // Replaces the old Basket/Group/Strategy radio+dropdown. Tracks which systems are
 // excluded via a Set; default = empty (all ON). Charts, heatmap, P&L table, etc.
@@ -6150,6 +6221,27 @@ function renderDashboard() {
     else { archNoteEl.style.display = 'none'; archNoteEl.textContent = ''; }
   }
 
+  // v25.2 — orphan-trade warning: trades whose client_id can't be resolved to any account
+  // are always excluded from totals (see isOrphanTrade), but silently dropping them with no
+  // visible trace risks someone assuming their data import is complete when it isn't. This
+  // banner names exactly how many, their P&L, and the date span so they're findable, not
+  // just invisible in a different way. v25.3 — can now also be deleted one by one from
+  // App Settings → Unassigned Trades (see renderOrphanTradesSettings).
+  const orphans = getOrphanTrades();
+  const orphanNoteEl = document.getElementById('dash-orphan-note');
+  if (orphanNoteEl) {
+    if (orphans.length) {
+      const orphanPnl = orphans.reduce((s,t)=>s+(t.pnl||0),0);
+      const dates = orphans.map(t=>t.entry_date||t.exit_date).filter(Boolean).sort();
+      const dateSpan = dates.length ? (dates[0]===dates[dates.length-1] ? dates[0] : `${dates[0]} to ${dates[dates.length-1]}`) : 'unknown date';
+      orphanNoteEl.style.display = 'inline-block';
+      orphanNoteEl.title = 'These trades have no client_id, so they can\'t be attributed to any account and never appear as a checkbox below. Excluded from every total. Go to App Settings → Unassigned Trades to fix or delete them.';
+      orphanNoteEl.textContent = `⚠️ ${orphans.length} unassigned trade${orphans.length===1?'':'s'} (${fmtINRShort(orphanPnl)}, ${dateSpan}) excluded — see App Settings`;
+    } else {
+      orphanNoteEl.style.display = 'none'; orphanNoteEl.textContent = ''; orphanNoteEl.title = '';
+    }
+  }
+
   // Year tabs and selectors built with ALL trades; filtered trades drive all content
   populateDashSelectors();
   renderDashFiltered(); // renders everything using current basket/strategy selection
@@ -6167,9 +6259,11 @@ function renderDashFiltered() {
   fyMonthsDash.forEach(k=>mMap[k]=0);
   // v22.8 — trFY uses the same excluded-systems filter as getDashFilteredTrades, but without the year clip
   // v24.9 — archived strategies always excluded from P&L math (see getDashFilteredTrades)
+  // v25.2 — orphan trades (unresolvable client_id) always excluded too (see isOrphanTrade)
   let trFY = allTrades.filter(t=>{
     if (t.archived) return false;
     if (isSystemArchived(t.algo_name)) return false;
+    if (isOrphanTrade(t)) return false;
     if (dashExcludedSystems.size === 0) return true;
     const nick = getNick(t.client_id) || t.client_id;
     return !dashExcludedSystems.has(nick + ':' + t.algo_name);
@@ -6301,9 +6395,11 @@ function getDashFilteredTrades() {
   // Archived" was clicked, and never touched by Select All / Unselect All while hidden —
   // stayed silently included by default and skewed totals for baskets (e.g. Alamelu)
   // that have no archived strategies of their own.
+  // v25.2 — orphan trades (unresolvable client_id) always excluded too (see isOrphanTrade)
   return allTrades.filter(t=>{
     if (t.archived) return false;
     if (isSystemArchived(t.algo_name)) return false;
+    if (isOrphanTrade(t)) return false;
     if (!(pnlDate(t)||t.entry_date||'').startsWith(currentYear)) return false;
     if (dashExcludedSystems.size === 0) return true;
     const nick = getNick(t.client_id) || t.client_id;
@@ -8995,6 +9091,56 @@ async function deleteTrade(hash) {
     refreshAll();
   }
   toast('Trade deleted', 'success');
+}
+
+// v25.3 — App Settings → Unassigned Trades. Lists every orphan trade (no client_id —
+// see isOrphanTrade/getOrphanTrades) so they can be deleted one at a time via the same
+// deleteTrade() used everywhere else (type-DELETE confirm included). The card and its list
+// are re-rendered from refreshAll(), so a delete here — or a fixed re-upload elsewhere —
+// updates this list automatically via the live journal/trades listener, no extra wiring.
+function renderOrphanTradesSettings() {
+  const card = document.getElementById('orphanTradesCard');
+  const list = document.getElementById('orphanTradesList');
+  if (!card || !list) return;
+  const orphans = getOrphanTrades().slice().sort((a,b) => (b.entry_date||'').localeCompare(a.entry_date||''));
+  if (!orphans.length) { card.style.display = 'none'; list.innerHTML = ''; return; }
+  card.style.display = '';
+  const totalPnl = orphans.reduce((s,t)=>s+(t.pnl||0),0);
+  let html = `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+    <span style="font-size:0.8rem;font-weight:700;color:var(--red);">${orphans.length} trade${orphans.length===1?'':'s'} · ${fmtINRShort(totalPnl)} total</span>
+    <button class="btn btn-sm" style="background:var(--red);color:#fff;" onclick="deleteAllOrphanTrades()">🗑 Delete All ${orphans.length}</button>
+  </div>`;
+  orphans.forEach(t => {
+    const pnlColor = (t.pnl||0) > 0 ? '#16a34a' : (t.pnl||0) < 0 ? '#dc2626' : 'var(--text2)';
+    html += `<div class="access-email-row">
+      <div class="access-email-left">
+        <div>
+          <div class="access-email-addr">${t.algo_name || '(no strategy name)'} <span style="font-weight:400;color:var(--text3);">· ${t.underlying||t.symbol||''}</span></div>
+          <div class="access-email-role" style="color:var(--text3);">${t.broker||t.source||'unknown broker'} · ${t.entry_date||'—'}${t.exit_date && t.exit_date!==t.entry_date ? ' → '+t.exit_date : ''} · <span style="color:${pnlColor};font-weight:700;">${fmtINRShort(t.pnl||0)}</span></div>
+        </div>
+      </div>
+      <button class="btn btn-sm" style="background:var(--red);color:#fff;" onclick="deleteTrade('${t.hash}')">🗑 Delete</button>
+    </div>`;
+  });
+  list.innerHTML = html;
+}
+
+// v25.3 — bulk companion to the per-row delete above, same confirm-typed-DELETE gate,
+// one Firebase call per trade (no batched multi-path update available without a hash list
+// changing shape mid-loop, and this list is small in practice — it's a data-cleanup path,
+// not a hot one).
+async function deleteAllOrphanTrades() {
+  const orphans = getOrphanTrades();
+  if (!orphans.length) return;
+  if (!confirmDeleteTyped(`Delete all ${orphans.length} unassigned trades? This cannot be undone.`)) return;
+  if (db) {
+    for (const t of orphans) await db.ref('journal/trades/' + t.hash).remove();
+  } else {
+    const hashes = new Set(orphans.map(t=>t.hash));
+    allTrades = allTrades.filter(t => !hashes.has(t.hash));
+    refreshAll();
+  }
+  toast(`${orphans.length} unassigned trades deleted`, 'success');
 }
 
 // ════════════════════════════════════════════════════
