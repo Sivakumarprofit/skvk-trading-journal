@@ -2,6 +2,25 @@
 ==========================================================
   SKVK TRADING JOURNAL — VERSION HISTORY
 ==========================================================
+  v25.1 | 2026-09-18 | ANALYTICS — BASKET: fixed the basket/strategy selection
+         |            | (dashExcludedSystems) and the "Show Archived" toggle
+         |            | (dashShowArchived) resetting on every page load. Both were plain
+         |            | in-memory JS variables with no Firebase read/write anywhere —
+         |            | despite the selector panel's other display settings (label mode,
+         |            | panel mode) already being persisted the same way. Net effect: pick
+         |            | "only ZEBU_ALAMELU", the numbers look right in that moment, but the
+         |            | next reload (new tab, refresh, revisit later) silently reverts to
+         |            | "everyone included," and older/less-obvious parts of the page (a
+         |            | historical month in the chart you're not actively staring at) can
+         |            | quietly pick up other accounts' P&L without any visual cue that the
+         |            | selection changed. Now both are saved to
+         |            | journal/settings/dash_excluded_systems and
+         |            | journal/settings/dash_show_archived on every change (dashSelectAll,
+         |            | toggleDashSystem, toggleDashAccount, toggleDashShowArchived) and
+         |            | re-applied via an .on('value') listener in attachListeners() —
+         |            | same pattern as dash_label_mode / dash_panel_mode. Selection now
+         |            | survives reloads, tab switches, and different devices signed into
+         |            | the same account.
   v24.9 | 2026-09-18 | ANALYTICS — BASKET: fixed archived strategies silently counting
          |            | toward Monthly P&L Data / Monthly P&L Chart totals. Root cause:
          |            | getDashFilteredTrades() and renderDashFiltered()'s trFY only
@@ -1189,7 +1208,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>SKVK Trading Journal v24.9</title>
+<title>SKVK Trading Journal v25.1</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -2169,7 +2188,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div class="login-logo">📋</div>
     <div class="login-title">
       SKVK Trading Journal
-      <span class="login-vbadge">v24.9</span>
+      <span class="login-vbadge">v25.1</span>
     </div>
     <div class="login-sub">Sign in with your authorised Google account to access the journal.</div>
     <button class="google-signin-btn" id="googleSignInBtn" onclick="signInWithGoogle()">
@@ -2209,7 +2228,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
         <i class="ti ti-chart-candle brand-icon"></i>
         <span class="brand-skvk">SKVK</span>
         <span class="brand-appname">Trading Journal</span>
-        <span class="brand-vbadge">v24.9</span>
+        <span class="brand-vbadge">v25.1</span>
       </div>
     </div>
     <div id="topbar-right-wrap">
@@ -5174,6 +5193,20 @@ function startListeners() {
     dashPanelMode = snap.val() || 'expanded';
     renderSystemSelectorPanel();
   });
+  // v25.1 — basket/strategy selection persistence (was session-only, silently reset to
+  // "everyone included" on every reload — see dashExcludedSystems comment above)
+  db.ref('journal/settings/dash_excluded_systems').on('value', snap => {
+    const arr = snap.val();
+    dashExcludedSystems = new Set(Array.isArray(arr) ? arr : []);
+    renderSystemSelectorPanel();
+    renderDashFiltered();
+  });
+  // v25.1 — "Show Archived" visibility toggle persistence
+  db.ref('journal/settings/dash_show_archived').on('value', snap => {
+    dashShowArchived = !!snap.val();
+    renderSystemSelectorPanel();
+    renderDashFiltered();
+  });
 }
 
 function refreshAll() {
@@ -5814,12 +5847,17 @@ function isSystemArchived(algoName) {
 // Replaces the old Basket/Group/Strategy radio+dropdown. Tracks which systems are
 // excluded via a Set; default = empty (all ON). Charts, heatmap, P&L table, etc.
 // all filter through this set. Capital always uses '__ALL__' (hidden fallback select).
+// v25.1 — persisted to Firebase (journal/settings/dash_excluded_systems) so the selection
+// survives a reload instead of silently resetting to "everyone included" every time the
+// page is opened. See dashSelectAll/toggleDashSystem/toggleDashAccount for the write side
+// and attachListeners() for the read side.
 let dashExcludedSystems = new Set();
-// v24.2 — global "Show Archived" switch for Analytics — Basket. OFF (default) = identical
-// to v24.1 (archived/Not-Live strategies stay fully hidden, never counted). ON = archived
-// strategies appear in every account's list, greyed out, each with its own checkbox
-// (checked by default the first time it appears, since dashExcludedSystems has no entry
-// for it yet) — so their P&L is folded into totals unless individually unchecked.
+// v24.2 — global "Show Archived" switch for Analytics — Basket. OFF (default) hides
+// archived/Not-Live strategies from the selector list. ON reveals them, greyed out, for
+// review. v24.9 — archived strategies are now ALWAYS excluded from every total regardless
+// of this switch; it only controls list visibility, never P&L inclusion (see
+// getDashFilteredTrades). v25.1 — also persisted to Firebase (journal/settings/dash_show_archived)
+// so this doesn't silently reset either.
 let dashShowArchived = false;
 
 // v23.3 — Privacy toggle: 'id' shows broker+clientid, 'name' shows nickname (holder name)
@@ -6011,8 +6049,15 @@ function setDashPanelMode(mode) {
 
 function toggleDashShowArchived() {  // v24.2
   dashShowArchived = !dashShowArchived;
+  if (db) db.ref('journal/settings/dash_show_archived').set(dashShowArchived);  // v25.1
   renderSystemSelectorPanel();
   renderDashFiltered();
+}
+
+// v25.1 — every dashExcludedSystems mutation now also saves to Firebase so the selection
+// survives a reload. Centralized here rather than repeated at each call site.
+function saveDashExcludedSystems() {
+  if (db) db.ref('journal/settings/dash_excluded_systems').set([...dashExcludedSystems]);
 }
 
 function dashSelectAll(checked) {
@@ -6024,6 +6069,7 @@ function dashSelectAll(checked) {
       ns[nick].forEach(s => dashExcludedSystems.add(nick + ':' + s));
     });
   }
+  saveDashExcludedSystems();  // v25.1
   renderSystemSelectorPanel();
   renderDashFiltered();
 }
@@ -6038,6 +6084,7 @@ function toggleDashSystem(nick, name, checked) {
   const key = nick + ':' + name;
   if (checked) dashExcludedSystems.delete(key);
   else dashExcludedSystems.add(key);
+  saveDashExcludedSystems();  // v25.1
   renderSystemSelectorPanel();
   renderDashFiltered();
 }
@@ -6055,6 +6102,7 @@ function toggleDashAccount(nick, checked) {
     if (checked) dashExcludedSystems.delete(key);
     else dashExcludedSystems.add(key);
   });
+  saveDashExcludedSystems();  // v25.1
   renderSystemSelectorPanel();
   renderDashFiltered();
 }
