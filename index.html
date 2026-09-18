@@ -2,6 +2,15 @@
 ==========================================================
   SKVK TRADING JOURNAL — VERSION HISTORY
 ==========================================================
+  v24.3 | 2026-09-18 | ANALYTICS — BASKET: fixed the ‹ / › account-carousel scroll arrows.
+         |            | They previously scrolled a fixed 240px regardless of each account
+         |            | card's actual width (210-260px), so a click often landed mid-card
+         |            | instead of fully revealing the next account, forcing multiple
+         |            | clicks or scrolling down the page to a different selector instead.
+         |            | dashCarouselScroll() now reads each card's real offsetLeft and
+         |            | snaps exactly to the next/previous account's left edge, so one
+         |            | click = exactly one account, every time, regardless of card width.
+==========================================================
   v24.2 | 2026-09-18 | ANALYTICS — BASKET: archived ("Not Live") strategies are no longer
          |            | unconditionally hidden. New global "📦 Show Archived" button in the
          |            | selector toolbar (next to Select All/Unselect All/Minimize/Expand
@@ -1114,7 +1123,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>SKVK Trading Journal v24.2</title>
+<title>SKVK Trading Journal v24.3</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -2073,7 +2082,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div class="login-logo">📋</div>
     <div class="login-title">
       SKVK Trading Journal
-      <span class="login-vbadge">v24.2</span>
+      <span class="login-vbadge">v24.3</span>
     </div>
     <div class="login-sub">Sign in with your authorised Google account to access the journal.</div>
     <button class="google-signin-btn" id="googleSignInBtn" onclick="signInWithGoogle()">
@@ -2113,7 +2122,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
         <i class="ti ti-chart-candle brand-icon"></i>
         <span class="brand-skvk">SKVK</span>
         <span class="brand-appname">Trading Journal</span>
-        <span class="brand-vbadge">v24.2</span>
+        <span class="brand-vbadge">v24.3</span>
       </div>
     </div>
     <div id="topbar-right-wrap">
@@ -5875,8 +5884,24 @@ function renderSystemSelectorPanel() {
 
 // v23.7 — smooth scroll the carousel by ~one card width
 function dashCarouselScroll(dir) {
+  // v24.3 — snap to the next/previous account CARD's exact left edge instead of a fixed
+  // 240px jump. A fixed jump often lands mid-card (cards vary 210-260px wide), so ‹ / ›
+  // needed several clicks to fully reveal the next account, forcing users to scroll the
+  // page down and use a different selector instead. Now one click = exactly one account.
   const el = document.getElementById('dash-acct-carousel');
-  if (el) el.scrollBy({ left: dir * 240, behavior: 'smooth' });
+  if (!el) return;
+  const cards = Array.from(el.children);
+  if (!cards.length) { el.scrollBy({ left: dir * 240, behavior: 'smooth' }); return; }
+  const cur = el.scrollLeft;
+  let target;
+  if (dir > 0) {
+    target = cards.map(c => c.offsetLeft).find(left => left > cur + 4);
+    if (target === undefined) target = el.scrollWidth; // already at/near the end
+  } else {
+    const lefts = cards.map(c => c.offsetLeft).filter(left => left < cur - 4);
+    target = lefts.length ? lefts[lefts.length - 1] : 0; // already at/near the start
+  }
+  el.scrollTo({ left: target, behavior: 'smooth' });
 }
 
 function toggleDashCollapse(nick) {
