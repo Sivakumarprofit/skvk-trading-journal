@@ -2,6 +2,21 @@
 ==========================================================
   SKVK TRADING JOURNAL — VERSION HISTORY
 ==========================================================
+  v24.2 | 2026-09-18 | ANALYTICS — BASKET: archived ("Not Live") strategies are no longer
+         |            | unconditionally hidden. New global "📦 Show Archived" button in the
+         |            | selector toolbar (next to Select All/Unselect All/Minimize/Expand
+         |            | All), OFF by default. OFF = identical to v24.1: Not-Live strategies
+         |            | stay fully hidden and uncounted everywhere on this page. ON = every
+         |            | Not-Live strategy appears in its account's list, greyed out/italic
+         |            | with a "NOT LIVE" tag, each with its OWN checkbox — checked by
+         |            | default the first time it's revealed (so its P&L is folded into the
+         |            | calendar/monthly chart/equity curve/live-perf totals immediately),
+         |            | and individually uncheckable just like a live strategy. Toggling
+         |            | back OFF returns to v24.1 behavior with no data loss (checkbox
+         |            | state for archived systems is simply ignored again, not cleared).
+         |            | This does not change Analytics — Account wise, which already shows
+         |            | every strategy (live or not) with no exclusion option, by design.
+==========================================================
   v24.1 | 2026-09-17 | BUGFIX — P&L DATE ATTRIBUTION reverted to Zebu's real convention.
          |            | v22.5 (2026-07-14) had switched pnlDate() to book every trade's
          |            | P&L to its ENTRY date, on the assumption that this matched Zebu
@@ -1099,7 +1114,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>SKVK Trading Journal v24.1</title>
+<title>SKVK Trading Journal v24.2</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -2058,7 +2073,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div class="login-logo">📋</div>
     <div class="login-title">
       SKVK Trading Journal
-      <span class="login-vbadge">v24.1</span>
+      <span class="login-vbadge">v24.2</span>
     </div>
     <div class="login-sub">Sign in with your authorised Google account to access the journal.</div>
     <button class="google-signin-btn" id="googleSignInBtn" onclick="signInWithGoogle()">
@@ -2098,7 +2113,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
         <i class="ti ti-chart-candle brand-icon"></i>
         <span class="brand-skvk">SKVK</span>
         <span class="brand-appname">Trading Journal</span>
-        <span class="brand-vbadge">v24.1</span>
+        <span class="brand-vbadge">v24.2</span>
       </div>
     </div>
     <div id="topbar-right-wrap">
@@ -5697,6 +5712,12 @@ function isSystemArchived(algoName) {
 // excluded via a Set; default = empty (all ON). Charts, heatmap, P&L table, etc.
 // all filter through this set. Capital always uses '__ALL__' (hidden fallback select).
 let dashExcludedSystems = new Set();
+// v24.2 — global "Show Archived" switch for Analytics — Basket. OFF (default) = identical
+// to v24.1 (archived/Not-Live strategies stay fully hidden, never counted). ON = archived
+// strategies appear in every account's list, greyed out, each with its own checkbox
+// (checked by default the first time it appears, since dashExcludedSystems has no entry
+// for it yet) — so their P&L is folded into totals unless individually unchecked.
+let dashShowArchived = false;
 
 // v23.3 — Privacy toggle: 'id' shows broker+clientid, 'name' shows nickname (holder name)
 let dashLabelMode = 'id';  // default = ID on fresh load, session-only
@@ -5744,7 +5765,8 @@ function renderSystemSelectorPanel() {
   const nickCids = {};
   const junk = new Set(['tradetron','quantleap','quantiply','zebu','upstox','']);
   allTrades.forEach(t => {
-    if (t.archived || isSystemArchived(t.algo_name)) return;
+    if (t.archived) return;
+    if (isSystemArchived(t.algo_name) && !dashShowArchived) return;  // v24.2
     const cid = t.client_id;
     if (!cid || junk.has(cid.toLowerCase())) return;
     const nick = getNick(cid) || cid;
@@ -5784,6 +5806,13 @@ function renderSystemSelectorPanel() {
   html += `<span style="width:1px;height:20px;background:var(--border);margin:0 2px;"></span>`;
   html += `<button onclick="setDashPanelMode('minimized')" style="${btnStyle}" onmouseenter="${hoverIn}" onmouseleave="${hoverOut}">\u25b4 Minimize All</button>`;
   html += `<button onclick="setDashPanelMode('expanded')" style="${btnStyle}" onmouseenter="${hoverIn}" onmouseleave="${hoverOut}">\u25be Expand All</button>`;
+  html += `<span style="width:1px;height:20px;background:var(--border);margin:0 2px;"></span>`;
+  // v24.2 \u2014 global Show Archived switch: OFF hides Not-Live strategies everywhere on this
+  // page (same as v24.1); ON reveals them (greyed out, own checkbox, checked by default).
+  const archBtnStyle = dashShowArchived
+    ? 'padding:4px 12px;border-radius:6px;font-size:0.71rem;font-weight:700;cursor:pointer;border:1.5px solid #c2410c;background:#c2410c;color:#fff;transition:background 0.15s,color 0.15s;'
+    : 'padding:4px 12px;border-radius:6px;font-size:0.71rem;font-weight:700;cursor:pointer;border:1.5px solid #c2410c;background:var(--bg);color:#c2410c;transition:background 0.15s,color 0.15s;';
+  html += `<button onclick="toggleDashShowArchived()" style="${archBtnStyle}">\ud83d\udce6 ${dashShowArchived ? 'Hide' : 'Show'} Archived</button>`;
   html += '<span style="margin-left:auto;display:flex;align-items:center;gap:8px;">';
   html += '<span style="font-size:0.7rem;color:var(--text2);font-weight:600;">Display:</span>';
   html += `<label style="display:flex;align-items:center;gap:4px;cursor:pointer;font-size:0.7rem;font-weight:600;color:var(--text1);"><input type="radio" name="dash-label-mode" value="id" ${dashLabelMode==='id'?'checked ':''}onchange="setDashLabelMode('id')" style="accent-color:var(--blue);cursor:pointer;">Account ID</label>`;
@@ -5819,16 +5848,19 @@ function renderSystemSelectorPanel() {
       systems.forEach((sysName, sysIdx) => {
         const exKey = nick + ':' + sysName;
         const checked = !dashExcludedSystems.has(exKey);
+        const isArch = isSystemArchived(sysName);  // v24.2
         const meta = algoMeta[sysName] || algoMeta[safeKey(sysName)] || {};
         const underlying = meta.underlying || guessUnderlying(sysName);
-        const color = getUnderlyingColor(underlying);
+        const color = isArch ? '#9ca3af' : getUnderlyingColor(underlying);
         const short = getUnderlyingShort(underlying);
         const safeName = sysName.replace(/'/g, "\\'");
-        html += `<label title="${sysName}" style="display:flex;align-items:center;gap:5px;cursor:pointer;margin-bottom:4px;${checked ? '' : 'opacity:0.4;'}">`;
+        const rowOpacity = isArch ? (checked ? 0.55 : 0.32) : (checked ? 1 : 0.4);
+        html += `<label title="${sysName}${isArch ? ' (Not Live / Archived)' : ''}" style="display:flex;align-items:center;gap:5px;cursor:pointer;margin-bottom:4px;opacity:${rowOpacity};${isArch ? 'font-style:italic;' : ''}">`;
         html += `<input type="checkbox" ${checked ? 'checked ' : ''}onchange="toggleDashSystem('${safeNick}','${safeName}',this.checked)" style="width:14px;height:14px;cursor:pointer;accent-color:${color};flex-shrink:0;">`;
         html += `<span style="font-size:0.72rem;font-weight:700;color:${color};white-space:nowrap;">S${sysIdx + 1}</span>`;
         html += `<span style="font-size:0.56rem;color:${color};font-weight:700;white-space:nowrap;">${short}</span>`;
         html += `<span style="font-size:0.58rem;color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${sysName}</span>`;
+        if (isArch) html += `<span style="font-size:0.5rem;font-weight:800;color:#9ca3af;border:1px solid #9ca3af;border-radius:4px;padding:0 3px;flex-shrink:0;">NOT LIVE</span>`;
         html += `</label>`;
       });
     }
@@ -5865,6 +5897,12 @@ function setDashPanelMode(mode) {
   renderSystemSelectorPanel();
 }
 
+function toggleDashShowArchived() {  // v24.2
+  dashShowArchived = !dashShowArchived;
+  renderSystemSelectorPanel();
+  renderDashFiltered();
+}
+
 function dashSelectAll(checked) {
   const ns = window._dashNickSystems;
   if (!ns) return;
@@ -5896,7 +5934,8 @@ function toggleDashAccount(nick, checked) {
   if (!cids) return;
   const systems = new Set();
   allTrades.forEach(t => {
-    if (t.archived || isSystemArchived(t.algo_name)) return;
+    if (t.archived) return;
+    if (isSystemArchived(t.algo_name) && !dashShowArchived) return;  // v24.2
     if (cids.has(t.client_id)) systems.add(t.algo_name);
   });
   systems.forEach(s => {
@@ -5914,7 +5953,8 @@ let capitalBasket = {}; // basket-wise capital: {basketName: {YYYY-MM: amount}}
 
 function renderDashboard() {
   const tr = allTrades.filter(t=>{
-    if (t.archived || isSystemArchived(t.algo_name)) return false;
+    if (t.archived) return false;
+    if (isSystemArchived(t.algo_name) && !dashShowArchived) return false;  // v24.2
     if (!(pnlDate(t)||t.entry_date||'').startsWith(currentYear)) return false;
     if (dashExcludedSystems.size === 0) return true;
     const nick = getNick(t.client_id) || t.client_id;
@@ -5928,7 +5968,7 @@ function renderDashboard() {
   const fyMonthsDash = getFYMonthKeys(currentYear);
   const mMap={};
   fyMonthsDash.forEach(k=>mMap[k]=0);
-  allTrades.filter(t=>!t.archived && !isSystemArchived(t.algo_name)).forEach(t=>{ const ym=(pnlDate(t)||'').slice(0,7); if(fyMonthsDash.includes(ym)) mMap[ym]=(mMap[ym]||0)+(t.pnl||0); });
+  allTrades.filter(t=>!t.archived && (dashShowArchived || !isSystemArchived(t.algo_name))).forEach(t=>{ const ym=(pnlDate(t)||'').slice(0,7); if(fyMonthsDash.includes(ym)) mMap[ym]=(mMap[ym]||0)+(t.pnl||0); });
 
   // Year tabs
   const years=[...new Set(allTrades.map(t=>(t.entry_date||'').slice(0,4)).filter(Boolean))];
@@ -5944,7 +5984,8 @@ function renderDashboard() {
   const archCount = Object.values(algoMeta).filter(a => a && a.archived).length;
   const archNoteEl = document.getElementById('dash-archived-note');
   if (archNoteEl) {
-    if (archCount) { archNoteEl.style.display = 'inline-block'; archNoteEl.textContent = `⏸ Active systems only — ${archCount} archived (App Settings)`; }
+    if (archCount && !dashShowArchived) { archNoteEl.style.display = 'inline-block'; archNoteEl.textContent = `⏸ Active systems only — ${archCount} archived (App Settings) — click "Show Archived" above to include`; }
+    else if (archCount && dashShowArchived) { archNoteEl.style.display = 'inline-block'; archNoteEl.textContent = `📦 Showing ${archCount} archived (Not Live) strategies too`; }
     else { archNoteEl.style.display = 'none'; archNoteEl.textContent = ''; }
   }
 
@@ -5965,7 +6006,8 @@ function renderDashFiltered() {
   fyMonthsDash.forEach(k=>mMap[k]=0);
   // v22.8 — trFY uses the same excluded-systems filter as getDashFilteredTrades, but without the year clip
   let trFY = allTrades.filter(t=>{
-    if (t.archived || isSystemArchived(t.algo_name)) return false;
+    if (t.archived) return false;
+    if (isSystemArchived(t.algo_name) && !dashShowArchived) return false;  // v24.2
     if (dashExcludedSystems.size === 0) return true;
     const nick = getNick(t.client_id) || t.client_id;
     return !dashExcludedSystems.has(nick + ':' + t.algo_name);
@@ -6090,8 +6132,11 @@ function populateDashSelectors() {
 
 function getDashFilteredTrades() {
   // v23.2 — exclusion keyed by 'nick:algo_name' for per-account independence
+  // v24.2 — isSystemArchived() only excludes when the global "Show Archived" switch is
+  // off; when on, archived strategies are governed by dashExcludedSystems like any other.
   return allTrades.filter(t=>{
-    if (t.archived || isSystemArchived(t.algo_name)) return false;
+    if (t.archived) return false;
+    if (isSystemArchived(t.algo_name) && !dashShowArchived) return false;
     if (!(pnlDate(t)||t.entry_date||'').startsWith(currentYear)) return false;
     if (dashExcludedSystems.size === 0) return true;
     const nick = getNick(t.client_id) || t.client_id;
