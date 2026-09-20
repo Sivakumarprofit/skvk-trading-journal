@@ -2,6 +2,11 @@
 ==========================================================
   SKVK TRADING JOURNAL — VERSION HISTORY
 ==========================================================
+  v26.1 | 2026-09-20 | RENUMBERED from v25.11 to v26.1 at user's request — no functional
+         |             | change from v25.11. Monthly P&L Chart outside-the-bar precise label now uses TWO
+         |             | decimal places (17.23K, -2.31L, 1.05Cr) instead of one, per
+         |             | user request. fmtKLCrDecimal() changed from toFixed(1) to
+         |             | toFixed(2). No other change.
   v25.10 | 2026-09-20 | Monthly P&L Chart (Analytics — Basket) now shows TWO labels per
          |             | bar: the existing whole-number value (17K, -2K) centered INSIDE
          |             | the bar, plus a new precise one-decimal value (17.2K, -2.3L)
@@ -1301,7 +1306,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>SKVK Trading Journal v25.10</title>
+<title>SKVK Trading Journal v26.1</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -2281,7 +2286,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div class="login-logo">📋</div>
     <div class="login-title">
       SKVK Trading Journal
-      <span class="login-vbadge">v25.10</span>
+      <span class="login-vbadge">v26.1</span>
     </div>
     <div class="login-sub">Sign in with your authorised Google account to access the journal.</div>
     <button class="google-signin-btn" id="googleSignInBtn" onclick="signInWithGoogle()">
@@ -2321,7 +2326,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
         <i class="ti ti-chart-candle brand-icon"></i>
         <span class="brand-skvk">SKVK</span>
         <span class="brand-appname">Trading Journal</span>
-        <span class="brand-vbadge">v25.10</span>
+        <span class="brand-vbadge">v26.1</span>
       </div>
     </div>
     <div id="topbar-right-wrap">
@@ -6428,15 +6433,15 @@ function fmtKLCrWhole(v) {
   return (v>=0?'+':'-')+abs;
 }
 
-// v25.10 — one-decimal-place K/L/Cr formatter used ONLY for the Monthly P&L Chart's
-// new outside-the-bar precise label (e.g. 17.2K, 13.4L). Same crossover thresholds as
-// fmtKLCrWhole, just with a decimal instead of rounding to a whole number.
+// v25.10/v25.11 — two-decimal-place K/L/Cr formatter used ONLY for the Monthly P&L
+// Chart's outside-the-bar precise label (e.g. 17.23K, 13.40L). Same crossover
+// thresholds as fmtKLCrWhole, just with two decimals instead of rounding to whole.
 function fmtKLCrDecimal(v) {
   if (!v && v!==0) return '';
   const abs=Math.abs(v), sign=v>=0?'+':'-';
-  if (abs>=10000000) return sign+(abs/10000000).toFixed(1)+'Cr';
-  if (abs>=100000)   return sign+(abs/100000).toFixed(1)+'L';
-  if (abs>=1000)     return sign+(abs/1000).toFixed(1)+'K';
+  if (abs>=10000000) return sign+(abs/10000000).toFixed(2)+'Cr';
+  if (abs>=100000)   return sign+(abs/100000).toFixed(2)+'L';
+  if (abs>=1000)     return sign+(abs/1000).toFixed(2)+'K';
   return sign+Math.round(abs);
 }
 
