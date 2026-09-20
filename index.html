@@ -2,6 +2,17 @@
 ==========================================================
   SKVK TRADING JOURNAL — VERSION HISTORY
 ==========================================================
+  v26.2 | 2026-09-20 | Split the single "Include Archived" toggle into TWO independent
+         |             | toggles, each persisted to its own Firebase path: (1) "Include
+         |             | Archived (Display)" — Basket page only — shows/hides archived
+         |             | strategy rows in the selector panel; (2) "Include Archived
+         |             | (P&L)" — now on BOTH the Basket page and the Account-wise page
+         |             | — whether archived strategies' numbers count toward totals
+         |             | (still decided per-strategy via each row's own checkbox on the
+         |             | Basket page). Account-wise page previously had NO archive
+         |             | filtering at all (always counted archived strategies); it now
+         |             | has its own "Include Archived (P&L)" toggle, defaulting to No —
+         |             | this is a real behavior change there, by explicit request.
   v26.1 | 2026-09-20 | RENUMBERED from v25.11 to v26.1 at user's request — no functional
          |             | change from v25.11. Monthly P&L Chart outside-the-bar precise label now uses TWO
          |             | decimal places (17.23K, -2.31L, 1.05Cr) instead of one, per
@@ -1306,7 +1317,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>SKVK Trading Journal v26.1</title>
+<title>SKVK Trading Journal v26.2</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -2286,7 +2297,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div class="login-logo">📋</div>
     <div class="login-title">
       SKVK Trading Journal
-      <span class="login-vbadge">v26.1</span>
+      <span class="login-vbadge">v26.2</span>
     </div>
     <div class="login-sub">Sign in with your authorised Google account to access the journal.</div>
     <button class="google-signin-btn" id="googleSignInBtn" onclick="signInWithGoogle()">
@@ -2326,7 +2337,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
         <i class="ti ti-chart-candle brand-icon"></i>
         <span class="brand-skvk">SKVK</span>
         <span class="brand-appname">Trading Journal</span>
-        <span class="brand-vbadge">v26.1</span>
+        <span class="brand-vbadge">v26.2</span>
       </div>
     </div>
     <div id="topbar-right-wrap">
@@ -2709,6 +2720,9 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
       <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:0.85rem;font-weight:600;color:var(--text0);">
         <input type="radio" autocomplete="off" name="acct-period-mode" value="fy" onchange="renderAcctReport()" style="accent-color:#6366f1;width:14px;height:14px;"> <span id="acct-period-fy-label">FY</span>
       </label>
+      <span style="width:1px;height:20px;background:var(--border);margin:0 4px;"></span>
+      <!-- v26.2 — Account-wise page's own independent "Include Archived (P&L)" toggle -->
+      <button id="acct-archived-pnl-btn" onclick="toggleAcctArchivedPnl()" style="padding:4px 12px;border-radius:6px;font-size:0.71rem;font-weight:700;cursor:pointer;border:1.5px solid #7c3aed;background:var(--bg);color:#7c3aed;">Include Archived (P&L): No</button>
     </div>
 
     <!-- ── Live Performance ── -->
@@ -3162,7 +3176,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
           <span style="font-size:1.3rem;">📇</span>
           <div>
             <div style="font-size:0.95rem;font-weight:700;color:var(--text0);">Strategies by Account</div>
-            <div style="font-size:0.72rem;color:var(--text2);margin-top:2px;">Mark a strategy Live or Archived for each account it trades on · archived hides it from Analytics — Basket for that account until "Include Archived" is switched on</div>
+            <div style="font-size:0.72rem;color:var(--text2);margin-top:2px;">Mark a strategy Live or Archived for each account it trades on · archived hides it from Analytics — Basket for that account until "Include Archived (Display)" or "Include Archived (P&L)" is switched on</div>
           </div>
         </div>
         <input type="text" id="as-strat-search" placeholder="Search strategies…" oninput="asRenderStrategiesByAccount()"
@@ -3825,6 +3839,7 @@ function initAcctReport() {
   if (!currentAcct) currentAcct = '__ALL__';
   sel.value = currentAcct;
   renderAcctReport();
+  renderAcctArchivedBtn();
 }
 
 function renderAcctReport() {
@@ -3839,8 +3854,8 @@ function renderAcctReport() {
   if (!hasAcct) return;
 
   const tr = currentAcct === '__ALL__'
-    ? allTrades.filter(t=>!t.archived)
-    : allTrades.filter(t=>!t.archived && (t.client_id||'')===currentAcct);
+    ? allTrades.filter(t=>!t.archived && (acctArchivedPnl || !isSystemArchived(getNick(t.client_id) || t.client_id, t.algo_name)))
+    : allTrades.filter(t=>!t.archived && (t.client_id||'')===currentAcct && (acctArchivedPnl || !isSystemArchived(getNick(t.client_id) || t.client_id, t.algo_name)));
   const label = currentAcct === '__ALL__' ? 'All Accounts' : getClientLabel(currentAcct);
 
   // Period toggle (All Time / FY 2026-27) for Live Performance, Daily P&L table, Equity/Drawdown
@@ -3907,8 +3922,8 @@ function renderDashAccountsAllocated() {
 function acctWeekNav(dir) {
   acctWeekOffset += dir;
   const tr = currentAcct === '__ALL__'
-    ? allTrades.filter(t=>!t.archived)
-    : allTrades.filter(t=>!t.archived && (t.client_id||'')===currentAcct);
+    ? allTrades.filter(t=>!t.archived && (acctArchivedPnl || !isSystemArchived(getNick(t.client_id) || t.client_id, t.algo_name)))
+    : allTrades.filter(t=>!t.archived && (t.client_id||'')===currentAcct && (acctArchivedPnl || !isSystemArchived(getNick(t.client_id) || t.client_id, t.algo_name)));
   renderAcctWeekTiles(tr);
 }
 
@@ -5050,11 +5065,24 @@ function startListeners() {
     renderSystemSelectorPanel();
     renderDashFiltered();
   });
-  // v25.7 — "Include Archived" visibility toggle persistence (renamed from Show Archived)
-  db.ref('journal/settings/dash_include_archived').on('value', snap => {
-    dashShowArchived = !!snap.val();
+  // v26.2 — split "Include Archived" into two independent toggles: Display (selector
+  // panel rows, Basket page) and P&L (whether archived strategies' numbers count toward
+  // Basket-page totals). Each persists to its own Firebase path.
+  db.ref('journal/settings/dash_include_archived_display').on('value', snap => {
+    dashArchivedDisplay = !!snap.val();
     renderSystemSelectorPanel();
     renderDashFiltered();
+  });
+  db.ref('journal/settings/dash_include_archived_pnl').on('value', snap => {
+    dashArchivedPnl = !!snap.val();
+    renderSystemSelectorPanel();
+    renderDashFiltered();
+  });
+  // v26.2 — Account-wise page's independent "Include Archived (P&L)" toggle. No Display
+  // toggle here — this page has no per-strategy row list to show/hide.
+  db.ref('journal/settings/acct_include_archived_pnl').on('value', snap => {
+    acctArchivedPnl = !!snap.val();
+    if (document.getElementById('acct-select')) { renderAcctReport(); renderAcctArchivedBtn(); }
   });
 }
 
@@ -5726,10 +5754,17 @@ let dashExcludedSystems = new Set();
 // of this switch; it only controls list visibility, never P&L inclusion (see
 // getDashFilteredTrades). v25.1 — also persisted to Firebase (journal/settings/dash_show_archived)
 // so this doesn't silently reset either.
-let dashShowArchived = false;
+let dashArchivedDisplay = false;  // v26.2 — replaces dashShowArchived: shows/hides archived
+                                   // strategy rows in the Basket-page selector panel
+let dashArchivedPnl = false;      // v26.2 — replaces dashShowArchived: gates whether archived
+                                   // strategies' P&L counts toward Basket-page totals (each
+                                   // still decided individually via dashExcludedSystems)
 
 // v23.3 — Privacy toggle: 'id' shows broker+clientid, 'name' shows nickname (holder name)
 let dashLabelMode = 'id';  // default = ID on fresh load, session-only
+let acctArchivedPnl = false;  // v26.2 — Account-wise page's own independent "Include Archived
+                               // (P&L)" toggle; no equivalent on this page for "Display" since
+                               // there's no per-strategy row list here to show/hide
 // v23.6 — Panel display mode: 'expanded' shows full system lists, 'minimized' shows headers only
 let dashPanelMode = 'expanded';  // persisted to Firebase
 function getDashAcctLabel(nick, cids) {
@@ -5778,7 +5813,7 @@ function renderSystemSelectorPanel() {
     const cid = t.client_id;
     if (!cid || junk.has(cid.toLowerCase())) return;
     const nick = getNick(cid) || cid;
-    if (isSystemArchived(nick, t.algo_name) && !dashShowArchived) return;  // v25.9 — per-account
+    if (isSystemArchived(nick, t.algo_name) && !dashArchivedDisplay) return;  // v26.2 — per-account, Display toggle
     if (!nickSystems[nick]) { nickSystems[nick] = new Set(); nickCids[nick] = new Set(); }
     nickSystems[nick].add(t.algo_name);
     nickCids[nick].add(cid);
@@ -5818,10 +5853,15 @@ function renderSystemSelectorPanel() {
   html += `<span style="width:1px;height:20px;background:var(--border);margin:0 2px;"></span>`;
   // v24.2 \u2014 global Show Archived switch: OFF hides Not-Live strategies everywhere on this
   // page (same as v24.1); ON reveals them (greyed out, own checkbox, checked by default).
-  const archBtnStyle = dashShowArchived
+  // v26.2 — two independent Include Archived switches, replacing the single toggle.
+  const archDisplayBtnStyle = dashArchivedDisplay
     ? 'padding:4px 12px;border-radius:6px;font-size:0.71rem;font-weight:700;cursor:pointer;border:1.5px solid #c2410c;background:#c2410c;color:#fff;transition:background 0.15s,color 0.15s;'
     : 'padding:4px 12px;border-radius:6px;font-size:0.71rem;font-weight:700;cursor:pointer;border:1.5px solid #c2410c;background:var(--bg);color:#c2410c;transition:background 0.15s,color 0.15s;';
-  html += `<button onclick="toggleDashShowArchived()" style="${archBtnStyle}">Include Archived: ${dashShowArchived ? 'Yes' : 'No'}</button>`;
+  const archPnlBtnStyle = dashArchivedPnl
+    ? 'padding:4px 12px;border-radius:6px;font-size:0.71rem;font-weight:700;cursor:pointer;border:1.5px solid #7c3aed;background:#7c3aed;color:#fff;transition:background 0.15s,color 0.15s;'
+    : 'padding:4px 12px;border-radius:6px;font-size:0.71rem;font-weight:700;cursor:pointer;border:1.5px solid #7c3aed;background:var(--bg);color:#7c3aed;transition:background 0.15s,color 0.15s;';
+  html += `<button onclick="toggleDashArchivedDisplay()" style="${archDisplayBtnStyle}">Include Archived (Display): ${dashArchivedDisplay ? 'Yes' : 'No'}</button>`;
+  html += `<button onclick="toggleDashArchivedPnl()" style="${archPnlBtnStyle}">Include Archived (P&L): ${dashArchivedPnl ? 'Yes' : 'No'}</button>`;
   html += '<span style="margin-left:auto;display:flex;align-items:center;gap:8px;">';
   html += '<span style="font-size:0.7rem;color:var(--text2);font-weight:600;">Display:</span>';
   html += `<label style="display:flex;align-items:center;gap:4px;cursor:pointer;font-size:0.7rem;font-weight:600;color:var(--text1);"><input type="radio" name="dash-label-mode" value="id" ${dashLabelMode==='id'?'checked ':''}onchange="setDashLabelMode('id')" style="accent-color:var(--blue);cursor:pointer;">Account ID</label>`;
@@ -5915,11 +5955,30 @@ function setDashPanelMode(mode) {
   renderSystemSelectorPanel();
 }
 
-function toggleDashShowArchived() {  // v25.7 — renamed "Include Archived"
-  dashShowArchived = !dashShowArchived;
-  if (db) db.ref('journal/settings/dash_include_archived').set(dashShowArchived);  // v25.7
+function toggleDashArchivedDisplay() {  // v26.2
+  dashArchivedDisplay = !dashArchivedDisplay;
+  if (db) db.ref('journal/settings/dash_include_archived_display').set(dashArchivedDisplay);
   renderSystemSelectorPanel();
   renderDashFiltered();
+}
+function toggleDashArchivedPnl() {  // v26.2
+  dashArchivedPnl = !dashArchivedPnl;
+  if (db) db.ref('journal/settings/dash_include_archived_pnl').set(dashArchivedPnl);
+  renderSystemSelectorPanel();
+  renderDashFiltered();
+}
+function toggleAcctArchivedPnl() {  // v26.2 — Account-wise page's own independent P&L toggle
+  acctArchivedPnl = !acctArchivedPnl;
+  if (db) db.ref('journal/settings/acct_include_archived_pnl').set(acctArchivedPnl);
+  renderAcctReport();
+  renderAcctArchivedBtn();
+}
+function renderAcctArchivedBtn() {  // v26.2
+  const btn = document.getElementById('acct-archived-pnl-btn');
+  if (!btn) return;
+  btn.textContent = `Include Archived (P&L): ${acctArchivedPnl ? 'Yes' : 'No'}`;
+  btn.style.background = acctArchivedPnl ? '#7c3aed' : 'var(--bg)';
+  btn.style.color = acctArchivedPnl ? '#fff' : '#7c3aed';
 }
 
 // v25.1 — every dashExcludedSystems mutation now also saves to Firebase so the selection
@@ -5962,7 +6021,7 @@ function toggleDashAccount(nick, checked) {
   const systems = new Set();
   allTrades.forEach(t => {
     if (t.archived) return;
-    if (isSystemArchived(nick, t.algo_name) && !dashShowArchived) return;  // v25.9 — per-account
+    if (isSystemArchived(nick, t.algo_name) && !dashArchivedDisplay) return;  // v26.2 — per-account, Display toggle
     if (cids.has(t.client_id)) systems.add(t.algo_name);
   });
   systems.forEach(s => {
@@ -5982,7 +6041,7 @@ let capitalBasket = {}; // basket-wise capital: {basketName: {YYYY-MM: amount}}
 function renderDashboard() {
   const tr = allTrades.filter(t=>{
     if (t.archived) return false;
-    if (isSystemArchived(getNick(t.client_id) || t.client_id, t.algo_name) && !dashShowArchived) return false;  // v25.9 — per-account
+    if (isSystemArchived(getNick(t.client_id) || t.client_id, t.algo_name) && !dashArchivedPnl) return false;  // v26.2 — per-account, P&L toggle
     if (!(pnlDate(t)||t.entry_date||'').startsWith(currentYear)) return false;
     if (dashExcludedSystems.size === 0) return true;
     const nick = getNick(t.client_id) || t.client_id;
@@ -5996,7 +6055,7 @@ function renderDashboard() {
   const fyMonthsDash = getFYMonthKeys(currentYear);
   const mMap={};
   fyMonthsDash.forEach(k=>mMap[k]=0);
-  allTrades.filter(t=>!t.archived && (dashShowArchived || !isSystemArchived(getNick(t.client_id) || t.client_id, t.algo_name))).forEach(t=>{ const ym=(pnlDate(t)||'').slice(0,7); if(fyMonthsDash.includes(ym)) mMap[ym]=(mMap[ym]||0)+(t.pnl||0); });
+  allTrades.filter(t=>!t.archived && (dashArchivedPnl || !isSystemArchived(getNick(t.client_id) || t.client_id, t.algo_name))).forEach(t=>{ const ym=(pnlDate(t)||'').slice(0,7); if(fyMonthsDash.includes(ym)) mMap[ym]=(mMap[ym]||0)+(t.pnl||0); });
 
   // Year tabs
   const years=[...new Set(allTrades.map(t=>(t.entry_date||'').slice(0,4)).filter(Boolean))];
@@ -6016,7 +6075,7 @@ function renderDashboard() {
   const archCount = Object.values(archivedSystems).filter(Boolean).length;
   const archNoteEl = document.getElementById('dash-archived-note');
   if (archNoteEl) {
-    if (archCount) { archNoteEl.style.display = 'inline-block'; archNoteEl.textContent = dashShowArchived ? `📦 Archived strategies shown below — check/uncheck each one to include it in totals` : `⏸ ${archCount} archived strategy/account pair(s) hidden (click "Include Archived" above, then check the ones you want in totals)`; }
+    if (archCount) { archNoteEl.style.display = 'inline-block'; archNoteEl.textContent = dashArchivedDisplay ? `📦 Archived strategies shown below — check/uncheck each one, then switch on "Include Archived (P&L)" to count them in totals` : `⏸ ${archCount} archived strategy/account pair(s) hidden (click "Include Archived (Display)" to review them, and "Include Archived (P&L)" to count them in totals)`; }
     else { archNoteEl.style.display = 'none'; archNoteEl.textContent = ''; }
   }
 
@@ -6065,7 +6124,7 @@ function renderDashFiltered() {
   // a broker report) without silently pulling in every other archived strategy too.
   let trFY = allTrades.filter(t=>{
     if (t.archived) return false;
-    if (isSystemArchived(getNick(t.client_id) || t.client_id, t.algo_name) && !dashShowArchived) return false;  // v25.9 — per-account
+    if (isSystemArchived(getNick(t.client_id) || t.client_id, t.algo_name) && !dashArchivedPnl) return false;  // v26.2 — per-account, P&L toggle
     if (isOrphanTrade(t)) return false;
     if (dashExcludedSystems.size === 0) return true;
     const nick = getNick(t.client_id) || t.client_id;
@@ -6206,7 +6265,7 @@ function getDashFilteredTrades() {
   // silently included" risk v24.9 fixed.
   return allTrades.filter(t=>{
     if (t.archived) return false;
-    if (isSystemArchived(getNick(t.client_id) || t.client_id, t.algo_name) && !dashShowArchived) return false;  // v25.9 — per-account
+    if (isSystemArchived(getNick(t.client_id) || t.client_id, t.algo_name) && !dashArchivedPnl) return false;  // v26.2 — per-account, P&L toggle
     if (isOrphanTrade(t)) return false;
     if (!(pnlDate(t)||t.entry_date||'').startsWith(currentYear)) return false;
     if (dashExcludedSystems.size === 0) return true;
