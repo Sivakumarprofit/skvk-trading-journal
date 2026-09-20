@@ -2,6 +2,18 @@
 ==========================================================
   SKVK TRADING JOURNAL — VERSION HISTORY
 ==========================================================
+  v25.9 | 2026-09-20 | BUG FIX: per-account Archived strategies (set from App Settings —
+         |            | Strategies by Account) were not actually being hidden from
+         |            | Analytics — Basket even with "Include Archived: No" — a v25.7
+         |            | packaging issue left isSystemArchived() and its 8 call sites on
+         |            | the old global, single-argument check instead of the new
+         |            | per-account one, so archiving a strategy for one account had no
+         |            | effect anywhere. Fixed: isSystemArchived(nick, algoName) and every
+         |            | caller now correctly key off the account, so an account+strategy
+         |            | marked Archived is hidden from that account's rows/totals on
+         |            | Analytics — Basket (and reappears, with its own checkbox, once
+         |            | "Include Archived" is switched to Yes) — matching what v25.7
+         |            | described. No visible UI change from v25.7/v25.8 otherwise.
   v25.8 | 2026-09-20 | ANALYTICS — BASKET: Monthly P&L Chart's bar-top value labels now
          |            | show whole K/L/Cr with no decimals (e.g. 17K instead of 17.23K,
          |            | 54K instead of 53.99K) via a new fmtKLCrWhole() used only for
@@ -1283,7 +1295,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>SKVK Trading Journal v25.8</title>
+<title>SKVK Trading Journal v25.9</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -2263,7 +2275,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div class="login-logo">📋</div>
     <div class="login-title">
       SKVK Trading Journal
-      <span class="login-vbadge">v25.8</span>
+      <span class="login-vbadge">v25.9</span>
     </div>
     <div class="login-sub">Sign in with your authorised Google account to access the journal.</div>
     <button class="google-signin-btn" id="googleSignInBtn" onclick="signInWithGoogle()">
@@ -2303,7 +2315,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
         <i class="ti ti-chart-candle brand-icon"></i>
         <span class="brand-skvk">SKVK</span>
         <span class="brand-appname">Trading Journal</span>
-        <span class="brand-vbadge">v25.8</span>
+        <span class="brand-vbadge">v25.9</span>
       </div>
     </div>
     <div id="topbar-right-wrap">
@@ -5663,10 +5675,9 @@ let ci=0; function nextColor(){return COLORS[ci++%COLORS.length];}
 // Grand Total, charts, heatmap). Stored as journal/algos/{safeKey}/archived. This is
 // display-only for the Basket page — Account-wise, Daily, capital and tax stay all-in.
 // Distinct from the trade-level t.archived flag (sold trades).
-function isSystemArchived(algoName) {
-  if (!algoName) return false;
-  const m = algoMeta[algoName] || algoMeta[safeKey(algoName)];
-  return !!(m && m.archived);
+function isSystemArchived(nick, algoName) {
+  if (!nick || !algoName) return false;
+  return !!archivedSystems[safeKey(nick + ':' + algoName)];
 }
 
 // v25.2 — a trade whose client_id can't be resolved to an account nickname (blank
@@ -5686,7 +5697,7 @@ function isOrphanTrade(t) {
 // management card, so both agree on exactly which trades count. Archived/deleted trades
 // are left out here since they're already gone from every total either way.
 function getOrphanTrades() {
-  return allTrades.filter(t => !t.archived && !isSystemArchived(t.algo_name) && isOrphanTrade(t));
+  return allTrades.filter(t => !t.archived && !isSystemArchived(getNick(t.client_id) || t.client_id, t.algo_name) && isOrphanTrade(t));
 }
 
 // ═══════ v22.8 — ACCOUNT-GROUPED SYSTEM SELECTOR ═══════
@@ -5753,10 +5764,10 @@ function renderSystemSelectorPanel() {
   const junk = new Set(['tradetron','quantleap','quantiply','zebu','upstox','']);
   allTrades.forEach(t => {
     if (t.archived) return;
-    if (isSystemArchived(t.algo_name) && !dashShowArchived) return;  // v24.2
     const cid = t.client_id;
     if (!cid || junk.has(cid.toLowerCase())) return;
     const nick = getNick(cid) || cid;
+    if (isSystemArchived(nick, t.algo_name) && !dashShowArchived) return;  // v25.9 — per-account
     if (!nickSystems[nick]) { nickSystems[nick] = new Set(); nickCids[nick] = new Set(); }
     nickSystems[nick].add(t.algo_name);
     nickCids[nick].add(cid);
@@ -5850,7 +5861,7 @@ function renderSystemSelectorPanel() {
       systems.forEach((sysName, sysIdx) => {
         const exKey = nick + ':' + sysName;
         const checked = !dashExcludedSystems.has(exKey);
-        const isArch = isSystemArchived(sysName);  // v24.2
+        const isArch = isSystemArchived(nick, sysName);  // v25.9 — per-account
         const meta = algoMeta[sysName] || algoMeta[safeKey(sysName)] || {};
         const underlying = meta.underlying || guessUnderlying(sysName);
         const color = isArch ? '#9ca3af' : getUnderlyingColor(underlying);
@@ -5940,7 +5951,7 @@ function toggleDashAccount(nick, checked) {
   const systems = new Set();
   allTrades.forEach(t => {
     if (t.archived) return;
-    if (isSystemArchived(t.algo_name) && !dashShowArchived) return;  // v24.2
+    if (isSystemArchived(nick, t.algo_name) && !dashShowArchived) return;  // v25.9 — per-account
     if (cids.has(t.client_id)) systems.add(t.algo_name);
   });
   systems.forEach(s => {
@@ -5960,7 +5971,7 @@ let capitalBasket = {}; // basket-wise capital: {basketName: {YYYY-MM: amount}}
 function renderDashboard() {
   const tr = allTrades.filter(t=>{
     if (t.archived) return false;
-    if (isSystemArchived(t.algo_name) && !dashShowArchived) return false;  // v24.2
+    if (isSystemArchived(getNick(t.client_id) || t.client_id, t.algo_name) && !dashShowArchived) return false;  // v25.9 — per-account
     if (!(pnlDate(t)||t.entry_date||'').startsWith(currentYear)) return false;
     if (dashExcludedSystems.size === 0) return true;
     const nick = getNick(t.client_id) || t.client_id;
@@ -5974,7 +5985,7 @@ function renderDashboard() {
   const fyMonthsDash = getFYMonthKeys(currentYear);
   const mMap={};
   fyMonthsDash.forEach(k=>mMap[k]=0);
-  allTrades.filter(t=>!t.archived && (dashShowArchived || !isSystemArchived(t.algo_name))).forEach(t=>{ const ym=(pnlDate(t)||'').slice(0,7); if(fyMonthsDash.includes(ym)) mMap[ym]=(mMap[ym]||0)+(t.pnl||0); });
+  allTrades.filter(t=>!t.archived && (dashShowArchived || !isSystemArchived(getNick(t.client_id) || t.client_id, t.algo_name))).forEach(t=>{ const ym=(pnlDate(t)||'').slice(0,7); if(fyMonthsDash.includes(ym)) mMap[ym]=(mMap[ym]||0)+(t.pnl||0); });
 
   // Year tabs
   const years=[...new Set(allTrades.map(t=>(t.entry_date||'').slice(0,4)).filter(Boolean))];
@@ -5991,10 +6002,10 @@ function renderDashboard() {
   // v25.4 — "Show Archived" now actually re-includes them, per-strategy, via their own
   // checkbox in the selector panel below — caption updated to say so instead of implying
   // the toggle is review-only.
-  const archCount = Object.values(algoMeta).filter(a => a && a.archived).length;
+  const archCount = Object.values(archivedSystems).filter(Boolean).length;
   const archNoteEl = document.getElementById('dash-archived-note');
   if (archNoteEl) {
-    if (archCount) { archNoteEl.style.display = 'inline-block'; archNoteEl.textContent = dashShowArchived ? `📦 Archived strategies shown below — check/uncheck each one to include it in totals` : `⏸ ${archCount} archived strategies hidden (click "Show Archived" above, then check the ones you want in totals)`; }
+    if (archCount) { archNoteEl.style.display = 'inline-block'; archNoteEl.textContent = dashShowArchived ? `📦 Archived strategies shown below — check/uncheck each one to include it in totals` : `⏸ ${archCount} archived strategy/account pair(s) hidden (click "Include Archived" above, then check the ones you want in totals)`; }
     else { archNoteEl.style.display = 'none'; archNoteEl.textContent = ''; }
   }
 
@@ -6043,7 +6054,7 @@ function renderDashFiltered() {
   // a broker report) without silently pulling in every other archived strategy too.
   let trFY = allTrades.filter(t=>{
     if (t.archived) return false;
-    if (isSystemArchived(t.algo_name) && !dashShowArchived) return false;
+    if (isSystemArchived(getNick(t.client_id) || t.client_id, t.algo_name) && !dashShowArchived) return false;  // v25.9 — per-account
     if (isOrphanTrade(t)) return false;
     if (dashExcludedSystems.size === 0) return true;
     const nick = getNick(t.client_id) || t.client_id;
@@ -6184,7 +6195,7 @@ function getDashFilteredTrades() {
   // silently included" risk v24.9 fixed.
   return allTrades.filter(t=>{
     if (t.archived) return false;
-    if (isSystemArchived(t.algo_name) && !dashShowArchived) return false;
+    if (isSystemArchived(getNick(t.client_id) || t.client_id, t.algo_name) && !dashShowArchived) return false;  // v25.9 — per-account
     if (isOrphanTrade(t)) return false;
     if (!(pnlDate(t)||t.entry_date||'').startsWith(currentYear)) return false;
     if (dashExcludedSystems.size === 0) return true;
