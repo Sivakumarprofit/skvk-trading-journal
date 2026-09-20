@@ -2,6 +2,12 @@
 ==========================================================
   SKVK TRADING JOURNAL — VERSION HISTORY
 ==========================================================
+  v25.10 | 2026-09-20 | Monthly P&L Chart (Analytics — Basket) now shows TWO labels per
+         |             | bar: the existing whole-number value (17K, -2K) centered INSIDE
+         |             | the bar, plus a new precise one-decimal value (17.2K, -2.3L)
+         |             | OUTSIDE the bar at its top/bottom edge. Uses the datalabels
+         |             | plugin's multi-label config; new fmtKLCrDecimal() formatter.
+         |             | Scoped to this one chart only — no other change.
   v25.9 | 2026-09-20 | BUG FIX: per-account Archived strategies (set from App Settings —
          |            | Strategies by Account) were not actually being hidden from
          |            | Analytics — Basket even with "Include Archived: No" — a v25.7
@@ -1295,7 +1301,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>SKVK Trading Journal v25.9</title>
+<title>SKVK Trading Journal v25.10</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -2275,7 +2281,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div class="login-logo">📋</div>
     <div class="login-title">
       SKVK Trading Journal
-      <span class="login-vbadge">v25.9</span>
+      <span class="login-vbadge">v25.10</span>
     </div>
     <div class="login-sub">Sign in with your authorised Google account to access the journal.</div>
     <button class="google-signin-btn" id="googleSignInBtn" onclick="signInWithGoogle()">
@@ -2315,7 +2321,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
         <i class="ti ti-chart-candle brand-icon"></i>
         <span class="brand-skvk">SKVK</span>
         <span class="brand-appname">Trading Journal</span>
-        <span class="brand-vbadge">v25.9</span>
+        <span class="brand-vbadge">v25.10</span>
       </div>
     </div>
     <div id="topbar-right-wrap">
@@ -6383,11 +6389,24 @@ function drawMonthly(mMap, trFY) {
         },
         datalabels:{
           display: ctx2=>ctx2.dataset.data[ctx2.dataIndex]!==0,
-          anchor: ctx2=>ctx2.dataset.data[ctx2.dataIndex]>=0?'end':'start',
-          align:  ctx2=>ctx2.dataset.data[ctx2.dataIndex]>=0?'top':'bottom',
-          color:  ctx2=>ctx2.dataset.data[ctx2.dataIndex]>=0?'#15803d':'#dc2626',
-          font:{size:9,weight:'700'},
-          formatter: v=>fmtKLCrWhole(v)  // v25.8 — Monthly P&L Chart bar labels only: whole K/L/Cr, no decimals
+          labels:{
+            // v25.10 — whole-number value, centered INSIDE the bar
+            whole:{
+              anchor:'center',
+              align:'center',
+              color:'#fff',
+              font:{size:9,weight:'700'},
+              formatter: v=>fmtKLCrWhole(v)
+            },
+            // v25.10 — precise one-decimal value, at the top/bottom edge OUTSIDE the bar
+            precise:{
+              anchor: ctx2=>ctx2.dataset.data[ctx2.dataIndex]>=0?'end':'start',
+              align:  ctx2=>ctx2.dataset.data[ctx2.dataIndex]>=0?'top':'bottom',
+              color:  ctx2=>ctx2.dataset.data[ctx2.dataIndex]>=0?'#15803d':'#dc2626',
+              font:{size:9,weight:'700'},
+              formatter: v=>fmtKLCrDecimal(v)
+            }
+          }
         }
       },
       scales:{
@@ -6407,6 +6426,18 @@ function fmtKLCrWhole(v) {
   if (abs>=100000)   return sign+Math.round(abs/100000)+'L';
   if (abs>=1000)     return sign+Math.round(abs/1000)+'K';
   return (v>=0?'+':'-')+abs;
+}
+
+// v25.10 — one-decimal-place K/L/Cr formatter used ONLY for the Monthly P&L Chart's
+// new outside-the-bar precise label (e.g. 17.2K, 13.4L). Same crossover thresholds as
+// fmtKLCrWhole, just with a decimal instead of rounding to a whole number.
+function fmtKLCrDecimal(v) {
+  if (!v && v!==0) return '';
+  const abs=Math.abs(v), sign=v>=0?'+':'-';
+  if (abs>=10000000) return sign+(abs/10000000).toFixed(1)+'Cr';
+  if (abs>=100000)   return sign+(abs/100000).toFixed(1)+'L';
+  if (abs>=1000)     return sign+(abs/1000).toFixed(1)+'K';
+  return sign+Math.round(abs);
 }
 
 function drawDashCalHeatmap(tr) {
