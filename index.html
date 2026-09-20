@@ -2,6 +2,12 @@
 ==========================================================
   SKVK TRADING JOURNAL — VERSION HISTORY
 ==========================================================
+  v25.8 | 2026-09-20 | ANALYTICS — BASKET: Monthly P&L Chart's bar-top value labels now
+         |            | show whole K/L/Cr with no decimals (e.g. 17K instead of 17.23K,
+         |            | 54K instead of 53.99K) via a new fmtKLCrWhole() used only for
+         |            | this chart's datalabels. Its tooltip, Y-axis, and every other
+         |            | chart/tile in the app keep their existing decimal formatting
+         |            | (fmtKLCr) unchanged.
   v25.7 | 2026-09-20 | REMOVED Basket Management, Group Management, and the combined
          |            | Basket & Group Allocation table from App Settings — replaced by a
          |            | single "Strategies by Account" card listing every strategy under
@@ -1277,7 +1283,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>SKVK Trading Journal v25.7</title>
+<title>SKVK Trading Journal v25.8</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -2257,7 +2263,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div class="login-logo">📋</div>
     <div class="login-title">
       SKVK Trading Journal
-      <span class="login-vbadge">v25.7</span>
+      <span class="login-vbadge">v25.8</span>
     </div>
     <div class="login-sub">Sign in with your authorised Google account to access the journal.</div>
     <button class="google-signin-btn" id="googleSignInBtn" onclick="signInWithGoogle()">
@@ -2297,7 +2303,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
         <i class="ti ti-chart-candle brand-icon"></i>
         <span class="brand-skvk">SKVK</span>
         <span class="brand-appname">Trading Journal</span>
-        <span class="brand-vbadge">v25.7</span>
+        <span class="brand-vbadge">v25.8</span>
       </div>
     </div>
     <div id="topbar-right-wrap">
@@ -6370,7 +6376,7 @@ function drawMonthly(mMap, trFY) {
           align:  ctx2=>ctx2.dataset.data[ctx2.dataIndex]>=0?'top':'bottom',
           color:  ctx2=>ctx2.dataset.data[ctx2.dataIndex]>=0?'#15803d':'#dc2626',
           font:{size:9,weight:'700'},
-          formatter: v=>fmtKLCr(v)
+          formatter: v=>fmtKLCrWhole(v)  // v25.8 — Monthly P&L Chart bar labels only: whole K/L/Cr, no decimals
         }
       },
       scales:{
@@ -6378,6 +6384,18 @@ function drawMonthly(mMap, trFY) {
         y:{grid:{color:'rgba(0,0,0,0.04)'},ticks:{color:'#6b7280',font:{size:10},callback:v=>fmtKLCr(v)}}
       }}
   });
+}
+
+// v25.8 — whole-number K/L/Cr formatter used ONLY for the Monthly P&L Chart's bar-top
+// labels (e.g. 17K instead of 17.23K). Every other display (tooltip, axis, tiles
+// elsewhere) keeps its existing decimal formatting via fmtKLCr — untouched.
+function fmtKLCrWhole(v) {
+  if (!v && v!==0) return '';
+  const abs=Math.abs(Math.round(v)), sign=v>=0?'+':'-';
+  if (abs>=10000000) return sign+Math.round(abs/10000000)+'Cr';
+  if (abs>=100000)   return sign+Math.round(abs/100000)+'L';
+  if (abs>=1000)     return sign+Math.round(abs/1000)+'K';
+  return (v>=0?'+':'-')+abs;
 }
 
 function drawDashCalHeatmap(tr) {
