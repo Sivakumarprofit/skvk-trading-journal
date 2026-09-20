@@ -2,6 +2,24 @@
 ==========================================================
   SKVK TRADING JOURNAL — VERSION HISTORY
 ==========================================================
+  v25.7 | 2026-09-20 | REMOVED Basket Management, Group Management, and the combined
+         |            | Basket & Group Allocation table from App Settings — replaced by a
+         |            | single "Strategies by Account" card listing every strategy under
+         |            | each account it has traded on, with a Live/Archived toggle per
+         |            | account+strategy pair (the same strategy can be Live on one
+         |            | account and Archived on another). Archived strategies are hidden
+         |            | from Analytics — Basket (rows and every total) for that account
+         |            | until "Include Archived" is switched to Yes. REMOVED the
+         |            | Allocations tab and Capital Deployed tracking entirely (account →
+         |            | basket → lots is gone, so are the Capital Deployed tiles/grids and
+         |            | the Return %, CAGR and Max Drawdown % figures that depended on it —
+         |            | these now show NA/blank since no capital data can be entered
+         |            | anymore). RENAMED Analytics — Basket's "📦 Show/Hide Archived"
+         |            | button to "Include Archived: Yes/No" (default No), persisted to
+         |            | journal/settings/dash_include_archived. Archive state persisted to
+         |            | journal/settings/archived_systems. Legacy journal/allocations,
+         |            | journal/groups and journal/algo_groups Firebase nodes are deleted
+         |            | once on load.
   v25.6 | 2026-09-19 | ANALYTICS — ACCOUNT WISE: reverted v25.5's row-wise multi-select
          |            | card selector — back to the original single-account dropdown
          |            | (pick one account, or "All Accounts"). No "Show Archived" button
@@ -1259,7 +1277,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>SKVK Trading Journal v25.6</title>
+<title>SKVK Trading Journal v25.7</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -2239,7 +2257,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div class="login-logo">📋</div>
     <div class="login-title">
       SKVK Trading Journal
-      <span class="login-vbadge">v25.6</span>
+      <span class="login-vbadge">v25.7</span>
     </div>
     <div class="login-sub">Sign in with your authorised Google account to access the journal.</div>
     <button class="google-signin-btn" id="googleSignInBtn" onclick="signInWithGoogle()">
@@ -2279,7 +2297,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
         <i class="ti ti-chart-candle brand-icon"></i>
         <span class="brand-skvk">SKVK</span>
         <span class="brand-appname">Trading Journal</span>
-        <span class="brand-vbadge">v25.6</span>
+        <span class="brand-vbadge">v25.7</span>
       </div>
     </div>
     <div id="topbar-right-wrap">
@@ -2302,7 +2320,6 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
       <button class="nav-tab" onclick="showPage('acctreport')"            data-page="acctreport">👤 Analytics — Account wise</button>
       <button class="nav-tab" onclick="showPage('upload')"                data-page="upload">⬆ Upload Trade Reports</button>
       <button class="nav-tab" onclick="showPage('stockmock')"             data-page="stockmock">📊 Analytics-Execution</button>
-      <button class="nav-tab" onclick="showPage('allocations')"           data-page="allocations"><i class="ti ti-sitemap"></i>&nbsp;Allocations</button>
       <button class="nav-tab" onclick="showPage('taxation')" data-page="taxation" style="line-height:1.2;">🧾 Taxation/<br>Expenses</button>
       <button class="nav-tab" onclick="showPage('appsettings')"           data-page="appsettings">🛠️ App Settings</button>
     </nav>
@@ -2399,7 +2416,6 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
       <span id="dash-monthly-perf-label" style="font-size:0.75rem;background:#eef2ff;color:#3730a3;padding:4px 12px;border-radius:20px;font-weight:600;"></span>
     </div>
     <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:16px 24px;">
-      <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Capital Deployed</div><div id="dash-mp-cap" style="font-size:1.1rem;font-weight:800;">—</div></div>
       <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Net P&L</div><div id="dash-mp-pnl" style="font-size:1.1rem;font-weight:800;">—</div></div>
       <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Net P&L %</div><div id="dash-mp-return" style="font-size:1.1rem;font-weight:800;">—</div></div>
       <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Max Drawdown</div><div id="dash-mp-dd" style="font-size:1.1rem;font-weight:800;color:var(--red);">—</div></div>
@@ -2447,7 +2463,6 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
       <span id="dash-orphan-note" style="display:none;font-size:0.72rem;background:#fee2e2;color:#991b1b;padding:4px 12px;border-radius:20px;font-weight:700;margin-left:6px;cursor:default;"></span>
     </div>
     <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:16px 24px;">
-      <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Capital Deployed</div><div id="s-algos" style="font-size:1.1rem;font-weight:800;">—</div></div>
       <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Net P&L</div><div id="s-pnl" style="font-size:1.1rem;font-weight:800;">—</div></div>
       <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Net P&L %</div><div id="s-return" style="font-size:1.1rem;font-weight:800;color:var(--green);">—</div></div>
       <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Max Drawdown</div><div id="s-dd" style="font-size:1.1rem;font-weight:800;color:var(--red);">—</div></div>
@@ -2507,7 +2522,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
   <div style="background:var(--bg);border:1.5px solid var(--border);border-radius:14px;padding:20px 24px;margin-bottom:28px;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
       <div style="font-size:0.95rem;font-weight:800;font-family:var(--display);">💰 Capital Deployed</div>
-      <span style="font-size:0.72rem;color:var(--text3);">Set via 🔗 Allocations</span>
+      <span style="font-size:0.72rem;color:var(--text3);">No capital data</span>
     </div>
     <div id="dash-capital-grid"></div>
   </div>
@@ -2626,7 +2641,6 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
         <span id="acct-monthly-perf-label" style="font-size:0.75rem;background:#eef2ff;color:#3730a3;padding:4px 12px;border-radius:20px;font-weight:600;"></span>
       </div>
       <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:16px 24px;">
-        <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Capital Deployed</div><div id="acct-mp-cap" style="font-size:1.1rem;font-weight:800;">—</div></div>
         <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Net P&L</div><div id="acct-mp-pnl" style="font-size:1.1rem;font-weight:800;">—</div></div>
         <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Net P&L %</div><div id="acct-mp-return" style="font-size:1.1rem;font-weight:800;">—</div></div>
         <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Max Drawdown</div><div id="acct-mp-dd" style="font-size:1.1rem;font-weight:800;color:var(--red);">—</div></div>
@@ -2678,7 +2692,6 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
         <span id="acct-date-range" style="font-size:0.75rem;background:#eef2ff;color:#3730a3;padding:4px 12px;border-radius:20px;font-weight:600;"></span>
       </div>
       <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:16px 24px;">
-        <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Capital Deployed</div><div id="acct-lp-cap" style="font-size:1.1rem;font-weight:800;">—</div></div>
         <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Net P&L</div><div id="acct-lp-pnl" style="font-size:1.1rem;font-weight:800;">—</div></div>
         <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Net P&L %</div><div id="acct-lp-return" style="font-size:1.1rem;font-weight:800;color:var(--green);">—</div></div>
         <div><div style="font-size:0.65rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Max Drawdown</div><div id="acct-lp-dd" style="font-size:1.1rem;font-weight:800;color:var(--red);">—</div></div>
@@ -2742,7 +2755,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div id="acct-capital-section" style="background:var(--bg);border:1.5px solid var(--border);border-radius:14px;padding:20px 24px;margin-bottom:28px;">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px;">
         <div style="font-size:0.95rem;font-weight:800;font-family:var(--display);">💰 Capital Deployed</div>
-        <span style="font-size:0.72rem;color:var(--text3);">Set via 🔗 Allocations</span>
+        <span style="font-size:0.72rem;color:var(--text3);">No capital data</span>
       </div>
       <div id="acct-capital-grid"></div>
     </div>
@@ -3061,97 +3074,11 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
 </div>
 
 
-<!-- ══════════ ALL ALLOCATIONS (v22.0) ══════════ -->
-<div id="page-allocations" class="page">
-  <div class="page-header">
-    <div>
-      <div class="page-title">Allocations</div>
-      <div class="page-subtitle">Account → Basket → Lots, by month · drives Capital Deployed across the app</div>
-    </div>
-    <div style="display:flex;gap:8px;">
-      <input type="file" id="alloc-import-input" accept=".csv" style="display:none" onchange="allocImportCSV(this.files[0])">
-      <button class="btn btn-ghost btn-sm" onclick="document.getElementById('alloc-import-input').click()">⬆ Import CSV</button>
-      <button class="btn btn-ghost btn-sm" onclick="allocExportCSV()">⬇ Export CSV</button>
-    </div>
-  </div>
-
-  <div style="display:flex;align-items:center;gap:12px;margin-bottom:22px;flex-wrap:wrap;">
-    <label style="font-size:0.8rem;font-weight:700;color:var(--text1);">Account</label>
-    <select id="alloc-account-select" class="form-select" onchange="onAllocAccountChange()" style="min-width:260px;transition:all 0.15s;">
-      <option value="">Select an account…</option>
-    </select>
-  </div>
-
-  <div id="alloc-empty-state" class="empty-state">
-    <span class="eicon">🔗</span>
-    <h3>Select an account to view its allocations</h3>
-    <p>Once selected, you'll see all 12 months of the current FY for that account</p>
-  </div>
-
-  <div id="alloc-table-wrap" style="display:none;background:#fff;border:1px solid var(--border);border-radius:12px;overflow:hidden;box-shadow:var(--shadow-sm);">
-    <table style="width:100%;border-collapse:collapse;font-size:0.84rem;">
-      <thead>
-        <tr style="background:var(--bg2);">
-          <th style="padding:10px 14px;text-align:left;font-weight:700;color:var(--text1);border-bottom:1px solid var(--border);">Month</th>
-          <th style="padding:10px 14px;text-align:left;font-weight:700;color:var(--text1);border-bottom:1px solid var(--border);">Allocations (Basket · Lots)</th>
-          <th style="padding:10px 14px;text-align:right;font-weight:700;color:var(--text1);border-bottom:1px solid var(--border);">Total Margin</th>
-          <th style="padding:10px 14px;text-align:center;font-weight:700;color:var(--text1);border-bottom:1px solid var(--border);">Exclude For Calculations</th>
-          <th style="padding:10px 14px;text-align:center;font-weight:700;color:var(--text1);border-bottom:1px solid var(--border);">Actions</th>
-        </tr>
-      </thead>
-      <tbody id="alloc-table-tbody"></tbody>
-    </table>
-  </div>
-</div>
-
-<!-- Edit month modal: add / edit / delete basket-rows for one month -->
-<div class="modal-overlay" id="modal-alloc-month">
-  <div class="modal" style="max-width:640px;">
-    <button class="modal-close" onclick="closeModal('modal-alloc-month')">✕</button>
-    <h2 id="alloc-month-modal-title">Edit Month</h2>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin:14px 0;background:#fafbff;border:1px solid var(--border);border-radius:10px;padding:12px;">
-      <div class="form-group" style="min-width:220px;margin:0;">
-        <label class="form-label">Basket</label>
-        <select class="form-select" id="alloc-modal-add-basket"><option value="">Select basket…</option></select>
-      </div>
-      <div class="form-group" style="min-width:90px;margin:0;">
-        <label class="form-label">Lots</label>
-        <input type="number" class="form-input" id="alloc-modal-add-lots" min="0" step="1" placeholder="e.g. 3">
-      </div>
-      <button class="btn btn-primary btn-sm" onclick="allocModalAddRow()">+ Add</button>
-    </div>
-    <table style="width:100%;border-collapse:collapse;font-size:0.82rem;">
-      <thead>
-        <tr style="background:var(--bg2);">
-          <th style="padding:8px 10px;text-align:left;font-weight:700;color:var(--text1);border-bottom:1px solid var(--border);">Basket</th>
-          <th style="padding:8px 10px;text-align:right;font-weight:700;color:var(--text1);border-bottom:1px solid var(--border);">Lots</th>
-          <th style="padding:8px 10px;text-align:right;font-weight:700;color:var(--text1);border-bottom:1px solid var(--border);">Capital/Lot</th>
-          <th style="padding:8px 10px;text-align:right;font-weight:700;color:var(--text1);border-bottom:1px solid var(--border);">Margin</th>
-          <th style="padding:8px 10px;text-align:center;font-weight:700;color:var(--text1);border-bottom:1px solid var(--border);">Actions</th>
-        </tr>
-      </thead>
-      <tbody id="alloc-modal-rows-tbody"></tbody>
-    </table>
-  </div>
-</div>
-
-<!-- Copy-to-other-months panel -->
-<div class="modal-overlay" id="modal-alloc-copy">
-  <div class="modal" style="max-width:420px;">
-    <button class="modal-close" onclick="closeModal('modal-alloc-copy')">✕</button>
-    <h2>📋 Copy Allocation To Other Months</h2>
-    <div id="alloc-copy-source-label" style="font-size:0.82rem;color:var(--text2);margin:8px 0 14px;"></div>
-    <div id="alloc-copy-month-list" style="display:flex;flex-direction:column;gap:6px;max-height:280px;overflow-y:auto;margin-bottom:16px;"></div>
-    <button class="btn btn-primary" onclick="allocApplyCopy()" style="width:100%;">Copy to Selected Months</button>
-  </div>
-</div>
-
-
 <div id="page-appsettings" class="page">
   <div class="page-header">
     <div>
       <div class="page-title">App Settings</div>
-      <div class="page-subtitle">Strategy Names · Basket Management · Group Management · Display · Nicknames · Capital · Data Management</div>
+      <div class="page-subtitle">Strategy Names · Strategies by Account · Display · Nicknames · Data Management</div>
     </div>
   </div>
 
@@ -3193,83 +3120,27 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
           <input type="color" id="as-new-color" value="#1a73e8"
             style="padding:2px;border:1.5px solid var(--border);border-radius:7px;height:36px;width:48px;cursor:pointer;">
         </div>
-        <div style="display:flex;flex-direction:column;gap:5px;flex:1;min-width:150px;">
-          <label style="font-size:0.75rem;font-weight:600;color:var(--text1);">Basket</label>
-          <select id="as-new-basket" style="padding:8px 10px;border:1.5px solid var(--border);border-radius:7px;font-size:0.84rem;outline:none;background:var(--bg);color:var(--text0);">
-            <option value="">— no basket —</option>
-          </select>
-        </div>
-        <div style="display:flex;flex-direction:column;gap:5px;flex:1;min-width:150px;">
-          <label style="font-size:0.75rem;font-weight:600;color:var(--text1);">Group <span style="font-weight:400;color:var(--text3);">(optional)</span></label>
-          <select id="as-new-group" style="padding:8px 10px;border:1.5px solid var(--border);border-radius:7px;font-size:0.84rem;outline:none;background:var(--bg);color:var(--text0);">
-            <option value="">— no group —</option>
-          </select>
-        </div>
         <button onclick="asAddSystem()" class="btn btn-primary" style="height:36px;white-space:nowrap;">
           ➕ Add System
         </button>
       </div>
     </div>
 
-    <!-- ── Basket Management ── -->
+    <!-- ── Strategies by Account ── -->
     <div style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:22px;box-shadow:var(--shadow-sm);">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:10px;">
         <div style="display:flex;align-items:center;gap:10px;">
-          <span style="font-size:1.3rem;">🧺</span>
+          <span style="font-size:1.3rem;">📇</span>
           <div>
-            <div style="font-size:0.95rem;font-weight:700;color:var(--text0);">Basket Management</div>
-            <div style="font-size:0.72rem;color:var(--text2);margin-top:2px;">Create and manage baskets · Capital Deployed is tracked at Basket level</div>
+            <div style="font-size:0.95rem;font-weight:700;color:var(--text0);">Strategies by Account</div>
+            <div style="font-size:0.72rem;color:var(--text2);margin-top:2px;">Mark a strategy Live or Archived for each account it trades on · archived hides it from Analytics — Basket for that account until "Include Archived" is switched on</div>
           </div>
         </div>
-        <button onclick="asOpenAddGroup()" class="btn btn-primary btn-sm">+ New Basket</button>
+        <input type="text" id="as-strat-search" placeholder="Search strategies…" oninput="asRenderStrategiesByAccount()"
+          style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:0.82rem;outline:none;min-width:180px;">
       </div>
-      <div id="as-group-list">
-        <div style="color:var(--text3);font-size:0.8rem;">No baskets yet</div>
-      </div>
-    </div>
-
-    <!-- ── Basket & Group Allocation (combined) ── -->
-    <div style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:22px;box-shadow:var(--shadow-sm);">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
-        <div style="display:flex;align-items:center;gap:10px;">
-          <span style="font-size:1.3rem;">📋</span>
-          <div>
-            <div style="font-size:0.95rem;font-weight:700;color:var(--text0);">Basket & Group Allocation</div>
-            <div style="font-size:0.72rem;color:var(--text2);margin-top:2px;">Assign each strategy to a Basket (required) and optionally a Group · ⚠️ Unassigned basket shown with error</div>
-          </div>
-        </div>
-        <div style="display:flex;align-items:center;gap:8px;">
-          <input type="text" id="as-search" placeholder="Search strategies…" oninput="asRenderSystems()"
-            style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:0.82rem;outline:none;min-width:160px;">
-          <select id="as-filter-basket" onchange="asRenderSystems()"
-            style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:0.82rem;outline:none;background:var(--bg);color:var(--text0);">
-            <option value="">All Baskets</option>
-          </select>
-          <select id="as-filter-group" onchange="asRenderSystems()"
-            style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:0.82rem;outline:none;background:var(--bg);color:var(--text0);">
-            <option value="">All Groups</option>
-          </select>
-        </div>
-      </div>
-      <div id="as-system-list">
+      <div id="as-strategies-by-account">
         <div class="loading"><div class="spinner"></div> Loading…</div>
-      </div>
-    </div>
-
-    <!-- ── Group Management ── -->
-    <div style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:22px;box-shadow:var(--shadow-sm);">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
-        <div style="display:flex;align-items:center;gap:10px;">
-          <span style="font-size:1.3rem;">📁</span>
-          <div>
-            <div style="font-size:0.95rem;font-weight:700;color:var(--text0);">Group Management</div>
-            <div style="font-size:0.72rem;color:var(--text2);margin-top:2px;">Create and manage groups · Groups are optional — strategies without a group show NA</div>
-          </div>
-        </div>
-        <button onclick="agOpenAddGroup()" class="btn btn-primary btn-sm" style="background:#0d9488;border-color:#0d9488;">+ New Group</button>
-      </div>
-      <div id="ag-group-list">
-        <div style="color:var(--text3);font-size:0.8rem;">No groups yet</div>
       </div>
     </div>
 
@@ -3316,17 +3187,6 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
         <span style="font-size:0.95rem;font-weight:700;color:var(--text0);">Strategy Management</span>
       </div>
       <div id="settings-algo-content">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
-          <div>
-            <div style="font-size:0.85rem;font-weight:700;color:var(--text0);">Baskets</div>
-            <div style="font-size:0.72rem;color:var(--text2);margin-top:2px;">Basket multiple algos · combined P&L in Reports</div>
-          </div>
-          <button class="btn btn-primary btn-sm" onclick="openAddGroupModal()">+ New Basket</button>
-        </div>
-        <div id="settings-group-list">
-          <div style="color:var(--text3);font-size:0.78rem;padding:6px 0;">No baskets yet</div>
-        </div>
-        <hr style="border:none;border-top:1px solid var(--border);margin:16px 0;">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
           <div>
             <div style="font-size:0.85rem;font-weight:700;color:var(--text0);">Individual Strategies</div>
@@ -3347,17 +3207,6 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
           </div>
         </div>
         <div id="settings-underlying-colors"></div>
-      </div>
-    </div>
-
-    <!-- ── Capital Deployed (now read-only, computed from Allocations) ── -->
-    <div style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:22px;box-shadow:var(--shadow-sm);">
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
-        <span style="font-size:1.3rem;">💰</span>
-        <div>
-          <div style="font-size:0.95rem;font-weight:700;color:var(--text0);">Capital Deployed</div>
-          <div style="font-size:0.72rem;color:var(--text2);margin-top:2px;">No longer entered manually — computed automatically from 🔗 Allocations (lots × capital/lot per basket). Go to the Allocations tab to set account/basket/lot allocations.</div>
-        </div>
       </div>
     </div>
 
@@ -3787,44 +3636,6 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
   </div>
 </div>
 
-<!-- ══════════ ALGO CONFIG ══════════ -->
-<div id="page-algos" class="page">
-  <div class="page-header">
-    <div>
-      <div class="page-title">Algo Settings</div>
-      <div class="page-subtitle">Manage strategies · create groups · assign colors</div>
-    </div>
-    <button class="btn btn-primary" onclick="openAddAlgoModal()">+ Add Algo</button>
-  </div>
-  <!-- Baskets Section -->
-  <div style="margin-bottom:28px;">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
-      <div>
-        <div style="font-size:0.9rem;font-weight:700;color:var(--text0);">Baskets</div>
-        <div style="font-size:0.75rem;color:var(--text2);margin-top:2px;">Basket multiple algos together · combined P&L shown in Reports</div>
-      </div>
-      <button class="btn btn-primary btn-sm" onclick="openAddGroupModal()">+ New Basket</button>
-    </div>
-    <div id="group-list">
-      <div style="color:var(--text3);font-size:0.78rem;padding:10px 0;">No baskets yet — create one to combine algo P&L in Reports</div>
-    </div>
-  </div>
-
-  <hr style="border:none;border-top:1px solid var(--border);margin-bottom:24px;">
-
-  <!-- Individual Strategies -->
-  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
-    <div>
-      <div style="font-size:0.9rem;font-weight:700;color:var(--text0);">Individual Strategies</div>
-      <div style="font-size:0.75rem;color:var(--text2);margin-top:2px;">Auto-created on upload · edit metadata here</div>
-    </div>
-    <button class="btn btn-primary btn-sm" onclick="openAddAlgoModal()">+ Add Algo</button>
-  </div>
-  <div id="algo-list">
-    <div class="loading"><div class="spinner"></div> Loading…</div>
-  </div>
-</div>
-
 <!-- ══════════ MCX JOURNAL ══════════ -->
 <div id="page-mcxjournal" class="page">
   <div class="page-header">
@@ -3883,66 +3694,6 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
 <!-- ══════════ SYSTEM STATISTICS ══════════ -->
 
 </div><!-- #main -->
-
-<!-- ADD GROUP MODAL -->
-<div class="modal-overlay" id="modal-group">
-  <div class="modal">
-    <button class="modal-close" onclick="closeModal('modal-group')">✕</button>
-    <h2 id="modal-group-title">Create Basket</h2>
-    <div class="form-grid" style="grid-template-columns:1fr 1fr;">
-      <div class="form-group" style="grid-column:1/-1">
-        <label class="form-label">Group Name *</label>
-        <input type="text" class="form-input" id="g-name" placeholder="e.g. NIFTY Straddles, BNF Hedge Set…" />
-      </div>
-      <div class="form-group">
-        <label class="form-label">Group Color</label>
-        <input type="color" class="form-input" id="g-color" value="#1a73e8" style="height:42px;padding:4px;" />
-      </div>
-      <div class="form-group">
-        <label class="form-label">Category <span style="color:var(--text3);font-weight:400">(e.g. SX 0DTE, NF 1DTE, BNF Hedge)</span></label>
-        <input type="text" class="form-input" id="g-category" placeholder="e.g. SENSEX 0DTE Strategies" list="category-suggestions" />
-        <datalist id="category-suggestions">
-          <option value="NIFTY 0DTE">
-          <option value="NIFTY 1DTE">
-          <option value="NIFTY 2DTE">
-          <option value="NIFTY Positional">
-          <option value="NIFTY Hedge">
-          <option value="BANKNIFTY 0DTE">
-          <option value="BANKNIFTY 1DTE">
-          <option value="BANKNIFTY Hedge">
-          <option value="SENSEX 0DTE">
-          <option value="SENSEX 1DTE">
-          <option value="SENSEX 2DTE">
-          <option value="SENSEX Positional">
-          <option value="GOLD Strategies">
-          <option value="SILVER Strategies">
-          <option value="Multi Instrument">
-        </datalist>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Notes</label>
-        <input type="text" class="form-input" id="g-notes" placeholder="Optional description…" />
-      </div>
-      <div class="form-group">
-        <label class="form-label">Capital Required for 1 Lot (₹)</label>
-        <input type="number" class="form-input" id="g-capital-per-lot" placeholder="e.g. 120000" min="0" step="1" />
-      </div>
-      <div class="form-group" style="grid-column:1/-1">
-        <label class="form-label">Select Algos for this Group</label>
-        <div id="g-algo-checkboxes" style="
-          max-height:240px;overflow-y:auto;
-          border:1px solid var(--border);border-radius:var(--radius);
-          background:var(--bg2);padding:8px;">
-          <div style="color:var(--text3);font-size:0.78rem;padding:8px;">Loading algos…</div>
-        </div>
-      </div>
-    </div>
-    <div style="display:flex;gap:10px;margin-top:16px;">
-      <button class="btn btn-primary" onclick="saveGroup()">Save Group</button>
-      <button class="btn btn-ghost" onclick="closeModal('modal-group')">Cancel</button>
-    </div>
-  </div>
-</div>
 
 <!-- MCX TRADE NAME MAPPING MODAL -->
 <div class="modal-overlay" id="modal-mcx-map">
@@ -5125,8 +4876,9 @@ let selectedAlgos = new Set(); // empty = all selected
 let selectedUnderlying = '';   // empty = all
 let selectedDTE = 'SHOWALL';   // SHOWALL=no filter, ALLDAYS=positional, 0DTE/1DTE/2DTE=exact
 let selectedClientId = '';     // empty = all client IDs
-let algoGroups = {};           // groupName → { name, color, algos:[] }  (Baskets)
-let algoGroupsData = {};       // groupName → { name, color, algos:[] }  (Groups — optional)
+let algoGroups = {};           // legacy — retired v25.7 (Basket Management removed), kept empty
+let algoGroupsData = {};       // legacy — retired v25.7 (Group Management removed), kept empty
+let archivedSystems = {};      // v25.7 — per-account archive flags: safeKey('nick:algo_name') → true
 
 
 // ════════════════════════════════════════════════════
@@ -5155,8 +4907,6 @@ function startListeners() {
     refreshAll();
     return;
   }
-  listenGroups();
-  listenAlgoGroups();
   listenMCX();
 
   // Gate: wait for trades + algos before first render
@@ -5193,15 +4943,15 @@ function startListeners() {
     uploads = Object.values(snap.val() || {});
     renderUploadHistory();
   });
-  // v22.0: manual Capital Deployed entry retired — capital is now derived entirely from
-  // journal/allocations. Old capital nodes are deleted once (see cleanupOldCapitalNodes).
-  db.ref('journal/allocations').on('value', snap => {
-    allocations = snap.val() || {};
-    recomputeCapitalFromAllocations();
-    renderDashboard();
-    if (document.getElementById('page-allocations')?.classList.contains('active')) renderAllocationsPage();
-  });
+  // v25.7 — Allocations/Capital Deployed retired; one-time cleanup of legacy Firebase nodes.
   cleanupOldCapitalNodes();
+  // v25.7 — per-account archived strategies (safeKey('nick:algo_name') → true)
+  db.ref('journal/settings/archived_systems').on('value', snap => {
+    archivedSystems = snap.val() || {};
+    renderSystemSelectorPanel();
+    renderDashFiltered();
+    asRenderStrategiesByAccount();
+  });
   db.ref('journal/expenses').on('value', snap => {
     expensesData = snap.val() || {};
     if (document.getElementById('page-taxation')?.classList.contains('active')) renderExpensesSection();
@@ -5271,8 +5021,8 @@ function startListeners() {
     renderSystemSelectorPanel();
     renderDashFiltered();
   });
-  // v25.1 — "Show Archived" visibility toggle persistence
-  db.ref('journal/settings/dash_show_archived').on('value', snap => {
+  // v25.7 — "Include Archived" visibility toggle persistence (renamed from Show Archived)
+  db.ref('journal/settings/dash_include_archived').on('value', snap => {
     dashShowArchived = !!snap.val();
     renderSystemSelectorPanel();
     renderDashFiltered();
@@ -5303,11 +5053,10 @@ function showPage(name) {
   if (pg) pg.classList.add('active');
   const tab = document.querySelector(`[data-page="${name}"]`);
   if (tab) tab.classList.add('active');
-  if (name === 'appsettings') { initAppSettings(); renderGroupList(); renderAlgoPage(); loadDisplayPrefs(); buildNicknameList(); estimateDBSize(); populateBrokerClearDropdown(); acLoadEmails(); renderOrphanTradesSettings(); }
+  if (name === 'appsettings') { initAppSettings(); renderAlgoPage(); loadDisplayPrefs(); buildNicknameList(); estimateDBSize(); populateBrokerClearDropdown(); acLoadEmails(); renderOrphanTradesSettings(); }
   if (name === 'taxation') { renderTaxPnlSection(); renderExpensesSection(); }
   if (name === 'stockmock') { loadSMTolerances(); updateSMStrategyDropdown(); onSMStratChange(); populateCompareSelects(); }
-  if (name === 'algos') { renderGroupList(); renderAlgoPage(); }
-  if (name === 'allocations') { initAllocationsPage(); }
+  if (name === 'algos') { renderAlgoPage(); }
   if (name === 'acctreport') { acctWeekOffset = 0; initAcctReport(); }
 }
 
@@ -6044,7 +5793,7 @@ function renderSystemSelectorPanel() {
   const archBtnStyle = dashShowArchived
     ? 'padding:4px 12px;border-radius:6px;font-size:0.71rem;font-weight:700;cursor:pointer;border:1.5px solid #c2410c;background:#c2410c;color:#fff;transition:background 0.15s,color 0.15s;'
     : 'padding:4px 12px;border-radius:6px;font-size:0.71rem;font-weight:700;cursor:pointer;border:1.5px solid #c2410c;background:var(--bg);color:#c2410c;transition:background 0.15s,color 0.15s;';
-  html += `<button onclick="toggleDashShowArchived()" style="${archBtnStyle}">\ud83d\udce6 ${dashShowArchived ? 'Hide' : 'Show'} Archived</button>`;
+  html += `<button onclick="toggleDashShowArchived()" style="${archBtnStyle}">Include Archived: ${dashShowArchived ? 'Yes' : 'No'}</button>`;
   html += '<span style="margin-left:auto;display:flex;align-items:center;gap:8px;">';
   html += '<span style="font-size:0.7rem;color:var(--text2);font-weight:600;">Display:</span>';
   html += `<label style="display:flex;align-items:center;gap:4px;cursor:pointer;font-size:0.7rem;font-weight:600;color:var(--text1);"><input type="radio" name="dash-label-mode" value="id" ${dashLabelMode==='id'?'checked ':''}onchange="setDashLabelMode('id')" style="accent-color:var(--blue);cursor:pointer;">Account ID</label>`;
@@ -6138,9 +5887,9 @@ function setDashPanelMode(mode) {
   renderSystemSelectorPanel();
 }
 
-function toggleDashShowArchived() {  // v24.2
+function toggleDashShowArchived() {  // v25.7 — renamed "Include Archived"
   dashShowArchived = !dashShowArchived;
-  if (db) db.ref('journal/settings/dash_show_archived').set(dashShowArchived);  // v25.1
+  if (db) db.ref('journal/settings/dash_include_archived').set(dashShowArchived);  // v25.7
   renderSystemSelectorPanel();
   renderDashFiltered();
 }
@@ -7408,36 +7157,7 @@ function getGlobalCapital(ym) {
   return capitalData[ym] || 0; // legacy fallback
 }
 
-// ════════════════════════════════════════════════════
-//  ALLOCATIONS (v22.0) — replaces manual Capital Deployed entry
-//  journal/allocations/{YYYY-MM}/rows/{rowId} = { client_id, basket, lots, created_at }
-//  journal/allocations/{YYYY-MM}/incomplete   = true/false
-// ════════════════════════════════════════════════════
-let allocations = {}; // { 'YYYY-MM': { rows: {rowId: {...}}, incomplete: bool } }
-
-// Rebuilds capitalDataAll (per-account) and capitalBasket (per-basket) from allocations ×
-// each basket's capital_per_lot. Months flagged "incomplete" are skipped entirely (their
-// capital contributes nothing, so they fall out of every capital-based metric).
-function recomputeCapitalFromAllocations() {
-  const newDataAll = {};
-  const newBasket = {};
-  Object.entries(allocations).forEach(([ym, m]) => {
-    if (!m || m.incomplete) return;
-    const rows = m.rows || {};
-    Object.values(rows).forEach(r => {
-      if (!r || !r.client_id || !r.basket || !r.lots) return;
-      const grp = Object.values(algoGroups).find(g => g.name === r.basket);
-      const perLot = (grp && grp.capital_per_lot) || 0;
-      const margin = (parseFloat(r.lots) || 0) * perLot;
-      if (!newDataAll[r.client_id]) newDataAll[r.client_id] = {};
-      newDataAll[r.client_id][ym] = (newDataAll[r.client_id][ym] || 0) + margin;
-      if (!newBasket[r.basket]) newBasket[r.basket] = {};
-      newBasket[r.basket][ym] = (newBasket[r.basket][ym] || 0) + margin;
-    });
-  });
-  capitalDataAll = newDataAll;
-  capitalBasket = newBasket;
-}
+let allocations = {}; // legacy — retired v25.7 (Allocations/Capital Deployed removed), kept empty
 
 function isAllocationIncomplete(ym) {
   return !!(allocations[ym] && allocations[ym].incomplete);
@@ -7452,386 +7172,12 @@ function cleanupOldCapitalNodes() {
   db.ref('journal/capital').remove().catch(()=>{});
   db.ref('journal/capital_v2').remove().catch(()=>{});
   db.ref('journal/capital_basket').remove().catch(()=>{});
+  // v25.7 — Basket/Group Management and Allocations retired; clean up their Firebase nodes once.
+  db.ref('journal/allocations').remove().catch(()=>{});
+  db.ref('journal/groups').remove().catch(()=>{});
+  db.ref('journal/algo_groups').remove().catch(()=>{});
 }
 
-// ════════════════════════════════════════════════════
-//  ALLOCATIONS PAGE (v22.3 — account-first, 12-row table, edit-in-modal)
-// ════════════════════════════════════════════════════
-let allocSelectedAccount = '';
-let allocCopySource = null; // {ym, rowId}
-let allocModalYM = null;    // month currently open in the edit modal
-
-function getAllAccountIds() {
-  const tradeIds  = [...new Set((allTrades||[]).map(t => t.client_id).filter(Boolean))];
-  const manualIds = Object.keys(typeof manualAccounts !== 'undefined' ? manualAccounts : {});
-  const nickIds   = Object.keys(typeof accountNicknames !== 'undefined' ? accountNicknames : {});
-  return [...new Set([...tradeIds, ...manualIds, ...nickIds])].sort();
-}
-
-function allocMonthApplicable(ym) {
-  // Allocation tracking only meaningful from Apr 2026 onward, and only for the
-  // current month or a past month — future months are never expected/required.
-  const todayYM = new Date().toISOString().slice(0,7);
-  return ym >= '2026-04' && ym <= todayYM;
-}
-
-function initAllocationsPage() {
-  const accSel = document.getElementById('alloc-account-select');
-  if (accSel) {
-    const accounts = getAllAccountIds();
-    const prev = allocSelectedAccount;
-    accSel.innerHTML = '<option value="">Select an account…</option>' +
-      accounts.map(a => `<option value="${a}">${getClientLabel(a)}</option>`).join('');
-    accSel.value = accounts.includes(prev) ? prev : '';
-    allocSelectedAccount = accSel.value;
-    allocStyleAccountSelect();
-  }
-  renderAllocationsPage();
-}
-
-function allocStyleAccountSelect() {
-  const sel = document.getElementById('alloc-account-select');
-  if (!sel) return;
-  if (allocSelectedAccount) {
-    sel.style.border = '2px solid var(--blue)';
-    sel.style.background = '#eff6ff';
-    sel.style.fontWeight = '700';
-    sel.style.color = 'var(--blue)';
-  } else {
-    sel.style.border = '';
-    sel.style.background = '';
-    sel.style.fontWeight = '';
-    sel.style.color = '';
-  }
-}
-
-function onAllocAccountChange() {
-  const sel = document.getElementById('alloc-account-select');
-  allocSelectedAccount = sel ? sel.value : '';
-  allocStyleAccountSelect();
-  renderAllocationsPage();
-}
-
-function renderAllocationsPage() {
-  const emptyState = document.getElementById('alloc-empty-state');
-  const tableWrap  = document.getElementById('alloc-table-wrap');
-  if (!tableWrap) return;
-
-  if (!allocSelectedAccount) {
-    emptyState.style.display = '';
-    tableWrap.style.display = 'none';
-    return;
-  }
-  emptyState.style.display = 'none';
-  tableWrap.style.display = '';
-
-  const fyKeys = getFYMonthKeys(getCurrentFYStartYear());
-  const todayYM = new Date().toISOString().slice(0,7);
-  const tbody = document.getElementById('alloc-table-tbody');
-
-  tbody.innerHTML = fyKeys.map(ym => {
-    const [y, mo] = ym.split('-');
-    const monthLabel = `${MONTH_NAMES[parseInt(mo)-1]} ${y}`;
-    const isFuture = ym > todayYM;
-    const isCurrent = ym === todayYM;
-    const monthData = allocations[ym] || {};
-    const incomplete = !!monthData.incomplete;
-    const rows = monthData.rows || {};
-    const acctRows = Object.values(rows).filter(r => r && r.client_id === allocSelectedAccount);
-
-    let totalMargin = 0;
-    const allocSummary = acctRows.length
-      ? acctRows.map(r => {
-          const grp = Object.values(algoGroups).find(g => g.name === r.basket);
-          const perLot = (grp && grp.capital_per_lot) || 0;
-          const lots = parseFloat(r.lots) || 0;
-          totalMargin += lots * perLot;
-          return `<div>${r.basket} · ${lots} lot${lots!==1?'s':''}</div>`;
-        }).join('')
-      : (isFuture ? '<span style="color:var(--text3);">—</span>' : `<span style="color:${allocMonthApplicable(ym) && !incomplete ? '#dc2626' : 'var(--text3)'};">${allocMonthApplicable(ym) && !incomplete ? '⚠️ Allocation not set' : '— none —'}</span>`);
-
-    const rowBg = isFuture ? 'background:var(--bg2);opacity:0.6;' : (isCurrent ? 'background:#eff6ff;' : '');
-    const excludeIcon = incomplete ? '🚫' : '⬜';
-    const excludeTitle = incomplete ? 'Excluded — click to include' : 'Included — click to exclude from capital metrics';
-    const hasRows = acctRows.length > 0;
-
-    return `
-      <tr style="${rowBg}border-bottom:1px solid var(--border);">
-        <td style="padding:10px 14px;font-weight:700;color:var(--text0);white-space:nowrap;">${monthLabel}${isCurrent ? ' <span style="font-size:0.65rem;font-weight:700;color:var(--blue);">● current</span>' : ''}${isFuture ? ' <span style="font-size:0.6rem;font-weight:600;color:var(--text3);">(future)</span>' : ''}</td>
-        <td style="padding:10px 14px;font-size:0.8rem;color:var(--text1);">${allocSummary}</td>
-        <td style="padding:10px 14px;text-align:right;font-weight:700;color:var(--blue);">${totalMargin ? fmtINRShort(totalMargin) : '—'}</td>
-        <td style="padding:10px 14px;text-align:center;">
-          <button onclick="allocToggleIncomplete('${ym}')" title="${excludeTitle}" style="background:none;border:none;cursor:pointer;font-size:1.3rem;line-height:1;">${excludeIcon}</button>
-        </td>
-        <td style="padding:10px 14px;text-align:center;white-space:nowrap;">
-          ${hasRows ? `<button onclick="allocOpenRowCopyPanel('${ym}')" class="btn btn-ghost btn-sm" title="Copy this month's whole allocation set to other months">📋 Copy To</button>` : ''}
-          <button onclick="allocOpenMonthModal('${ym}')" class="btn btn-ghost btn-sm">✏️ Edit</button>
-        </td>
-      </tr>`;
-  }).join('');
-}
-
-// ── Edit-month modal ──
-function allocOpenMonthModal(ym) {
-  allocModalYM = ym;
-  const [y, mo] = ym.split('-');
-  document.getElementById('alloc-month-modal-title').textContent = `Edit ${MONTH_NAMES[parseInt(mo)-1]} ${y} — ${getClientLabel(allocSelectedAccount)}`;
-  const bskSel = document.getElementById('alloc-modal-add-basket');
-  const baskets = Object.values(algoGroups).sort((a,b)=>(a.name||'').localeCompare(b.name||''));
-  bskSel.innerHTML = '<option value="">Select basket…</option>' +
-    baskets.map(g => `<option value="${g.name}">${g.name}${g.capital_per_lot?` (${fmtINRShort(g.capital_per_lot)}/lot)`:' (capital/lot not set)'}</option>`).join('');
-  document.getElementById('alloc-modal-add-lots').value = '';
-  renderAllocModalRows();
-  openModal('modal-alloc-month');
-}
-
-function renderAllocModalRows() {
-  const ym = allocModalYM;
-  const tbody = document.getElementById('alloc-modal-rows-tbody');
-  const rows = (allocations[ym] && allocations[ym].rows) || {};
-  const entries = Object.entries(rows).filter(([, r]) => r && r.client_id === allocSelectedAccount);
-
-  if (!entries.length) {
-    tbody.innerHTML = `<tr><td colspan="5" style="padding:16px;text-align:center;color:var(--text3);">No allocations yet for this month</td></tr>`;
-    return;
-  }
-  tbody.innerHTML = entries.map(([rowId, r]) => {
-    const grp = Object.values(algoGroups).find(g => g.name === r.basket);
-    const perLot = (grp && grp.capital_per_lot) || 0;
-    const lots = parseFloat(r.lots) || 0;
-    const margin = lots * perLot;
-    return `
-      <tr style="border-bottom:1px solid var(--border);">
-        <td style="padding:7px 10px;">${r.basket}</td>
-        <td style="padding:7px 10px;text-align:right;">
-          <input type="number" value="${lots}" min="0" step="1"
-            style="width:64px;padding:3px 5px;border:1px solid var(--border);border-radius:5px;font-size:0.78rem;text-align:right;outline:none;"
-            onchange="allocUpdateLots('${ym}','${rowId}',this.value)">
-        </td>
-        <td style="padding:7px 10px;text-align:right;color:var(--text2);">${perLot ? fmtINRShort(perLot) : '—'}</td>
-        <td style="padding:7px 10px;text-align:right;font-weight:700;color:var(--blue);">${fmtINRShort(margin)}</td>
-        <td style="padding:7px 10px;text-align:center;white-space:nowrap;">
-          <button onclick="allocOpenCopyPanel('${ym}','${rowId}')" class="btn btn-ghost btn-sm" title="Copy to other months" style="padding:3px 8px;">📋</button>
-          <button onclick="allocDeleteRow('${ym}','${rowId}')" class="btn btn-sm" style="background:var(--red-lt);color:var(--red);border:none;padding:3px 8px;">🗑</button>
-        </td>
-      </tr>`;
-  }).join('');
-}
-
-async function allocModalAddRow() {
-  const ym = allocModalYM;
-  if (!allocSelectedAccount || !ym) return;
-  const basket = document.getElementById('alloc-modal-add-basket')?.value;
-  const lots   = parseFloat(document.getElementById('alloc-modal-add-lots')?.value);
-  if (!basket) { toast('Select a basket', 'error'); return; }
-  if (!lots || lots <= 0) { toast('Enter lots (> 0)', 'error'); return; }
-
-  const rowId = 'r' + Date.now() + Math.random().toString(36).slice(2,6);
-  const row = { client_id: allocSelectedAccount, basket, lots, created_at: new Date().toISOString() };
-  if (!allocations[ym]) allocations[ym] = { rows: {}, incomplete: false };
-  if (!allocations[ym].rows) allocations[ym].rows = {};
-  allocations[ym].rows[rowId] = row;
-
-  if (db) await db.ref('journal/allocations/' + ym + '/rows/' + rowId).set(row);
-  recomputeCapitalFromAllocations();
-  document.getElementById('alloc-modal-add-lots').value = '';
-  renderAllocModalRows();
-  renderAllocationsPage();
-  renderDashboard();
-  toast('✓ Allocation added', 'success');
-}
-
-async function allocUpdateLots(ym, rowId, value) {
-  const lots = parseFloat(value) || 0;
-  if (!allocations[ym] || !allocations[ym].rows || !allocations[ym].rows[rowId]) return;
-  allocations[ym].rows[rowId].lots = lots;
-  if (db) await db.ref('journal/allocations/' + ym + '/rows/' + rowId + '/lots').set(lots);
-  recomputeCapitalFromAllocations();
-  renderAllocModalRows();
-  renderAllocationsPage();
-  renderDashboard();
-}
-
-async function allocDeleteRow(ym, rowId) {
-  if (!confirmDeleteTyped('Delete this allocation row?')) return;
-  if (allocations[ym] && allocations[ym].rows) delete allocations[ym].rows[rowId];
-  if (db) await db.ref('journal/allocations/' + ym + '/rows/' + rowId).remove();
-  recomputeCapitalFromAllocations();
-  renderAllocModalRows();
-  renderAllocationsPage();
-  renderDashboard();
-  toast('Allocation row deleted', 'info');
-}
-
-async function allocToggleIncomplete(ym) {
-  if (!allocations[ym]) allocations[ym] = { rows: {}, incomplete: false };
-  const newVal = !allocations[ym].incomplete;
-  allocations[ym].incomplete = newVal;
-  if (db) await db.ref('journal/allocations/' + ym + '/incomplete').set(newVal);
-  recomputeCapitalFromAllocations();
-  renderAllocationsPage();
-  renderDashboard();
-  toast(newVal ? `${ym} excluded from capital metrics` : `${ym} included again`, 'info');
-}
-
-// ── Copy to other months ──
-function allocOpenCopyPanel(ym, rowId) {
-  const r = allocations[ym]?.rows?.[rowId];
-  if (!r) return;
-  allocCopySource = { ym, rowId, wholeMonth: false };
-  document.getElementById('alloc-copy-source-label').textContent =
-    `Copying "${r.basket}" · ${r.lots} lot(s) · ${getClientLabel(r.client_id)} — choose target month(s):`;
-  const fyKeys = getFYMonthKeys(getCurrentFYStartYear()).filter(k => k !== ym);
-  const list = document.getElementById('alloc-copy-month-list');
-  list.innerHTML = fyKeys.map(k => {
-    const [y, mo] = k.split('-');
-    const label = `${MONTH_NAMES[parseInt(mo)-1]} ${y}`;
-    return `<label style="display:flex;align-items:center;gap:8px;font-size:0.82rem;cursor:pointer;padding:5px 8px;border:1px solid var(--border);border-radius:6px;">
-      <input type="checkbox" value="${k}" style="accent-color:var(--blue);width:14px;height:14px;">
-      ${label}
-    </label>`;
-  }).join('');
-  openModal('modal-alloc-copy');
-}
-
-// v22.4: "Copy To" on a table row — copies the WHOLE month's basket/lot set
-// (all rows for the selected account in that month) to the picked target months.
-function allocOpenRowCopyPanel(ym) {
-  const rows = (allocations[ym] && allocations[ym].rows) || {};
-  const acctRows = Object.entries(rows).filter(([, r]) => r && r.client_id === allocSelectedAccount);
-  if (!acctRows.length) return;
-  allocCopySource = { ym, rowId: null, wholeMonth: true };
-  const summary = acctRows.map(([, r]) => `${r.basket} · ${r.lots} lot(s)`).join(', ');
-  document.getElementById('alloc-copy-source-label').textContent =
-    `Copying ALL allocations for ${getClientLabel(allocSelectedAccount)}: ${summary} — choose target month(s):`;
-  const fyKeys = getFYMonthKeys(getCurrentFYStartYear()).filter(k => k !== ym);
-  const list = document.getElementById('alloc-copy-month-list');
-  list.innerHTML = fyKeys.map(k => {
-    const [y, mo] = k.split('-');
-    const label = `${MONTH_NAMES[parseInt(mo)-1]} ${y}`;
-    return `<label style="display:flex;align-items:center;gap:8px;font-size:0.82rem;cursor:pointer;padding:5px 8px;border:1px solid var(--border);border-radius:6px;">
-      <input type="checkbox" value="${k}" style="accent-color:var(--blue);width:14px;height:14px;">
-      ${label}
-    </label>`;
-  }).join('');
-  openModal('modal-alloc-copy');
-}
-
-async function allocApplyCopy() {
-  if (!allocCopySource) return;
-  const checked = [...document.querySelectorAll('#alloc-copy-month-list input:checked')].map(el => el.value);
-  if (!checked.length) { toast('Select at least one month', 'error'); return; }
-
-  if (allocCopySource.wholeMonth) {
-    const srcYm = allocCopySource.ym;
-    const rows = (allocations[srcYm] && allocations[srcYm].rows) || {};
-    const srcRows = Object.values(rows).filter(r => r && r.client_id === allocSelectedAccount);
-    if (!srcRows.length) { closeModal('modal-alloc-copy'); return; }
-    for (const ym of checked) {
-      if (!allocations[ym]) allocations[ym] = { rows: {}, incomplete: false };
-      if (!allocations[ym].rows) allocations[ym].rows = {};
-      for (const srcRow of srcRows) {
-        const rowId = 'r' + Date.now() + Math.random().toString(36).slice(2,6);
-        const row = { client_id: srcRow.client_id, basket: srcRow.basket, lots: srcRow.lots, created_at: new Date().toISOString() };
-        allocations[ym].rows[rowId] = row;
-        if (db) await db.ref('journal/allocations/' + ym + '/rows/' + rowId).set(row);
-      }
-    }
-    recomputeCapitalFromAllocations();
-    closeModal('modal-alloc-copy');
-    renderAllocationsPage();
-    renderDashboard();
-    toast(`✓ Copied ${srcRows.length} allocation(s) to ${checked.length} month(s)`, 'success');
-    return;
-  }
-
-  const { ym: srcYm, rowId: srcRowId } = allocCopySource;
-  const srcRow = allocations[srcYm]?.rows?.[srcRowId];
-  if (!srcRow) { closeModal('modal-alloc-copy'); return; }
-
-  for (const ym of checked) {
-    const rowId = 'r' + Date.now() + Math.random().toString(36).slice(2,6);
-    const row = { client_id: srcRow.client_id, basket: srcRow.basket, lots: srcRow.lots, created_at: new Date().toISOString() };
-    if (!allocations[ym]) allocations[ym] = { rows: {}, incomplete: false };
-    if (!allocations[ym].rows) allocations[ym].rows = {};
-    allocations[ym].rows[rowId] = row;
-    if (db) await db.ref('journal/allocations/' + ym + '/rows/' + rowId).set(row);
-  }
-  recomputeCapitalFromAllocations();
-  closeModal('modal-alloc-copy');
-  renderAllocModalRows();
-  renderAllocationsPage();
-  renderDashboard();
-  toast(`✓ Copied to ${checked.length} month(s)`, 'success');
-}
-
-function allocExportCSV() {
-  if (!allocSelectedAccount) { toast('Select an account first', 'error'); return; }
-  const fyKeys = getFYMonthKeys(getCurrentFYStartYear());
-  let csv = 'Month,Account,Basket,Lots,CapitalPerLot,Margin\n';
-  fyKeys.forEach(ym => {
-    const rows = (allocations[ym] && allocations[ym].rows) || {};
-    Object.values(rows).filter(r => r.client_id === allocSelectedAccount).forEach(r => {
-      const grp = Object.values(algoGroups).find(g => g.name === r.basket);
-      const perLot = (grp && grp.capital_per_lot) || 0;
-      const lots = parseFloat(r.lots) || 0;
-      csv += `${ym},${r.client_id},${r.basket},${lots},${perLot},${lots*perLot}\n`;
-    });
-  });
-  const blob = new Blob([csv], { type: 'text/csv' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = `allocations_${allocSelectedAccount}.csv`;
-  a.click();
-}
-
-async function allocImportCSV(file) {
-  if (!file) return;
-  const text = await file.text();
-  const lines = text.split(/\r?\n/).filter(l => l.trim());
-  if (lines.length < 2) { toast('CSV appears empty', 'error'); return; }
-  const header = lines[0].split(',').map(h => h.trim().toLowerCase());
-  const idxAccount = header.findIndex(h => h.includes('account') || h.includes('client'));
-  const idxBasket  = header.findIndex(h => h.includes('basket'));
-  const idxLots    = header.findIndex(h => h.includes('lot'));
-  const idxMonth   = header.findIndex(h => h.includes('month'));
-  if (idxAccount === -1 || idxBasket === -1 || idxLots === -1 || idxMonth === -1) {
-    toast('CSV must have Month, Account, Basket, Lots columns', 'error');
-    return;
-  }
-  let added = 0;
-  for (let i = 1; i < lines.length; i++) {
-    const cols = lines[i].split(',').map(c => c.trim());
-    const clientId = cols[idxAccount];
-    const basket   = cols[idxBasket];
-    const lots     = parseFloat(cols[idxLots]);
-    const ym       = cols[idxMonth];
-    if (!clientId || !basket || !lots || !ym) continue;
-    const rowId = 'r' + Date.now() + Math.random().toString(36).slice(2,6) + i;
-    const row = { client_id: clientId, basket, lots, created_at: new Date().toISOString() };
-    if (!allocations[ym]) allocations[ym] = { rows: {}, incomplete: false };
-    if (!allocations[ym].rows) allocations[ym].rows = {};
-    allocations[ym].rows[rowId] = row;
-    if (db) await db.ref('journal/allocations/' + ym + '/rows/' + rowId).set(row);
-    added++;
-  }
-  recomputeCapitalFromAllocations();
-  renderAllocationsPage();
-  renderDashboard();
-  document.getElementById('alloc-import-input').value = '';
-  toast(`✓ Imported ${added} allocation row(s)`, 'success');
-}
-
-function generateCapitalMonths() {
-  const months = [];
-  let d = new Date(2026, 0, 1); // Jan 2026
-  const end = new Date(2036, 0, 1); // Jan 2036
-  while (d <= end) {
-    months.push(d.toISOString().slice(0,7)); // YYYY-MM
-    d.setMonth(d.getMonth() + 1);
-  }
-  return months;
-}
 
 // ════════════════════════════════════════════════════
 //  TAX P&L SECTION (v21.1) — Indian FY runs Apr–Mar
@@ -8304,20 +7650,6 @@ async function renameClientId(oldId) {
       if (t.hash) updates['journal/trades/' + t.hash + '/client_id'] = newId;
     });
     if (Object.keys(updates).length && db) await db.ref().update(updates);
-
-    // 2. Migrate allocation rows referencing oldId → newId (v22.0: capital_v2 retired)
-    if (db) {
-      for (const [ym, monthData] of Object.entries(allocations)) {
-        const rows = monthData?.rows || {};
-        for (const [rowId, r] of Object.entries(rows)) {
-          if (r && r.client_id === oldId) {
-            allocations[ym].rows[rowId].client_id = newId;
-            await db.ref('journal/allocations/' + ym + '/rows/' + rowId + '/client_id').set(newId);
-          }
-        }
-      }
-      recomputeCapitalFromAllocations();
-    }
 
     // 3. Migrate nickname entry
     const nickEntry = accountNicknames[oldId] || { nick: '' };
@@ -9409,60 +8741,26 @@ function clearFilters() {
 // ════════════════════════════════════════════════════
 function renderAlgoPage() {
   const algos=Object.values(algoMeta).sort((a,b)=>(a.name||'').localeCompare(b.name||''));
-  const archCount = algos.filter(a => a && a.archived).length;
-  const allArch = algos.length > 0 && archCount === algos.length;
-  // v22.7 — select-all / archived-count header
-  const header = !algos.length ? '' : `
-    <div style="display:flex;align-items:center;gap:12px;padding:9px 14px;margin-bottom:10px;background:var(--bg2);border:1px solid var(--border);border-radius:9px;flex-wrap:wrap;">
-      <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:0.78rem;font-weight:700;color:var(--text1);">
-        <input type="checkbox" ${allArch?'checked':''} onchange="toggleAllSystemsArchived(this.checked)" style="width:16px;height:16px;accent-color:#d97706;cursor:pointer;">
-        Archive all
-      </label>
-      <span style="font-size:0.72rem;color:var(--text2);">${archCount} of ${algos.length} archived · archived systems are hidden from <strong>Analytics — Basket</strong> (still counted in Account-wise)</span>
-    </div>`;
   const body = !algos.length
     ? `<div class="empty-state"><span class="eicon">⚙️</span><h3>No algos yet</h3><p>They are auto-created when you upload CSV reports</p></div>`
     : algos.map(a=>`
-    <div class="algo-item" style="${a.archived?'opacity:0.62;':''}">
+    <div class="algo-item">
       <div class="algo-dot" style="background:${a.color||'#6b7280'}"></div>
       <div style="flex:1">
-        <div style="font-weight:600;font-size:0.85rem;">${a.name}${a.archived?' <span class="badge b-gray" style="font-size:0.56rem;">ARCHIVED</span>':''}</div>
+        <div style="font-weight:600;font-size:0.85rem;">${a.name}</div>
         <div style="font-size:0.71rem;color:var(--text2);margin-top:2px;">${a.display_name||''} · ${a.underlying||''} · <span class="badge b-blue" style="font-size:0.6rem;">${a.type||''}</span></div>
       </div>
-      <label title="Archive this system — hides it from Analytics — Basket" style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:0.72rem;color:var(--text2);margin-right:6px;user-select:none;">
-        <input type="checkbox" ${a.archived?'checked':''} onchange="toggleSystemArchived('${a.name}',this.checked)" style="width:15px;height:15px;accent-color:#d97706;cursor:pointer;">
-        Archive
-      </label>
       <button class="btn btn-ghost btn-sm" onclick="editAlgo('${a.name}')">Edit</button>
       <button class="btn btn-danger btn-sm" onclick="delAlgo('${a.name}')">Delete</button>
     </div>`).join('');
-  const html = header + body;
+  const html = body;
   // Render into page-algos (legacy)
   if (document.getElementById('algo-list')) el('algo-list').innerHTML = html;
   // Render into settings page
   if (document.getElementById('settings-algo-list')) document.getElementById('settings-algo-list').innerHTML = html;
 }
-
-// v22.7 — archive one system → hidden from Analytics — Basket (kept in Account-wise)
-async function toggleSystemArchived(name, checked) {
-  const k = Object.keys(algoMeta).find(kk => (algoMeta[kk]?.name) === name) || safeKey(name);
-  if (algoMeta[k]) algoMeta[k].archived = checked;
-  else algoMeta[k] = { name, archived: checked };
-  if (db) await db.ref('journal/algos/' + k + '/archived').set(checked);
-  renderAlgoPage();
-  refreshAll();
-  toast(`"${name}" ${checked ? 'archived — hidden from Basket view' : 'reactivated'}`, checked ? 'info' : 'success');
-}
-
-// v22.7 — archive / reactivate every system at once
-async function toggleAllSystemsArchived(checked) {
-  const updates = {};
-  Object.keys(algoMeta).forEach(k => { algoMeta[k].archived = checked; updates[k + '/archived'] = checked; });
-  if (db && Object.keys(updates).length) await db.ref('journal/algos').update(updates);
-  renderAlgoPage(); renderSystemSelectorPanel();
-  refreshAll();
-  toast(checked ? 'All systems archived — Basket view now empty' : 'All systems reactivated', 'info');
-}
+// v25.7 — per-strategy global Archive removed; archiving is now per-account, done from
+// the "Strategies by Account" card (see toggleAccountStrategyArchived).
 
 // v22.8 — Underlying Colors settings UI
 function renderUnderlyingColorsSettings() {
@@ -9515,7 +8813,7 @@ function openAddAlgoModal() { ['a-name','a-display','a-notes'].forEach(id=>el(id
 function editAlgo(name) { const a=algoMeta[name]||{}; el('a-name').value=a.name||name; el('a-display').value=a.display_name||''; el('a-underlying').value=a.underlying||'NIFTY'; el('a-type').value=a.type||'0DTE'; el('a-color').value=a.color||'#1a73e8'; el('a-notes').value=a.notes||''; el('modal-algo-title').textContent='Edit Algo'; openModal('modal-algo'); }
 async function saveAlgo() {
   const name=el('a-name').value.trim(); if(!name){toast('Name required','error');return;}
-  const meta={name, display_name:el('a-display').value.trim()||name, underlying:el('a-underlying').value, type:el('a-type').value, color:el('a-color').value, notes:el('a-notes').value.trim(), archived:(algoMeta[name]?.archived||algoMeta[safeKey(name)]?.archived||false), created_at:algoMeta[name]?.created_at||new Date().toISOString()};
+  const meta={name, display_name:el('a-display').value.trim()||name, underlying:el('a-underlying').value, type:el('a-type').value, color:el('a-color').value, notes:el('a-notes').value.trim(), created_at:algoMeta[name]?.created_at||new Date().toISOString()};
   algoMeta[name]=meta;
   if(db) await db.ref('journal/algos/'+safeKey(name)).set(meta);
   renderAlgoPage(); populateAlgoDropdowns(); closeModal('modal-algo'); toast(`"${name}" saved`,'success');
@@ -9808,304 +9106,6 @@ function demoData(){return[
   {source:'quantiply',broker:'upstox',client_id:'144772',algo_name:'NF_0DTE_ITM_SL30_TSL10_925',underlying:'NIFTY 50',symbol:'NIFTY2651223650CE',option_type:'CE',action:'SELL',quantity:65,entry_date:'2026-05-19',entry_time:'09:25',entry_price:91.8,exit_date:'2026-05-19',exit_time:'09:40',exit_price:79.35,exit_reason:'UNIVERSAL',pnl:809.25,is_re_entry:false,hash:'d6'},
   {source:'quantiply',broker:'upstox',client_id:'144772',algo_name:'SX_1DTE_ATM_SL30_RBO_922to959_PRAD',underlying:'SENSEX',symbol:'SENSEX2652174700PE',option_type:'PE',action:'SELL',quantity:20,entry_date:'2026-05-20',entry_time:'09:59',entry_price:318.7,exit_date:'2026-05-20',exit_time:'15:27',exit_price:102.35,exit_reason:'UNIVERSAL',pnl:4327,is_re_entry:false,hash:'d7'},
 ];}
-
-// ════════════════════════════════════════════════════
-//  ALGO GROUPS
-// ════════════════════════════════════════════════════
-function listenGroups() {
-  if (!db) return;
-  db.ref('journal/groups').on('value', snap => {
-    algoGroups = snap.val() || {};
-    renderGroupList();
-    renderDashboard(); // re-render reports with group rows
-  });
-}
-
-function renderGroupList() {
-  const groups = Object.values(algoGroups);
-  const emptyHtml = `<div style="color:var(--text3);font-size:0.78rem;padding:10px 0;">No baskets yet — create one to combine algo P&L in Reports</div>`;
-  const html = !groups.length ? emptyHtml : groups.map(g => `
-    <div class="group-card">
-      <div class="group-header">
-        <div class="group-color-bar" style="background:${g.color||'#1a73e8'};min-height:36px;"></div>
-        <div style="flex:1">
-          <div class="group-name">${g.name}</div>
-          ${g.category ? `<div style="font-size:0.68rem;color:var(--text2);margin-top:2px;font-weight:500;">📂 ${g.category}</div>` : ''}
-        </div>
-        <div style="font-size:0.72rem;color:var(--text2);">${(g.algos||[]).length} algos</div>
-        <button class="btn btn-ghost btn-sm" onclick="editGroup('${g.name}')">Edit</button>
-        <button class="btn btn-danger btn-sm" onclick="deleteGroup('${g.name}')">Delete</button>
-      </div>
-      <div class="group-algo-list">
-        ${(g.algos||[]).map(a => `
-          <span class="group-algo-tag" style="border-color:${g.color||'#1a73e8'}20;background:${g.color||'#1a73e8'}10;color:var(--text0);">
-            ${a}
-            <span class="remove-tag" onclick="removeAlgoFromGroup('${g.name}','${a}')">×</span>
-          </span>`).join('')}
-        ${!(g.algos||[]).length ? `<span style="color:var(--text3);font-size:0.75rem;">No algos assigned yet — click Edit</span>` : ''}
-      </div>
-    </div>`).join('');
-  // Render into page-algos (legacy)
-  const legacyContainer = document.getElementById('group-list');
-  if (legacyContainer) legacyContainer.innerHTML = html;
-  // Render into settings page
-  const settingsContainer = document.getElementById('settings-group-list');
-  if (settingsContainer) settingsContainer.innerHTML = html;
-}
-
-function openAddGroupModal() {
-  el('g-name').value = '';
-  el('g-color').value = '#1a73e8';
-  el('g-category').value = '';
-  el('g-notes').value = '';
-  el('g-capital-per-lot').value = '';
-  el('modal-group-title').textContent = 'Create Basket';
-  buildGroupAlgoCheckboxes(null);
-  openModal('modal-group');
-}
-
-function editGroup(name) {
-  const gk = Object.keys(algoGroups).find(k => algoGroups[k].name === name) || name;
-  const g = algoGroups[gk] || {};
-  el('g-name').value = g.name || name;
-  el('g-color').value = g.color || '#1a73e8';
-  el('g-category').value = g.category || '';
-  el('g-notes').value = g.notes || '';
-  el('g-capital-per-lot').value = g.capital_per_lot || '';
-  el('modal-group-title').textContent = 'Edit Group: ' + name;
-  buildGroupAlgoCheckboxes(g.algos || []);
-  openModal('modal-group');
-}
-
-function buildGroupAlgoCheckboxes(selectedAlgosList) {
-  const all = getAllAlgos();
-  const selected = new Set(selectedAlgosList || []);
-  el('g-algo-checkboxes').innerHTML = all.length ? all.map(a => `
-    <label style="display:flex;align-items:center;gap:8px;padding:6px 8px;cursor:pointer;border-radius:4px;transition:background 0.1s;" onmouseover="this.style.background='var(--bg3)'" onmouseout="this.style.background=''">
-      <input type="checkbox" value="${a}" ${selected.has(a)?'checked':''} style="accent-color:var(--blue);width:14px;height:14px;">
-      <span style="font-size:0.78rem;color:var(--text0);">${a}</span>
-    </label>`).join('')
-  : `<div style="color:var(--text3);font-size:0.78rem;padding:8px;">No algos available — upload trade data first</div>`;
-}
-
-async function saveGroup() {
-  const name = el('g-name').value.trim();
-  if (!name) { toast('Group name required', 'error'); return; }
-  const checkboxes = el('g-algo-checkboxes').querySelectorAll('input[type="checkbox"]:checked');
-  const algos = [...checkboxes].map(cb => cb.value);
-  if (!algos.length) { toast('Select at least one algo', 'error'); return; }
-  const group = {
-    name,
-    category: el('g-category').value.trim(),
-    color: el('g-color').value,
-    notes: el('g-notes').value.trim(),
-    capital_per_lot: parseFloat(el('g-capital-per-lot').value) || 0,
-    algos,
-    created_at: algoGroups[name]?.created_at || new Date().toISOString()
-  };
-  algoGroups[name] = group;
-  if (db) await db.ref('journal/groups/' + safeKey(name)).set(group);
-  recomputeCapitalFromAllocations();
-  renderGroupList();
-  renderDashboard();
-  closeModal('modal-group');
-  toast(`Group "${name}" saved with ${algos.length} algos`, 'success');
-}
-
-async function deleteGroup(name) {
-  if (!confirmDeleteTyped(`Delete group "${name}"?`)) return;
-  delete algoGroups[name];
-  if (db) await db.ref('journal/groups/' + safeKey(name)).remove();
-  renderGroupList();
-  renderDashboard();
-  toast(`Group "${name}" deleted`, 'info');
-}
-
-async function removeAlgoFromGroup(groupName, algoName) {
-  const g = algoGroups[groupName];
-  if (!g) return;
-  g.algos = (g.algos || []).filter(a => a !== algoName);
-  if (db) await db.ref('journal/groups/' + safeKey(groupName) + '/algos').set(g.algos);
-  renderGroupList();
-  renderDashboard();
-}
-
-// ════════════════════════════════════════════════════
-//  ALGO GROUPS DATA (Groups — optional, separate from Baskets)
-// ════════════════════════════════════════════════════
-function listenAlgoGroups() {
-  if (!db) return;
-  db.ref('journal/algo_groups').on('value', snap => {
-    algoGroupsData = snap.val() || {};
-    agRenderGroups();
-    agRenderSystems();
-    agPopulateDropdowns();
-    populateDashSelectors();
-  });
-}
-
-function agPopulateDropdowns() {
-  const grps = Object.values(algoGroupsData).sort((a,b)=>(a.name||'').localeCompare(b.name||''));
-  const selFilter = document.getElementById('ag-filter-group');
-  if (selFilter) selFilter.innerHTML = '<option value="">All Groups</option>' + grps.map(g=>`<option value="${g.name}">${g.name}</option>`).join('');
-  // Also refresh the combined table dropdowns
-  asPopulateGroupDropdowns();
-}
-
-function agRenderGroups() {
-  const list = document.getElementById('ag-group-list');
-  if (!list) return;
-  const grps = Object.values(algoGroupsData).sort((a,b)=>(a.name||'').localeCompare(b.name||''));
-  if (!grps.length) { list.innerHTML = '<div style="color:var(--text3);font-size:0.8rem;">No groups yet — groups are optional</div>'; return; }
-  list.innerHTML = grps.map((g, idx) => {
-    const color = g.color || '#0d9488';
-    const members = (g.algos || []).length;
-    return `
-      <div style="display:flex;align-items:center;gap:12px;padding:10px 14px;border:1px solid var(--border);border-radius:8px;margin-bottom:8px;">
-        <span style="min-width:24px;text-align:center;font-size:0.75rem;font-weight:700;color:var(--text3);">${idx+1}</span>
-        <span style="width:14px;height:14px;border-radius:50%;background:${color};flex-shrink:0;display:inline-block;"></span>
-        <div style="flex:1;">
-          <div style="font-size:0.85rem;font-weight:600;color:var(--text0);">${g.name}</div>
-          <div style="font-size:0.72rem;color:var(--text2);">${members} strategy${members!==1?'s':''}</div>
-        </div>
-        <button onclick="agEditGroup('${g.name}')" class="btn btn-ghost btn-sm">✏️ Edit</button>
-        <button onclick="agConvertToBasket('${g.name}')" class="btn btn-ghost btn-sm" style="color:#1a73e8;border-color:#1a73e8;" title="Convert this Group to a Basket">⇄ To Basket</button>
-        <button onclick="agDeleteGroup('${g.name}')" class="btn btn-sm" style="background:var(--red-lt);color:var(--red);border:none;">🗑</button>
-      </div>`;
-  }).join('');
-}
-
-function agRenderSystems() {
-  const list = document.getElementById('ag-system-list');
-  if (!list) return;
-  const search = (document.getElementById('ag-search')?.value || '').toLowerCase();
-  const filterGroup = document.getElementById('ag-filter-group')?.value || '';
-
-  let algos = Object.values(algoMeta).sort((a,b)=>(a.name||'').localeCompare(b.name||''));
-  if (search) algos = algos.filter(a => (a.name||'').toLowerCase().includes(search) || (a.display_name||'').toLowerCase().includes(search));
-  if (filterGroup) {
-    const g = Object.values(algoGroupsData).find(x=>x.name===filterGroup);
-    const members = new Set(g?.algos || []);
-    algos = algos.filter(a => members.has(a.name));
-  }
-
-  if (!algos.length) { list.innerHTML = '<div style="color:var(--text3);font-size:0.8rem;padding:10px 0;">No strategies found</div>'; return; }
-
-  // Build group lookup (a strategy can be in multiple groups — show all)
-  const groupLookup = {};
-  Object.values(algoGroupsData).forEach(g => { (g.algos||[]).forEach(n => { groupLookup[n] = groupLookup[n] ? groupLookup[n]+', '+g.name : g.name; }); });
-
-  const groupOpts = '<option value="">— no group —</option>' +
-    Object.values(algoGroupsData).sort((a,b)=>(a.name||'').localeCompare(b.name||'')).map(g=>`<option value="${g.name}">${g.name}</option>`).join('');
-
-  list.innerHTML = `
-    <table style="width:100%;border-collapse:collapse;font-size:0.82rem;">
-      <thead>
-        <tr style="background:var(--bg2);">
-          <th style="padding:8px 10px;text-align:left;font-weight:600;color:var(--text1);border-bottom:1px solid var(--border);">Strategy Name</th>
-          <th style="padding:8px 10px;text-align:left;font-weight:600;color:var(--text1);border-bottom:1px solid var(--border);">Group(s)</th>
-          <th style="padding:8px 10px;text-align:left;font-weight:600;color:var(--text1);border-bottom:1px solid var(--border);">Assign Group</th>
-          <th style="padding:8px 10px;text-align:center;font-weight:600;color:var(--text1);border-bottom:1px solid var(--border);">Remove</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${algos.map(a => {
-          const grpLabel = groupLookup[a.name] || '<span style="color:var(--text3);font-style:italic;">NA</span>';
-          const gopts = groupOpts;
-          return `
-          <tr style="border-bottom:1px solid var(--border);">
-            <td style="padding:8px 10px;font-weight:600;color:var(--text0);">${a.name}
-              ${a.display_name && a.display_name !== a.name ? `<div style="font-size:0.7rem;color:var(--text2);">${a.display_name}</div>` : ''}
-            </td>
-            <td style="padding:8px 10px;font-size:0.78rem;color:var(--text1);">${grpLabel}</td>
-            <td style="padding:8px 10px;">
-              <select onchange="agAssignGroup('${a.name}',this.value);this.value=''"
-                style="padding:4px 7px;border:1px solid var(--border);border-radius:5px;font-size:0.8rem;background:var(--bg);color:var(--text0);">
-                <option value="">+ Add to group…</option>
-                ${Object.values(algoGroupsData).sort((a,b)=>(a.name||'').localeCompare(b.name||'')).map(g=>`<option value="${g.name}">${g.name}</option>`).join('')}
-              </select>
-            </td>
-            <td style="padding:8px 10px;text-align:center;">
-              ${Object.values(algoGroupsData).filter(g=>(g.algos||[]).includes(a.name)).map(g=>
-                `<button onclick="agRemoveFromGroup('${a.name}','${g.name}')" class="btn btn-sm" style="background:var(--red-lt);color:var(--red);border:none;padding:3px 8px;margin:2px;font-size:0.72rem;" title="Remove from ${g.name}">✕ ${g.name}</button>`
-              ).join('')}
-            </td>
-          </tr>`;
-        }).join('')}
-      </tbody>
-    </table>`;
-}
-
-function agOpenAddGroup() {
-  const name = prompt('New Group name:');
-  if (!name || !name.trim()) return;
-  agSaveGroup(name.trim(), '#0d9488');
-}
-
-async function agEditGroup(name) {
-  const g = algoGroupsData[safeKey(name)] || Object.values(algoGroupsData).find(x=>x.name===name) || {};
-  const newName = prompt('Group name:', g.name || name);
-  if (!newName || !newName.trim()) return;
-  const newColor = prompt('Group color (hex):', g.color || '#0d9488');
-  await agSaveGroup(newName.trim(), newColor||'#0d9488', name);
-}
-
-async function agSaveGroup(name, color, oldName) {
-  const gk = safeKey(name);
-  const existing = oldName ? (Object.keys(algoGroupsData).find(k=>algoGroupsData[k].name===oldName)||safeKey(oldName)) : gk;
-  const group = {
-    name,
-    color: color || '#0d9488',
-    algos: algoGroupsData[existing]?.algos || [],
-    created_at: algoGroupsData[existing]?.created_at || new Date().toISOString()
-  };
-  if (oldName && existing !== gk) {
-    delete algoGroupsData[existing];
-    if (db) await db.ref('journal/algo_groups/' + existing).remove();
-  }
-  algoGroupsData[gk] = group;
-  if (db) await db.ref('journal/algo_groups/' + gk).set(group);
-  agRenderGroups();
-  agRenderSystems();
-  agPopulateDropdowns();
-  populateDashSelectors();
-  toast(`Group "${name}" saved`, 'success');
-}
-
-async function agDeleteGroup(name) {
-  if (!confirmDeleteTyped(`Delete group "${name}"? Strategies in this group will show NA.`)) return;
-  const gk = Object.keys(algoGroupsData).find(k=>algoGroupsData[k].name===name) || safeKey(name);
-  delete algoGroupsData[gk];
-  if (db) await db.ref('journal/algo_groups/' + gk).remove();
-  agRenderGroups();
-  agRenderSystems();
-  agPopulateDropdowns();
-  populateDashSelectors();
-  toast(`Group "${name}" deleted`, 'info');
-}
-
-async function agAssignGroup(algoName, groupName) {
-  if (!groupName) return;
-  const gk = Object.keys(algoGroupsData).find(k=>algoGroupsData[k].name===groupName) || safeKey(groupName);
-  if (!algoGroupsData[gk]) return;
-  algoGroupsData[gk].algos = [...new Set([...(algoGroupsData[gk].algos||[]), algoName])];
-  if (db) await db.ref('journal/algo_groups/' + gk + '/algos').set(algoGroupsData[gk].algos);
-  agRenderGroups();
-  agRenderSystems();
-  populateDashSelectors();
-  toast(`"${algoName}" added to group "${groupName}"`, 'success');
-}
-
-async function agRemoveFromGroup(algoName, groupName) {
-  const gk = Object.keys(algoGroupsData).find(k=>algoGroupsData[k].name===groupName) || safeKey(groupName);
-  if (!algoGroupsData[gk]) return;
-  algoGroupsData[gk].algos = (algoGroupsData[gk].algos||[]).filter(n=>n!==algoName);
-  if (db) await db.ref('journal/algo_groups/' + gk + '/algos').set(algoGroupsData[gk].algos);
-  agRenderGroups();
-  agRenderSystems();
-  populateDashSelectors();
-  toast(`"${algoName}" removed from group "${groupName}"`, 'info');
-}
 
 // ════════════════════════════════════════════════════
 //  BROKER COMPARISON
@@ -10800,176 +9800,7 @@ function listenMCX() {
 // ════════════════════════════════════════════════════
 
 function initAppSettings() {
-  asRenderGroups();
-  asRenderSystems();      // combined Basket & Group allocation table
-  asPopulateGroupDropdowns();
-  agRenderGroups();
-  agPopulateDropdowns();
-}
-
-function asPopulateGroupDropdowns() {
-  const groups = Object.values(algoGroups).sort((a,b)=>(a.name||'').localeCompare(b.name||''));
-  const grps   = Object.values(algoGroupsData).sort((a,b)=>(a.name||'').localeCompare(b.name||''));
-
-  // Add form — Basket dropdown
-  const selAddBasket = document.getElementById('as-new-basket');
-  if (selAddBasket) selAddBasket.innerHTML = '<option value="">— no basket —</option>' +
-    groups.map(g=>`<option value="${g.name}">${g.name}</option>`).join('');
-
-  // Add form — Group dropdown
-  const selAddGroup = document.getElementById('as-new-group');
-  if (selAddGroup) selAddGroup.innerHTML = '<option value="">— no group —</option>' +
-    grps.map(g=>`<option value="${g.name}">${g.name}</option>`).join('');
-
-  // Filter — Basket
-  const selFilter = document.getElementById('as-filter-basket');
-  if (selFilter) selFilter.innerHTML = '<option value="">All Baskets</option>' +
-    groups.map(g=>`<option value="${g.name}">${g.name}</option>`).join('');
-
-  // Filter — Group (combined table)
-  const selFilterGrp = document.getElementById('as-filter-group');
-  if (selFilterGrp) selFilterGrp.innerHTML = '<option value="">All Groups</option>' +
-    grps.map(g=>`<option value="${g.name}">${g.name}</option>`).join('');
-}
-
-function asRenderGroups() {
-  const list = document.getElementById('as-group-list');
-  if (!list) return;
-  const groups = Object.values(algoGroups).sort((a,b)=>(a.name||'').localeCompare(b.name||''));
-  if (!groups.length) { list.innerHTML = '<div style="color:var(--text3);font-size:0.8rem;">No baskets yet — create one below</div>'; return; }
-  list.innerHTML = groups.map((g, idx) => {
-    const color = g.color || '#1a73e8';
-    const members = (g.algos || []).length;
-    const capPill = g.capital_per_lot
-      ? `<span style="font-size:0.74rem;font-weight:700;color:var(--blue);background:#eff6ff;border:1px solid #bfdbfe;border-radius:6px;padding:3px 10px;white-space:nowrap;">${fmtINRShort(g.capital_per_lot)}/lot</span>`
-      : `<span style="font-size:0.72rem;font-weight:600;color:var(--text3);background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:3px 10px;white-space:nowrap;">capital/lot not set</span>`;
-    return `
-      <div style="display:flex;align-items:center;gap:12px;padding:10px 14px;border:1px solid var(--border);border-radius:8px;margin-bottom:8px;">
-        <span style="min-width:24px;text-align:center;font-size:0.75rem;font-weight:700;color:var(--text3);">${idx+1}</span>
-        <span style="width:14px;height:14px;border-radius:50%;background:${color};flex-shrink:0;display:inline-block;"></span>
-        <div style="flex:1;">
-          <div style="font-size:0.85rem;font-weight:600;color:var(--text0);">${g.name}</div>
-          <div style="font-size:0.72rem;color:var(--text2);">${members} system${members!==1?'s':''}</div>
-        </div>
-        ${capPill}
-        <button onclick="asEditGroup('${g.name}')" class="btn btn-ghost btn-sm">✏️ Edit</button>
-        <button onclick="asConvertToGroup('${g.name}')" class="btn btn-ghost btn-sm" style="color:#0d9488;border-color:#0d9488;" title="Convert this Basket to a Group">⇄ To Group</button>
-        <button onclick="asDeleteGroup('${g.name}')" class="btn btn-sm" style="background:var(--red-lt);color:var(--red);border:none;">🗑</button>
-      </div>`;
-  }).join('');
-}
-
-function asRenderSystems() {
-  const list = document.getElementById('as-system-list');
-  if (!list) return;
-  const search = (document.getElementById('as-search')?.value || '').toLowerCase();
-  const filterBasket = document.getElementById('as-filter-basket')?.value || '';
-  const filterGroup  = document.getElementById('as-filter-group')?.value || '';
-
-  let algos = Object.values(algoMeta).sort((a,b)=>(a.name||'').localeCompare(b.name||''));
-  if (search) algos = algos.filter(a => (a.name||'').toLowerCase().includes(search) || (a.display_name||'').toLowerCase().includes(search));
-
-  // Build basket lookup
-  const basketLookup = {};
-  Object.values(algoGroups).forEach(g => { (g.algos||[]).forEach(n => { basketLookup[n] = g.name; }); });
-
-  // Build group lookup (strategy → group name, optional)
-  const groupLookup = {};
-  Object.values(algoGroupsData).forEach(g => { (g.algos||[]).forEach(n => { groupLookup[n] = groupLookup[n] ? groupLookup[n]+', '+g.name : g.name; }); });
-
-  if (filterBasket) {
-    const g = Object.values(algoGroups).find(x=>x.name===filterBasket);
-    const members = new Set(g?.algos||[]);
-    algos = algos.filter(a => members.has(a.name));
-  }
-  if (filterGroup) {
-    const g = Object.values(algoGroupsData).find(x=>x.name===filterGroup);
-    const members = new Set(g?.algos||[]);
-    algos = algos.filter(a => members.has(a.name));
-  }
-
-  if (!algos.length) { list.innerHTML = '<div style="color:var(--text3);font-size:0.8rem;padding:10px 0;">No strategies found</div>'; return; }
-
-  const unassignedCount = algos.filter(a => !basketLookup[a.name]).length;
-  const warningBanner = unassignedCount > 0
-    ? `<div style="background:#fef2f2;border:2px solid #dc2626;border-radius:10px;padding:12px 16px;margin-bottom:14px;display:flex;align-items:center;gap:12px;">
-        <span style="font-size:2rem;">⚠️</span>
-        <div><div style="font-weight:700;color:#dc2626;font-size:0.9rem;">${unassignedCount} strategy${unassignedCount>1?'ies':''} not assigned to any Basket!</div>
-        <div style="font-size:0.75rem;color:#b91c1c;margin-top:2px;">Assign each strategy to a basket using the dropdown below.</div></div>
-       </div>` : '';
-
-  const basketOpts = '<option value="">— no basket —</option>' +
-    Object.values(algoGroups).sort((a,b)=>(a.name||'').localeCompare(b.name||'')).map(g=>`<option value="${g.name}">${g.name}</option>`).join('');
-
-  const groupOpts = '<option value="">— no group —</option>' +
-    Object.values(algoGroupsData).sort((a,b)=>(a.name||'').localeCompare(b.name||'')).map(g=>`<option value="${g.name}">${g.name}</option>`).join('');
-
-  list.innerHTML = warningBanner + `
-    <table style="width:100%;border-collapse:collapse;font-size:0.82rem;">
-      <thead>
-        <tr style="background:var(--bg2);">
-          <th style="padding:8px 10px;text-align:center;font-weight:600;color:var(--text1);border-bottom:1px solid var(--border);min-width:40px;">#</th>
-          <th style="padding:8px 10px;text-align:left;font-weight:600;color:var(--text1);border-bottom:1px solid var(--border);">Strategy Name</th>
-          <th style="padding:8px 10px;text-align:left;font-weight:600;color:var(--text1);border-bottom:1px solid var(--border);">Underlying</th>
-          <th style="padding:8px 10px;text-align:left;font-weight:600;color:var(--text1);border-bottom:1px solid var(--border);">Type</th>
-          <th style="padding:8px 10px;text-align:left;font-weight:600;color:var(--text1);border-bottom:1px solid var(--border);">🧺 Basket</th>
-          <th style="padding:8px 10px;text-align:left;font-weight:600;color:var(--text1);border-bottom:1px solid var(--border);">📁 Group <span style="font-size:0.65rem;font-weight:400;color:var(--text3);">(optional)</span></th>
-          <th style="padding:8px 10px;text-align:center;font-weight:600;color:var(--text1);border-bottom:1px solid var(--border);">Color</th>
-          <th style="padding:8px 10px;text-align:center;font-weight:600;color:var(--text1);border-bottom:1px solid var(--border);">Actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${algos.map((a, idx) => {
-          const basket = basketLookup[a.name] || '';
-          const grp    = groupLookup[a.name]  || '';
-          const isUnassigned = !basket;
-          const bOpts = basketOpts.replace(`value="${basket}"`, `value="${basket}" selected`);
-          const gOpts = groupOpts.replace(`value="${grp}"`, `value="${grp}" selected`);
-          return `
-          <tr style="border-bottom:1px solid var(--border);${isUnassigned?'background:#fff5f5;':''}">
-            <td style="padding:8px 10px;text-align:center;color:var(--text3);font-size:0.78rem;font-weight:600;">${idx+1}</td>
-            <td style="padding:8px 10px;">
-              ${isUnassigned ? '<span style="font-size:1rem;margin-right:4px;" title="Not assigned to any basket">⚠️</span>' : ''}
-              <span style="font-weight:600;color:${isUnassigned?'#dc2626':'var(--text0)'};">${a.name}</span>
-              ${isUnassigned ? '<span style="background:#dc2626;color:#fff;font-size:0.6rem;font-weight:700;padding:1px 6px;border-radius:4px;margin-left:6px;">ERROR</span>' : ''}
-              ${a.display_name && a.display_name !== a.name ? `<div style="font-size:0.7rem;color:var(--text2);">${a.display_name}</div>` : ''}
-            </td>
-            <td style="padding:8px 10px;">
-              <select onchange="asUpdateField('${a.name}','underlying',this.value)"
-                style="padding:4px 7px;border:1px solid var(--border);border-radius:5px;font-size:0.8rem;background:var(--bg);color:var(--text0);">
-                ${['NIFTY','BANKNIFTY','SENSEX','MULTI'].map(u=>`<option value="${u}"${a.underlying===u?' selected':''}>${u}</option>`).join('')}
-              </select>
-            </td>
-            <td style="padding:8px 10px;">
-              <select onchange="asUpdateField('${a.name}','type',this.value)"
-                style="padding:4px 7px;border:1px solid var(--border);border-radius:5px;font-size:0.8rem;background:var(--bg);color:var(--text0);">
-                ${['0DTE','1DTE','POSITIONAL','HEDGE'].map(t=>`<option value="${t}"${a.type===t?' selected':''}>${t}</option>`).join('')}
-              </select>
-            </td>
-            <td style="padding:8px 10px;">
-              <select onchange="asAssignGroup('${a.name}',this.value)"
-                style="padding:4px 7px;border:1px solid var(--border);border-radius:5px;font-size:0.8rem;background:var(--bg);color:var(--text0);${isUnassigned?'border-color:#dc2626;':''}" >
-                ${bOpts}
-              </select>
-            </td>
-            <td style="padding:8px 10px;">
-              <select onchange="agAssignGroup('${a.name}',this.value)"
-                style="padding:4px 7px;border:1px solid var(--border);border-radius:5px;font-size:0.8rem;background:var(--bg);color:var(--text0);">
-                ${gOpts}
-              </select>
-            </td>
-            <td style="padding:8px 10px;text-align:center;">
-              <input type="color" value="${a.color||'#1a73e8'}" onchange="asUpdateField('${a.name}','color',this.value)"
-                style="width:32px;height:24px;padding:1px;border:1px solid var(--border);border-radius:4px;cursor:pointer;">
-            </td>
-            <td style="padding:8px 10px;text-align:center;">
-              <button onclick="asDeleteSystem('${a.name}')" title="Delete system"
-                class="btn btn-sm" style="background:var(--red-lt);color:var(--red);border:none;padding:4px 10px;">🗑</button>
-            </td>
-          </tr>`;
-        }).join('')}
-      </tbody>
-    </table>`;
+  asRenderStrategiesByAccount();
 }
 
 async function asAddSystem() {
@@ -10986,127 +9817,76 @@ async function asAddSystem() {
   };
   algoMeta[name] = meta;
   if (db) await db.ref('journal/algos/' + safeKey(name)).set(meta);
-
-  // Assign to basket if selected
-  const basket = document.getElementById('as-new-basket')?.value;
-  if (basket) await asAssignGroup(name, basket);
-
-  // Assign to group if selected
-  const grp = document.getElementById('as-new-group')?.value;
-  if (grp) await agAssignGroup(name, grp);
-
   document.getElementById('as-new-name').value = '';
-  asRenderSystems();
-  asRenderGroups();
-  asPopulateGroupDropdowns();
-  agRenderGroups();
+  renderAlgoPage();
+  populateAlgoDropdowns();
   toast(`"${name}" added`, 'success');
 }
 
-async function asUpdateField(name, field, value) {
-  if (!algoMeta[name]) return;
-  algoMeta[name][field] = value;
-  if (db) await db.ref('journal/algos/' + safeKey(name) + '/' + field).set(value);
-  toast(`Updated ${field} for "${name}"`, 'success');
-}
-
-async function asAssignGroup(algoName, groupName) {
-  // Remove from all groups first
-  for (const [gk, g] of Object.entries(algoGroups)) {
-    if ((g.algos||[]).includes(algoName)) {
-      g.algos = g.algos.filter(n => n !== algoName);
-      if (db) await db.ref('journal/groups/' + gk + '/algos').set(g.algos);
-    }
-  }
-  // Add to new group
-  if (groupName) {
-    const gk = Object.keys(algoGroups).find(k => algoGroups[k].name === groupName) || safeKey(groupName);
-    if (algoGroups[gk]) {
-      algoGroups[gk].algos = [...new Set([...(algoGroups[gk].algos||[]), algoName])];
-      if (db) await db.ref('journal/groups/' + gk + '/algos').set(algoGroups[gk].algos);
-    }
-  }
-  asRenderGroups();
-  toast(groupName ? `Assigned to "${groupName}"` : 'Removed from group', 'success');
-}
-
-async function asDeleteSystem(name) {
-  if (!confirmDeleteTyped(`Delete system "${name}"? This only removes the system definition — existing trades are kept.`)) return;
-  delete algoMeta[name];
-  if (db) await db.ref('journal/algos/' + safeKey(name)).remove();
-  asRenderSystems();
-  asPopulateGroupDropdowns();
-  toast(`"${name}" deleted`, 'info');
-}
-
-function asOpenAddGroup() {
-  // Reuse existing openAddGroupModal from Settings page
-  if (typeof openAddGroupModal === 'function') openAddGroupModal();
-  else toast('Use Settings → Baskets to add groups', 'info');
-}
-
-async function asEditGroup(name) {
-  if (typeof editGroup === 'function') editGroup(name);
-}
-
-async function asDeleteGroup(name) {
-  if (!confirmDeleteTyped(`Delete group "${name}"? Systems in this group will be unassigned.`)) return;
-  const gk = Object.keys(algoGroups).find(k => algoGroups[k].name === name);
-  if (!gk) return;
-  delete algoGroups[gk];
-  if (db) await db.ref('journal/groups/' + gk).remove();
-  asRenderGroups();
-  asRenderSystems();
-  asPopulateGroupDropdowns();
-  toast(`Group "${name}" deleted`, 'info');
-}
-
-async function asConvertToGroup(name) {
-  if (!confirm(`Convert Basket "${name}" to a Group?\nIt will be removed from Baskets and added to Groups (parent basket = NA).`)) return;
-  const basket = algoGroups[safeKey(name)] || Object.values(algoGroups).find(x=>x.name===name) || {};
-  const gk = safeKey(name);
-  // Add to algo_groups (Group) with same algos + color
-  const newGroup = {
-    name: name,
-    color: basket.color || '#0d9488',
-    algos: basket.algos || [],
-    created_at: basket.created_at || new Date().toISOString()
+// ════════════════════════════════════════════════════
+//  STRATEGIES BY ACCOUNT (v25.7) — replaces Basket/Group Management. Each
+//  strategy is listed once per account it has traded on; Live/Archived is a
+//  per "nick:algo_name" flag (journal/settings/archived_systems), so the same
+//  strategy can be Live on one account and Archived on another.
+// ════════════════════════════════════════════════════
+function asRenderStrategiesByAccount() {
+  const container = document.getElementById('as-strategies-by-account');
+  if (!container) return;
+  const search = (document.getElementById('as-strat-search')?.value || '').toLowerCase();
+  const nickSystems = {};
+  const junk = new Set(['tradetron','quantleap','quantiply','zebu','upstox','']);
+  allTrades.forEach(t => {
+    const cid = t.client_id;
+    if (!cid || junk.has(cid.toLowerCase())) return;
+    const nick = getNick(cid) || cid;
+    if (!nickSystems[nick]) nickSystems[nick] = new Set();
+    nickSystems[nick].add(t.algo_name);
+  });
+  const brokerOrder = (nick) => {
+    const n = nick.toUpperCase();
+    if (n.startsWith('ZEBU')) return '0_' + n;
+    if (n.startsWith('IIFL')) return '1_' + n;
+    if (n.startsWith('SHOONYA')) return '2_' + n;
+    if (n.startsWith('ALICEBLUE')) return '3_' + n;
+    if (n.startsWith('UPSTOX')) return '4_' + n;
+    return '9_' + n;
   };
-  algoGroupsData[gk] = newGroup;
-  if (db) await db.ref('journal/algo_groups/' + gk).set(newGroup);
-  // Remove from groups (Basket)
-  const bk = Object.keys(algoGroups).find(k=>algoGroups[k].name===name) || gk;
-  delete algoGroups[bk];
-  if (db) await db.ref('journal/groups/' + bk).remove();
-  asRenderGroups();
-  agRenderGroups();
-  asRenderSystems();
-  asPopulateGroupDropdowns();
-  toast(`"${name}" converted to Group`, 'success');
+  const nicks = Object.keys(nickSystems).sort((a,b)=>brokerOrder(a).localeCompare(brokerOrder(b)));
+  if (!nicks.length) { container.innerHTML = '<div style="color:var(--text3);font-size:0.8rem;">No account-system data yet — upload trades first</div>'; return; }
+  let html = '';
+  nicks.forEach(nick => {
+    let systems = [...nickSystems[nick]].sort();
+    if (search) systems = systems.filter(s => s.toLowerCase().includes(search));
+    if (!systems.length) return;
+    const safeNick = nick.replace(/'/g, "\\'");
+    html += `<div style="margin-bottom:18px;">
+      <div style="font-size:0.82rem;font-weight:800;color:var(--text0);margin-bottom:8px;padding-bottom:6px;border-bottom:1.5px solid var(--border);">${nick}</div>
+      <div style="display:flex;flex-direction:column;gap:6px;">`;
+    systems.forEach(s => {
+      const archived = !!archivedSystems[safeKey(nick + ':' + s)];
+      const safeName = s.replace(/'/g, "\\'");
+      const meta = algoMeta[s] || algoMeta[safeKey(s)] || {};
+      html += `<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border:1px solid var(--border);border-radius:8px;${archived?'opacity:0.65;background:var(--bg2);':''}">
+        <span style="flex:1;font-size:0.82rem;font-weight:600;color:var(--text0);">${s}${meta.display_name && meta.display_name!==s?` <span style="font-weight:400;color:var(--text2);">(${meta.display_name})</span>`:''}</span>
+        <button onclick="toggleAccountStrategyArchived('${safeNick}','${safeName}',${!archived})"
+          class="btn btn-sm" style="min-width:100px;${archived?'background:var(--bg3);color:var(--text2);border:1px solid var(--border);':'background:#e6f7f1;color:#0d9488;border:1px solid #0d9488;'}">
+          ${archived?'⏸ Archived':'✅ Live'}
+        </button>
+      </div>`;
+    });
+    html += `</div></div>`;
+  });
+  container.innerHTML = html || '<div style="color:var(--text3);font-size:0.8rem;">No strategies match your search</div>';
 }
 
-async function agConvertToBasket(name) {
-  if (!confirm(`Convert Group "${name}" to a Basket?\nIt will be removed from Groups and added to Baskets (parent group = NA).`)) return;
-  const grp = algoGroupsData[safeKey(name)] || Object.values(algoGroupsData).find(x=>x.name===name) || {};
-  const gk = safeKey(name);
-  // Add to groups (Basket) with same algos + color
-  const newBasket = {
-    name: name,
-    color: grp.color || '#1a73e8',
-    algos: grp.algos || [],
-    created_at: grp.created_at || new Date().toISOString()
-  };
-  algoGroups[gk] = newBasket;
-  if (db) await db.ref('journal/groups/' + gk).set(newBasket);
-  // Remove from algo_groups (Group)
-  const bk = Object.keys(algoGroupsData).find(k=>algoGroupsData[k].name===name) || gk;
-  delete algoGroupsData[bk];
-  if (db) await db.ref('journal/algo_groups/' + bk).remove();
-  agRenderGroups();
-  asRenderGroups();
-  asRenderSystems();
-  asPopulateGroupDropdowns();
-  toast(`"${name}" converted to Basket`, 'success');
+async function toggleAccountStrategyArchived(nick, name, archived) {
+  const key = safeKey(nick + ':' + name);
+  if (archived) archivedSystems[key] = true; else delete archivedSystems[key];
+  if (db) await db.ref('journal/settings/archived_systems/' + key).set(archived ? true : null);
+  asRenderStrategiesByAccount();
+  renderSystemSelectorPanel();
+  refreshAll();
+  toast(`"${name}" ${archived ? 'archived for ' + nick : 'reactivated for ' + nick}`, archived ? 'info' : 'success');
 }
 
 // ════════════════════════════════════════════════════
