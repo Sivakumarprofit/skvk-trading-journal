@@ -2,6 +2,9 @@
 ==========================================================
   SKVK TRADING JOURNAL — VERSION HISTORY
 ==========================================================
+  v26.4 | 2026-09-29 | UI: "P&L Mode: Standard / Zebu" button moved from the header to the
+         |             | Analytics — Basket toolbar, right after "Expand All". Behaviour,
+         |             | Firebase path (journal/settings/pnl_mode) and scope unchanged.
   v26.3 | 2026-09-29 | NEW: global "P&L Mode: Standard / Zebu" toggle in the header, persisted
          |             | to Firebase (journal/settings/pnl_mode), applies to ALL accounts.
          |             | Zebu mode excludes trades closed TODAY (local date) from Analytics —
@@ -1324,7 +1327,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>SKVK Trading Journal v26.3</title>
+<title>SKVK Trading Journal v26.4</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -2304,7 +2307,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div class="login-logo">📋</div>
     <div class="login-title">
       SKVK Trading Journal
-      <span class="login-vbadge">v26.3</span>
+      <span class="login-vbadge">v26.4</span>
     </div>
     <div class="login-sub">Sign in with your authorised Google account to access the journal.</div>
     <button class="google-signin-btn" id="googleSignInBtn" onclick="signInWithGoogle()">
@@ -2344,12 +2347,11 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
         <i class="ti ti-chart-candle brand-icon"></i>
         <span class="brand-skvk">SKVK</span>
         <span class="brand-appname">Trading Journal</span>
-        <span class="brand-vbadge">v26.3</span>
+        <span class="brand-vbadge">v26.4</span>
       </div>
     </div>
     <div id="topbar-right-wrap">
       <div class="topbar-right">
-        <button id="pnl-mode-btn" onclick="togglePnlMode()" title="Standard: includes today's closed trades. Zebu: excludes today's trades from Analytics totals (matches Zebu's end-of-day Monthly Returns)." style="margin-right:10px;padding:7px 14px;border-radius:20px;border:1.5px solid #60a5fa;background:transparent;color:#bfdbfe;font-weight:700;font-size:12.5px;cursor:pointer;white-space:nowrap;">P&amp;L Mode: Standard</button>
         <button class="signout-btn" id="signoutBtn" onclick="signOut()" title="Sign out">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M18.36 6.64A9 9 0 1 1 5.64 6.64"/>
@@ -5672,7 +5674,7 @@ function renderPnlModeBtn() {
   b.style.borderColor = z ? '#f59e0b' : '#60a5fa';
 }
 function rerenderForPnlMode() {
-  renderPnlModeBtn();
+  try { renderSystemSelectorPanel(); } catch(e) {}
   try { renderDashFiltered(); } catch(e) {}
   try { if (document.getElementById('acct-select')) renderAcctReport(); } catch(e) {}
 }
@@ -5886,6 +5888,9 @@ function renderSystemSelectorPanel() {
   html += `<span style="width:1px;height:20px;background:var(--border);margin:0 2px;"></span>`;
   html += `<button onclick="setDashPanelMode('minimized')" style="${btnStyle}" onmouseenter="${hoverIn}" onmouseleave="${hoverOut}">\u25b4 Minimize All</button>`;
   html += `<button onclick="setDashPanelMode('expanded')" style="${btnStyle}" onmouseenter="${hoverIn}" onmouseleave="${hoverOut}">\u25be Expand All</button>`;
+  // v26.4 — P&L Mode toggle moved here from the header (next to Expand All)
+  const pnlZ = pnlMode === 'zebu';
+  html += `<button onclick="togglePnlMode()" title="Standard: includes today's closed trades. Zebu: excludes today's trades from Analytics totals (matches Zebu's end-of-day Monthly Returns)." style="padding:4px 12px;border-radius:6px;font-size:0.71rem;font-weight:700;cursor:pointer;border:1.5px solid #d97706;background:${pnlZ?'#d97706':'var(--bg)'};color:${pnlZ?'#fff':'#d97706'};transition:background 0.15s,color 0.15s;">P&L Mode: ${pnlZ?'Zebu':'Standard'}</button>`;
   html += `<span style="width:1px;height:20px;background:var(--border);margin:0 2px;"></span>`;
   // v24.2 \u2014 global Show Archived switch: OFF hides Not-Live strategies everywhere on this
   // page (same as v24.1); ON reveals them (greyed out, own checkbox, checked by default).
