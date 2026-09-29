@@ -2,6 +2,13 @@
 ==========================================================
   SKVK TRADING JOURNAL — VERSION HISTORY
 ==========================================================
+  v26.3 | 2026-09-29 | NEW: global "P&L Mode: Standard / Zebu" toggle in the header, persisted
+         |             | to Firebase (journal/settings/pnl_mode), applies to ALL accounts.
+         |             | Zebu mode excludes trades closed TODAY (local date) from Analytics —
+         |             | Basket and Analytics — Account wise totals, tiles and charts, so the
+         |             | monthly figure matches Zebu's end-of-day Monthly Returns heatmap.
+         |             | Standard = previous behaviour. Daily Journal, upload, tax pages
+         |             | unaffected. Max DD % / Net P&L % left as-is by request.
   v26.2 | 2026-09-20 | Split the single "Include Archived" toggle into TWO independent
          |             | toggles, each persisted to its own Firebase path: (1) "Include
          |             | Archived (Display)" — Basket page only — shows/hides archived
@@ -1317,7 +1324,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>SKVK Trading Journal v26.2</title>
+<title>SKVK Trading Journal v26.3</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -2297,7 +2304,7 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
     <div class="login-logo">📋</div>
     <div class="login-title">
       SKVK Trading Journal
-      <span class="login-vbadge">v26.2</span>
+      <span class="login-vbadge">v26.3</span>
     </div>
     <div class="login-sub">Sign in with your authorised Google account to access the journal.</div>
     <button class="google-signin-btn" id="googleSignInBtn" onclick="signInWithGoogle()">
@@ -2337,11 +2344,12 @@ tbody tr.trade-row:hover td { background: #f0f4ff !important; }
         <i class="ti ti-chart-candle brand-icon"></i>
         <span class="brand-skvk">SKVK</span>
         <span class="brand-appname">Trading Journal</span>
-        <span class="brand-vbadge">v26.2</span>
+        <span class="brand-vbadge">v26.3</span>
       </div>
     </div>
     <div id="topbar-right-wrap">
       <div class="topbar-right">
+        <button id="pnl-mode-btn" onclick="togglePnlMode()" title="Standard: includes today's closed trades. Zebu: excludes today's trades from Analytics totals (matches Zebu's end-of-day Monthly Returns)." style="margin-right:10px;padding:7px 14px;border-radius:20px;border:1.5px solid #60a5fa;background:transparent;color:#bfdbfe;font-weight:700;font-size:12.5px;cursor:pointer;white-space:nowrap;">P&amp;L Mode: Standard</button>
         <button class="signout-btn" id="signoutBtn" onclick="signOut()" title="Sign out">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M18.36 6.64A9 9 0 1 1 5.64 6.64"/>
@@ -3854,8 +3862,8 @@ function renderAcctReport() {
   if (!hasAcct) return;
 
   const tr = currentAcct === '__ALL__'
-    ? allTrades.filter(t=>!t.archived && (acctArchivedPnl || !isSystemArchived(getNick(t.client_id) || t.client_id, t.algo_name)))
-    : allTrades.filter(t=>!t.archived && (t.client_id||'')===currentAcct && (acctArchivedPnl || !isSystemArchived(getNick(t.client_id) || t.client_id, t.algo_name)));
+    ? allTrades.filter(t=>!t.archived && !pnlModeExcl(t) && (acctArchivedPnl || !isSystemArchived(getNick(t.client_id) || t.client_id, t.algo_name)))
+    : allTrades.filter(t=>!t.archived && !pnlModeExcl(t) && (t.client_id||'')===currentAcct && (acctArchivedPnl || !isSystemArchived(getNick(t.client_id) || t.client_id, t.algo_name)));
   const label = currentAcct === '__ALL__' ? 'All Accounts' : getClientLabel(currentAcct);
 
   // Period toggle (All Time / FY 2026-27) for Live Performance, Daily P&L table, Equity/Drawdown
@@ -3922,8 +3930,8 @@ function renderDashAccountsAllocated() {
 function acctWeekNav(dir) {
   acctWeekOffset += dir;
   const tr = currentAcct === '__ALL__'
-    ? allTrades.filter(t=>!t.archived && (acctArchivedPnl || !isSystemArchived(getNick(t.client_id) || t.client_id, t.algo_name)))
-    : allTrades.filter(t=>!t.archived && (t.client_id||'')===currentAcct && (acctArchivedPnl || !isSystemArchived(getNick(t.client_id) || t.client_id, t.algo_name)));
+    ? allTrades.filter(t=>!t.archived && !pnlModeExcl(t) && (acctArchivedPnl || !isSystemArchived(getNick(t.client_id) || t.client_id, t.algo_name)))
+    : allTrades.filter(t=>!t.archived && !pnlModeExcl(t) && (t.client_id||'')===currentAcct && (acctArchivedPnl || !isSystemArchived(getNick(t.client_id) || t.client_id, t.algo_name)));
   renderAcctWeekTiles(tr);
 }
 
@@ -5080,6 +5088,10 @@ function startListeners() {
   });
   // v26.2 — Account-wise page's independent "Include Archived (P&L)" toggle. No Display
   // toggle here — this page has no per-strategy row list to show/hide.
+  db.ref('journal/settings/pnl_mode').on('value', snap => {  // v26.3
+    pnlMode = snap.val() === 'zebu' ? 'zebu' : 'standard';
+    rerenderForPnlMode();
+  });
   db.ref('journal/settings/acct_include_archived_pnl').on('value', snap => {
     acctArchivedPnl = !!snap.val();
     if (document.getElementById('acct-select')) { renderAcctReport(); renderAcctArchivedBtn(); }
@@ -5645,6 +5657,30 @@ function normDate(d) {
 // (no exit_date yet) keep booking to entry_date so the current day stays partial,
 // same as before.
 function pnlDate(t) { return t.exit_date || t.entry_date; }
+// v26.3 — P&L Mode: 'standard' (all closed trades) or 'zebu' (excludes trades closed TODAY
+// from Analytics totals, matching Zebu's end-of-day Monthly Returns). Global, all accounts.
+// Persisted at journal/settings/pnl_mode. Daily Journal is unaffected.
+let pnlMode = 'standard';
+function localTodayISO() { const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function pnlModeExcl(t) { return pnlMode === 'zebu' && (pnlDate(t)||'').slice(0,10) === localTodayISO(); }
+function renderPnlModeBtn() {
+  const b = document.getElementById('pnl-mode-btn'); if (!b) return;
+  const z = pnlMode === 'zebu';
+  b.textContent = 'P&L Mode: ' + (z ? 'Zebu' : 'Standard');
+  b.style.background = z ? '#f59e0b' : 'transparent';
+  b.style.color = z ? '#1e1b4b' : '#bfdbfe';
+  b.style.borderColor = z ? '#f59e0b' : '#60a5fa';
+}
+function rerenderForPnlMode() {
+  renderPnlModeBtn();
+  try { renderDashFiltered(); } catch(e) {}
+  try { if (document.getElementById('acct-select')) renderAcctReport(); } catch(e) {}
+}
+function togglePnlMode() {
+  pnlMode = pnlMode === 'zebu' ? 'standard' : 'zebu';
+  if (db) db.ref('journal/settings/pnl_mode').set(pnlMode);
+  rerenderForPnlMode();
+}
 function isoTime(s) { const m=(s||'').match(/T(\d{2}:\d{2})/); return m?m[1]:''; }
 function optType(s) { s=s.toUpperCase(); return s.endsWith('CE')?'CE':s.endsWith('PE')?'PE':s.includes('FUT')?'FUT':'OPT'; }
 function normExit(r) {
@@ -6041,6 +6077,7 @@ let capitalBasket = {}; // basket-wise capital: {basketName: {YYYY-MM: amount}}
 function renderDashboard() {
   const tr = allTrades.filter(t=>{
     if (t.archived) return false;
+    if (pnlModeExcl(t)) return false;  // v26.3
     if (isSystemArchived(getNick(t.client_id) || t.client_id, t.algo_name) && !dashArchivedPnl) return false;  // v26.2 — per-account, P&L toggle
     if (!(pnlDate(t)||t.entry_date||'').startsWith(currentYear)) return false;
     if (dashExcludedSystems.size === 0) return true;
@@ -6055,7 +6092,7 @@ function renderDashboard() {
   const fyMonthsDash = getFYMonthKeys(currentYear);
   const mMap={};
   fyMonthsDash.forEach(k=>mMap[k]=0);
-  allTrades.filter(t=>!t.archived && (dashArchivedPnl || !isSystemArchived(getNick(t.client_id) || t.client_id, t.algo_name))).forEach(t=>{ const ym=(pnlDate(t)||'').slice(0,7); if(fyMonthsDash.includes(ym)) mMap[ym]=(mMap[ym]||0)+(t.pnl||0); });
+  allTrades.filter(t=>!t.archived && !pnlModeExcl(t) && (dashArchivedPnl || !isSystemArchived(getNick(t.client_id) || t.client_id, t.algo_name))).forEach(t=>{ const ym=(pnlDate(t)||'').slice(0,7); if(fyMonthsDash.includes(ym)) mMap[ym]=(mMap[ym]||0)+(t.pnl||0); });
 
   // Year tabs
   const years=[...new Set(allTrades.map(t=>(t.entry_date||'').slice(0,4)).filter(Boolean))];
@@ -6124,6 +6161,7 @@ function renderDashFiltered() {
   // a broker report) without silently pulling in every other archived strategy too.
   let trFY = allTrades.filter(t=>{
     if (t.archived) return false;
+    if (pnlModeExcl(t)) return false;  // v26.3
     if (isSystemArchived(getNick(t.client_id) || t.client_id, t.algo_name) && !dashArchivedPnl) return false;  // v26.2 — per-account, P&L toggle
     if (isOrphanTrade(t)) return false;
     if (dashExcludedSystems.size === 0) return true;
@@ -6265,6 +6303,7 @@ function getDashFilteredTrades() {
   // silently included" risk v24.9 fixed.
   return allTrades.filter(t=>{
     if (t.archived) return false;
+    if (pnlModeExcl(t)) return false;  // v26.3
     if (isSystemArchived(getNick(t.client_id) || t.client_id, t.algo_name) && !dashArchivedPnl) return false;  // v26.2 — per-account, P&L toggle
     if (isOrphanTrade(t)) return false;
     if (!(pnlDate(t)||t.entry_date||'').startsWith(currentYear)) return false;
